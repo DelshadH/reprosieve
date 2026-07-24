@@ -122,10 +122,10 @@ def _resolve_target(argv: tuple[str, ...]) -> list[str]:
 
 def _terminate(process: subprocess.Popen[bytes]) -> None:
     try:
-        if os.name == "posix":
-            os.killpg(process.pid, signal.SIGKILL)  # type: ignore[attr-defined]
-        else:
+        if sys.platform == "win32":
             process.kill()
+        else:
+            os.killpg(process.pid, signal.SIGKILL)
     except OSError:
         pass
 

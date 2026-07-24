@@ -294,10 +294,10 @@ def _terminate(process: subprocess.Popen[bytes]) -> None:
     if process.poll() is not None:
         return
     try:
-        if os.name == "posix":
-            os.killpg(process.pid, signal.SIGKILL)  # type: ignore[attr-defined]
-        else:
+        if sys.platform == "win32":
             process.kill()
+        else:
+            os.killpg(process.pid, signal.SIGKILL)
     except (ProcessLookupError, PermissionError, OSError):
         try:
             process.kill()
