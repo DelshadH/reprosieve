@@ -2,22 +2,56 @@
 
 ## Before-disk invariant
 
-No unredacted capture payload may be written to a file, logger, exception string, temporary archive, telemetry system, or crash dump by RunSieve. Default capture replaces the Agents SDK default tracing exporter; RunSieve must not silently duplicate sensitive traces to any provider backend. Transform SDK events into bounded in-memory primitives, redact, scan for canaries, then persist.
+RunSieve does not write an unredacted capture payload to its files, archives,
+logs, exceptions, telemetry, or target-output relay. The adapter converts each
+completed public SDK span to bounded in-memory primitives, redacts it, and only
+then allows capsule construction. Target stdout and stderr are discarded.
+
+Capture replaces the Agents SDK default trace processors. The
+`--retain-sdk-exporter` option weakens this privacy boundary intentionally and is
+never enabled implicitly.
+
+This contract covers RunSieve. It cannot prevent the captured application,
+provider SDK, operating system, debugger, or crash reporter from writing its own
+data.
 
 ## Default redaction
 
-- key names matching token, secret, password, authorization, cookie, api-key, private-key, or session variants;
-- bearer/basic authorization material;
-- common provider-key shapes;
+The default policy covers:
+
+- keys containing token, secret, password, authorization, cookie, API key,
+  private key, or session variants;
+- bearer/basic credentials and common provider-key forms;
 - PEM private-key blocks;
-- user-supplied exact canaries and regexes.
+- user-declared exact canaries;
+- a conservative bounded regex subset;
+- explicit deny paths.
 
-Replacement values are typed markers with stable salted fingerprints for equality within one capsule, not recoverable originals. Salt is capsule-local and must not enable cross-capsule tracking.
+Deny paths win. Allow paths may suppress key-name redaction but never suppress
+exact-canary or token-shape redaction. Full-value replacements are typed markers
+with a salted fingerprint. Partial-string replacements use the same
+capsule-local fingerprint. The random salt is not persisted, so equal values are
+linkable only inside one capture.
 
-## User responsibility boundary
+Grouping, alternation, counted repetition, backreferences, and multiple
+unbounded wildcards are rejected in user regexes because Python's standard
+regular-expression engine has no evaluation timeout.
 
-Arbitrary personal data cannot be inferred safely. The CLI must support key/path allowlists, deny paths, and an interactive-free dry-run redaction report. Documentation must warn users to inspect a capsule before attaching it publicly.
+## Declared data only
 
-## Proof
+Capture reads only explicitly named UTF-8 workspace files and environment
+entries. It rejects traversal, symlink/junction components, non-files, invalid
+UTF-8, duplicate sanitized paths, excess files, and excess bytes. A secret in a
+declared filename or environment name is replaced with a safe salted name.
 
-Tests inject canaries into every field class, nested tool data, exceptions, logs, filenames, and malformed payloads. The gate byte-scans all produced files and process output for originals.
+Arbitrary personal information cannot be inferred safely. A successful
+redaction report is evidence that configured patterns were removed, not proof
+that a capsule is anonymous. Byte-scan and inspect a capsule before publishing
+it.
+
+## Tests
+
+Privacy tests inject synthetic canaries into trace metadata, model input, tool
+arguments/results, workspace content, environment values, filenames, malformed
+spans, predicate output, and exported files. Produced capsule bytes and captured
+CLI streams are scanned for the original canaries.

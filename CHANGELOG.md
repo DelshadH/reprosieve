@@ -4,5 +4,8 @@ All notable changes will be recorded here.
 
 ## Unreleased
 
-- Published the initial schema, redaction helper, and minimization kernel.
-- Documented the 0.1 product, privacy boundary, architecture, and release criteria.
+- Added public OpenAI Agents SDK trace capture for version 0.18.3.
+- Added bounded before-disk redaction and deterministic validated capsules.
+- Added hermetic recorded-output replay and strict tri-state/K-of-N predicates.
+- Added dependency-aware hierarchical reduction and independent 1-minimality verification.
+- Added hash-addressed artifacts, standalone issue exports, the 247-event demo, and security gates.

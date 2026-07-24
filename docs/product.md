@@ -1,66 +1,91 @@
 # Product contract
 
-## One-sentence promise
+## Promise
 
-Given one failed agent-run capsule and an executable failure predicate, RunSieve produces a smaller redacted capsule that reproduces the same failure offline and is 1-minimal under declared reduction units.
+Given one failed agent-run capsule and an embedded Python failure predicate,
+RunSieve produces a smaller redacted capsule that reproduces the same failure
+offline and is 1-minimal under declared reduction units.
 
-## Primary user
+The primary user is an agent framework maintainer who needs a compact issue
+reproduction or regression fixture.
 
-An agent framework maintainer or coding agent that needs to attach a compact, portable failure reproduction to an issue or regression test.
+## Capture
 
-## v0.1 capture
+The first adapter supports `openai-agents>=0.18.3,<0.19`. It implements the
+public synchronous `TracingProcessor` callbacks and installs with
+`set_trace_processors()` by default. That replaces the SDK backend exporter.
+Keeping another exporter requires the explicit `--retain-sdk-exporter` option.
 
-The OpenAI Agents SDK adapter records through its public tracing processor interface. By default it installs with `set_trace_processors()` and replaces the SDK default exporter; using `add_trace_processor()` or retaining another exporter requires explicit user opt-in:
+The adapter records:
 
-- trace/span topology and stable local IDs;
-- model inputs and captured model outputs needed for replay;
-- tool names, JSON-safe arguments, captured results/errors, and call dependencies;
-- handoff/guardrail events represented by the SDK trace;
-- run configuration that affects replay;
-- declared workspace files and environment-key allowlist;
-- runtime/package fingerprint.
+- trace/span topology and stable capsule-local IDs;
+- generation inputs and recorded outputs;
+- tool names, JSON-safe arguments, results, errors, and trajectory dependencies;
+- handoff, guardrail, turn, and unknown spans;
+- declared UTF-8 workspace files and allowed environment entries;
+- Python, platform, adapter, and SDK version information.
 
-Secrets are redacted in memory before persistence. Raw provider payloads outside the explicit schema are not silently stored.
+SDK objects are converted to bounded primitives and redacted in memory. Unknown
+span types remain explicit. Missing parents, incomplete spans, excess events,
+unsupported SDK versions, or more than one completed trace fail closed.
 
-## Replay modes
+## Offline replay
 
-### Offline structural replay
+Replay walks the retained event graph and substitutes recorded model and tool
+outputs. It does not import a provider SDK or execute an original tool. This
+reproduces failures in orchestration, serialization, tool protocols, and
+application logic under one fixed trajectory. It does not prove a model would
+generate the same trajectory again.
 
-Default. Replaces model generations and tool executions with recorded outputs. It may execute only the user's local failure predicate and generated replay harness. Network access is denied in the proof fixture. No provider key is present. This mode is intended for deterministic SDK, orchestration, serialization, tool-protocol, and application failures under a fixed recorded trajectory; it does not prove that a model would generate the same trajectory again.
-
-### Live semantic replay
-
-Optional and post-offline gate. Re-calls the model while mocking recorded tool results, using deterministic parameters where available and a declared K-of-N reproduction rule. Use it for prompt/model-behavior failures. It is inherently probabilistic and separately labeled; it cannot inherit offline-minimality claims.
+Predicates run in fresh directories with copied declared files, provider keys
+removed, proxy variables emptied, direct argument vectors, time/output/process
+limits, and Python audit hooks for network, process, native-loading, and
+host-filesystem denial. K-of-N runs use a fresh directory for every trial and are
+reported as probabilistic predicate evidence. They still use recorded outputs;
+live model replay is outside this seed release.
 
 ## Reduction units
 
-Apply in dependency-preserving hierarchy:
+The dependency-preserving hierarchy is:
 
-1. independent trace branches/spans;
-2. turns/messages;
+1. independent spans and branches;
+2. messages;
 3. tool-call/result pairs;
-4. JSON object fields and array elements;
-5. text chunks;
-6. declared workspace files and file chunks;
-7. allowed environment entries.
+4. JSON object fields;
+5. JSON array elements;
+6. text chunks;
+7. declared workspace files;
+8. file chunks;
+9. allowed environment entries.
 
-After each accepted reduction, restart the current hierarchy level. A completed result is 1-minimal: deleting any remaining unit at the final granularity either removes the target failure or makes the candidate invalid.
+An accepted deletion restarts its level. Removing a producer also removes its
+parent/dependency consumers. IDs are stable and sequence numbers are normalized.
+After reduction, a separate verifier tries every remaining final-granularity
+deletion without sharing the reducer cache.
 
-## Predicate protocol
+## Capsule and export
 
-Run the predicate in an isolated temporary directory with capsule path and replay metadata in documented environment variables.
+A `.runsieve` file is a deterministic ZIP with stored entries, normalized
+timestamps/order/permissions, canonical JSON, a complete SHA-256 manifest, and:
 
-- exit `0`: the target failure is reproduced;
-- exit `1`: target failure is absent;
-- exit `2`: invalid candidate/harness failure;
-- timeout, signal, malformed result: invalid.
+- `events/v1.json`
+- `metadata.json`
+- `environment.json`
+- `workspace/index.json`
+- `workspace/files/*`
+- `redaction.json`
+- `predicate.json`
 
-For K-of-N, each trial uses a fresh directory. Store every trial result.
+Source capsules are never overwritten. Reduced artifacts are named by the
+SHA-256 of their complete bytes and record the source hash, predicate hash,
+reduction evidence, offline call counts, and independent minimality proof.
 
-## Capsule
-
-A `.runsieve` file is a deterministic ZIP with normalized timestamps/order and contains `manifest.json`, versioned events, redaction report, environment fingerprint, replay assets, predicate metadata, and SHA-256 hashes. The archive must never include credentials, provider API keys, or undeclared workspace files.
+Export copies the exact capsule plus a standard-library `reproduce.py` and a
+short README. `python reproduce.py` validates all hashes and safety limits,
+reconstructs recorded outputs, and runs the embedded predicate.
 
 ## Non-goals
 
-RunSieve does not diagnose root cause, guarantee global minimum, guarantee a probabilistic model failure, replace an observability backend, or make arbitrary side-effecting tools hermetic.
+RunSieve does not diagnose root cause, guarantee a global minimum, reproduce
+model semantics, replace an observability backend, capture arbitrary processes,
+support arbitrary predicate languages, or make side-effecting tools hermetic.

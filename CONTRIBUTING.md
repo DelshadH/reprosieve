@@ -15,7 +15,9 @@ Run:
 python -m pytest
 python -m ruff check .
 python -m mypy
+python scripts/security_check.py
+python scripts/killer_demo.py
 ```
 
-Additional frameworks, a server, a hosted trace store, and a browser UI are out
-of scope until the core command-line workflow is complete.
+Additional adapters, arbitrary predicate languages, a server, a hosted trace
+store, and a browser UI remain out of scope for this pre-0.1 seed.

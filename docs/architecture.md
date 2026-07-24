@@ -2,37 +2,72 @@
 
 ## Modules
 
-- `schema.py`: versioned immutable records and referential-integrity validation.
-- `redact.py`: in-memory recursive redaction and canary detection.
-- `adapters/openai_agents.py`: custom trace processor and capture lifecycle.
-- `capsule.py`: deterministic archive read/write and hash manifest.
-- `replay.py`: offline response/tool substitution and isolation.
-- `predicate.py`: timeout-safe tri-state and K-of-N runner.
-- `ddmin.py`: generic 1-minimal delta-debugging kernel.
-- `hierarchy.py`: dependency-aware reduction units and repair/validation.
-- `export.py`: clean repro directory and optional static viewer.
-- `cli.py`: stable command/exit contract.
+- `schema.py`: immutable versioned records, bounded JSON, safe names, and graph validation.
+- `redact.py`: in-memory recursive redaction and replacement reports.
+- `safeio.py`: regular-file and no-symlink/junction path checks.
+- `adapters/openai_agents.py`: public SDK processor and trace conversion.
+- `_capture_bootstrap.py`: validated child-process processor installation.
+- `capsule.py`: deterministic archive writing, hostile archive reading, and hash verification.
+- `replay.py`: recorded output substitution with no provider or tool imports.
+- `predicate.py`: isolated tri-state and K-of-N execution.
+- `ddmin.py`: generic tri-state delta debugging.
+- `hierarchy.py`: dependency-aware hierarchical reduction and memoization.
+- `verify.py`: independent final-granularity 1-minimality proof.
+- `export.py`: standalone issue reproduction.
+- `cli.py`: command and exit contract.
 
-## Capture boundary
+## Capture
 
-The capture bootstrap installs a RunSieve processor before the target entrypoint and replaces the default SDK trace processors unless the user explicitly opts into additional exporters. The adapter converts SDK trace objects into RunSieve's own versioned schema immediately. Internal provider/SDK object serialization must not leak into the capsule contract. Unknown span types are represented explicitly and block reductions that would misrepresent them. If the target program replaces processors after bootstrap or required span data is absent, capture exits as a harness failure rather than producing a partial capsule.
+`runsieve capture` starts the target with a temporary `sitecustomize.py`. The
+bootstrap imports only public `agents` and `agents.tracing` surfaces and installs
+one `RunSieveTraceProcessor`. The target command is an argument vector; no shell
+parsing is used.
+
+Trace and span callbacks are synchronous and thread-safe. Span start order is
+recorded, completed exports are redacted immediately, and event construction
+waits for trace end. Generation and response spans become request/response
+pairs. Function spans become call/result pairs. Sibling model and tool spans are
+linked into a recorded trajectory within their parent scope.
 
 ## Referential integrity
 
-At minimum enforce:
+Validation enforces:
 
-- every child span references an existing parent or root;
-- every tool result references exactly one retained tool call;
-- every replayed model output maps to the retained request position;
-- removing a producer removes or repairs dependent consumers as one candidate operation;
-- IDs remain stable across candidates and are never recycled.
+- unique bounded event IDs and strictly increasing sequence numbers;
+- parents and dependencies reference earlier retained events;
+- each model response has exactly one model request producer;
+- each tool result has exactly one tool call producer;
+- workspace paths are normalized relative paths;
+- environment names and all JSON values are bounded.
 
-## Minimization algorithm
+Deleting a producer recursively deletes consumers. IDs are never recycled;
+sequence numbers alone are normalized.
 
-Use hierarchical ddmin with memoization by canonical candidate hash. The predicate cache key includes capsule hash, predicate hash, replay mode, environment hash, timeout, and probabilistic policy. Invalid results are not cached as absent failures when the cause is transient infrastructure.
+## Minimization
 
-After ddmin at each level, run a linear 1-minimality pass. Publish call counts and wall time; do not claim optimality.
+Each level uses tri-state evaluation and canonical capsule hashes. Bulk event,
+file, and environment levels use delta debugging. JSON units use restart-on-
+accept greedy deletion. Text and file contents use fixed 32-character chunks.
+Only `REPRODUCES` accepts a candidate. Invalid results remain invalid.
+
+The cache key used by executable predicates includes the complete capsule bytes,
+argument vector, timeout, output limit, process limit, K-of-N policy, environment,
+and offline mode. Runtime call counts and wall time are printed; wall time is not
+stored in deterministic capsule bytes.
+
+The verifier is separate code and does not share the reducer's cache. It attempts
+each retained event, JSON field/item, text chunk, file/chunk, and environment
+entry exactly once.
 
 ## Isolation
 
-Offline proofs run with no provider keys, an empty proxy configuration, denied outbound network where the platform permits, a clean temporary home, explicit environment allowlist, CPU/time/output limits, and copied-only declared files.
+Every Python predicate trial receives a fresh temporary home and only declared
+files. The runner removes provider credentials, empties proxy variables,
+discards predicate output after hashing it, and enforces timeout, output, file,
+CPU, descriptor, and process limits where the platform exposes them.
+
+`sitecustomize.py` patches network entry points and installs a Python audit hook
+that denies host-file access, child processes, native loading, and destructive
+operations outside the trial directory. This is meaningful defense in depth,
+not an operating-system or virtual-machine sandbox; see the residual risks in
+`docs/security-review.md`.
