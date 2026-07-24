@@ -77,14 +77,15 @@ def check_python(paths: list[Path], errors: list[str]) -> None:
                         )
 
 
-def check_secrets(paths: list[Path], errors: list[str]) -> None:
+def contains_secret_pattern(paths: list[Path]) -> bool:
     for path in paths:
         if not path.is_file() or path.stat().st_size > 5 * 1024 * 1024:
             continue
         payload = path.read_bytes()
-        for label, pattern in SECRET_PATTERNS.items():
+        for pattern in SECRET_PATTERNS.values():
             if pattern.search(payload):
-                errors.append(f"{path.relative_to(ROOT)}: possible {label}")
+                return True
+    return False
 
 
 def check_audit_requirements(errors: list[str]) -> None:
@@ -108,10 +109,13 @@ def main() -> int:
     check_audit_requirements(errors)
     check_actions(paths, errors)
     check_python(paths, errors)
-    check_secrets(paths, errors)
+    secret_pattern_found = contains_secret_pattern(paths)
     if errors:
         for error in sorted(errors):
             print(error, file=sys.stderr)
+        return 1
+    if secret_pattern_found:
+        print("possible secret pattern detected", file=sys.stderr)
         return 1
     print(f"security policy checks passed for {len(paths)} tracked files")
     return 0
