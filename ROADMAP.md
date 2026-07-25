@@ -32,3 +32,6 @@ has a green independent synthetic gate at PR #7, but still needs permissioned
 real-case evidence and independent human review. All three real-case categories
 remain explicit external blockers; their package schema and structural verifier
 do not substitute for cases, permissions, or sustained external use.
+
+The exact evidence and blocker split is recorded in the canonical
+[`docs/maturity-status.json`](docs/maturity-status.json) ledger.

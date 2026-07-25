@@ -1,0 +1,79 @@
+name: Independent validation report
+description: Report a clean, non-sensitive independent RunSieve verification.
+title: "[Validation]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not attach credentials, private source, personal data, production traces,
+        unpublished permission records, or registry secrets. Use synthetic artifacts
+        unless the exact public package has completed permission and disclosure review.
+  - type: input
+    id: commit
+    attributes:
+      label: Full RunSieve commit SHA
+      placeholder: 40 lowercase hexadecimal characters
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Operating system, architecture, and Python
+      placeholder: Ubuntu 24.04 x86_64, Python 3.13.5
+    validations:
+      required: true
+  - type: dropdown
+    id: checkout
+    attributes:
+      label: Validation source
+      options:
+        - Fresh clean clone
+        - Installed wheel or sdist
+        - CI artifact downloaded into an empty directory
+    validations:
+      required: true
+  - type: dropdown
+    id: operation
+    attributes:
+      label: Operation actually executed
+      options:
+        - Trace reduction
+        - Recorded-output materialization
+        - Offline predicate reproduction
+        - Experimental application replay
+        - Complete 0.1 verification gate
+    validations:
+      required: true
+  - type: textarea
+    id: commands
+    attributes:
+      label: Exact commands and exit codes
+      description: Use bounded output and redact only by documenting each redaction.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: artifacts
+    attributes:
+      label: Artifact names, byte sizes, and SHA-256 values
+      description: Attach only synthetic, reviewed public artifacts.
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Result, divergence, and limitations
+      description: State exactly what was rerun and what was only materialized.
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety and evidence confirmation
+      options:
+        - label: I inspected the submission and included no credentials or private data.
+          required: true
+        - label: I did not infer application replay from materialization or predicate execution.
+          required: true
+        - label: I understand this report requires maintainer reproduction before acceptance.
+          required: true

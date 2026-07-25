@@ -37,6 +37,7 @@ its declared boundary. It does not prove arbitrary application replay, isolate
 trusted callback code, replay external side effects, or prevent the callback
 from bypassing injected interfaces.
 
-The 0.5 claim remains pending until a frozen implementation has independent
-gate evidence and at least one permissioned real case. ADR 0002 remains
-authoritative for 0.1.
+The frozen implementation now has independent synthetic RS-05-AR1 gate
+evidence. The 0.5 claim remains pending until at least one permissioned real
+case and independent human review exist. ADR 0002 remains authoritative for
+0.1.

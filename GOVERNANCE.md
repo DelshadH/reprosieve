@@ -17,5 +17,12 @@ Security reports use private GitHub Security Advisories. Conduct is governed by
 `CODE_OF_CONDUCT.md`. Maintainer succession and loss-of-access recovery are
 documented in `docs/recovery.md`.
 
+External validation follows
+[`docs/external-validation.md`](docs/external-validation.md). A maintainer must
+reproduce a report and record its exact evidence identity before it can support
+a compatibility or maturity claim; usage reports are not self-authenticating.
+
 Multiple active maintainers and sustained external use are explicit maturity
-level 1.0 requirements; the project does not currently meet them.
+level 1.0 requirements; the project does not currently meet them. The
+machine-readable status ledger is
+[`docs/maturity-status.json`](docs/maturity-status.json).

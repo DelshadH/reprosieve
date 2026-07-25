@@ -18,3 +18,11 @@ All notable changes will be recorded here.
   `reproduce-predicate`, and `reduce` commands. Application replay is deferred;
   pre-0.1 `replay` and `minimize` remain warning aliases.
 - Allowed only operating-system temporary-directory symlink prefixes and added a reviewed secret-scan baseline.
+- Added a corrected unrelated contract-v2 lineage whose immutable terminology
+  matches recorded-output materialization and offline predicate reproduction.
+- Added an experimental, public-API OpenAI Agents application-replay adapter
+  with ordered exact substitution, measured canaries, divergence failures, and
+  independently verified synthetic evidence. It remains outside the 0.1
+  promise and is not 0.5-ready without permissioned real-case evidence.
+- Added a strict permissioned case-study package schema and structural verifier
+  while recording all three real-case categories as external blockers.
