@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -11,10 +12,22 @@ pytest.importorskip("agents", reason="openai extra is required for application r
 from scripts.generate_application_replay_evidence import generate_evidence
 from scripts.verify_application_replay_evidence import (
     verify_evidence,
+    verify_evidence_tracked_in_head,
     write_verification_attestation,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def _git(repository: Path, *arguments: str) -> str:
+    completed = subprocess.run(
+        ["git", *arguments],
+        cwd=repository,
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    return completed.stdout.strip()
 
 
 def test_application_replay_evidence_capsules_are_not_ignored() -> None:
@@ -92,3 +105,47 @@ def test_application_replay_evidence_rejects_wrong_commit(tmp_path: Path) -> Non
 
     with pytest.raises(ValueError, match="commit"):
         verify_evidence(evidence, expected_commit="d" * 40)
+
+
+def test_application_replay_evidence_must_be_committed_in_head(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    scripts = repository / "scripts"
+    scripts.mkdir(parents=True)
+    for name in (
+        "generate_application_replay_evidence.py",
+        "verify_application_replay_evidence.py",
+    ):
+        shutil.copyfile(ROOT / "scripts" / name, scripts / name)
+    _git(repository, "init", "--initial-branch=main")
+    _git(repository, "config", "user.email", "runsieve@example.invalid")
+    _git(repository, "config", "user.name", "RunSieve test")
+    _git(repository, "add", "scripts")
+    _git(repository, "commit", "-m", "implementation")
+    implementation_commit = _git(repository, "rev-parse", "HEAD")
+
+    evidence = repository / ".evidence" / "RS-05-AR1" / "fixture"
+    evidence.parent.mkdir(parents=True)
+    generate_evidence(evidence, commit=implementation_commit)
+    write_verification_attestation(
+        evidence,
+        expected_commit=implementation_commit,
+        output=evidence / "verification.json",
+    )
+
+    with pytest.raises(ValueError, match="not tracked in HEAD"):
+        verify_evidence_tracked_in_head(
+            evidence,
+            expected_commit=implementation_commit,
+            repo_root=repository,
+        )
+
+    _git(repository, "add", ".evidence")
+    _git(repository, "commit", "-m", "register evidence")
+    report = verify_evidence_tracked_in_head(
+        evidence,
+        expected_commit=implementation_commit,
+        repo_root=repository,
+    )
+    assert report["passed"] is True

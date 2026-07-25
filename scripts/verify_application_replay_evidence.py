@@ -416,10 +416,10 @@ def write_verification_attestation(
     return attestation
 
 
-def _head() -> str:
+def _head(repo_root: Path = ROOT) -> str:
     completed = subprocess.run(
         ["git", "rev-parse", "HEAD"],
-        cwd=ROOT,
+        cwd=repo_root,
         text=True,
         capture_output=True,
         check=False,
@@ -430,9 +430,131 @@ def _head() -> str:
     return commit
 
 
+def _require_head_blob(repo_root: Path, path: Path) -> None:
+    try:
+        relative = path.resolve(strict=True).relative_to(repo_root).as_posix()
+    except ValueError as exc:
+        raise ValueError("application replay evidence path escapes its repository") from exc
+    completed = subprocess.run(
+        ["git", "cat-file", "blob", f"HEAD:{relative}"],
+        cwd=repo_root,
+        capture_output=True,
+        check=False,
+    )
+    if completed.returncode:
+        raise ValueError(f"application replay evidence path is not tracked in HEAD: {relative}")
+    if completed.stdout != path.read_bytes():
+        raise ValueError(f"application replay evidence path differs from HEAD: {relative}")
+
+
+def verify_evidence_tracked_in_head(
+    directory: Path,
+    *,
+    expected_commit: str,
+    repo_root: Path = ROOT,
+) -> dict[str, Any]:
+    report = verify_evidence(directory, expected_commit=expected_commit)
+    repository = ensure_real_directory(
+        repo_root,
+        label="application replay evidence repository",
+    )
+    head = _head(repository)
+    ancestry = subprocess.run(
+        ["git", "merge-base", "--is-ancestor", expected_commit, head],
+        cwd=repository,
+        capture_output=True,
+        check=False,
+    )
+    if ancestry.returncode:
+        raise ValueError("application replay evidence commit is not an ancestor of HEAD")
+
+    root = ensure_real_directory(directory, label="application replay evidence directory")
+    manifest_path = ensure_regular_file(
+        root / "evidence.json",
+        label="application replay evidence manifest",
+    )
+    manifest = _canonical_document(manifest_path, label="application replay evidence manifest")
+    artifacts = _artifact_paths(root, manifest)
+    verification_path = ensure_regular_file(
+        root / "verification.json",
+        label="application replay verification attestation",
+    )
+    verification = _canonical_document(
+        verification_path,
+        label="application replay verification attestation",
+    )
+    if (
+        set(verification)
+        != {
+            "assertions",
+            "commit",
+            "evidence_manifest",
+            "gate",
+            "passed",
+            "schema_version",
+            "verifier",
+        }
+        or verification.get("schema_version") != 1
+        or verification.get("gate") != "RS-05-AR1"
+        or verification.get("commit") != expected_commit
+        or verification.get("passed") is not True
+        or verification.get("assertions") != report["assertions"]
+    ):
+        raise ValueError("application replay verification attestation is invalid")
+    manifest_identity = verification.get("evidence_manifest")
+    if (
+        not isinstance(manifest_identity, dict)
+        or set(manifest_identity) != {"bytes", "path", "sha256"}
+        or manifest_identity.get("path") != "evidence.json"
+        or manifest_identity.get("bytes") != manifest_path.stat().st_size
+        or manifest_identity.get("sha256") != _sha256(manifest_path)
+    ):
+        raise ValueError("application replay evidence manifest attestation is invalid")
+
+    producer = cast(dict[str, Any], manifest["producer"])
+    producer_path = ensure_regular_file(
+        repository / producer["path"],
+        label="application replay evidence producer",
+    )
+    verifier = verification.get("verifier")
+    if (
+        not isinstance(verifier, dict)
+        or set(verifier) != {"bytes", "path", "sha256"}
+        or not isinstance(verifier.get("path"), str)
+    ):
+        raise ValueError("application replay evidence verifier identity is invalid")
+    safe_relative_path(
+        verifier["path"],
+        label="application replay evidence verifier",
+    )
+    verifier_path = ensure_regular_file(
+        repository / verifier["path"],
+        label="application replay evidence verifier",
+    )
+    if (
+        verifier_path.stat().st_size != verifier.get("bytes")
+        or _sha256(verifier_path) != verifier.get("sha256")
+    ):
+        raise ValueError("application replay evidence verifier differs from the attestation")
+
+    for path in (
+        manifest_path,
+        verification_path,
+        producer_path,
+        verifier_path,
+        *artifacts.values(),
+    ):
+        _require_head_blob(repository, path)
+    return report
+
+
 def main(argv: list[str] | None = None) -> int:
     arguments = list(sys.argv[1:] if argv is None else argv)
     output: Path | None = None
+    require_tracked = False
+    if "--require-tracked" in arguments:
+        arguments.remove("--require-tracked")
+        require_tracked = True
     if "--output" in arguments:
         index = arguments.index("--output")
         if index + 1 >= len(arguments):
@@ -440,25 +562,39 @@ def main(argv: list[str] | None = None) -> int:
             return 2
         output = Path(arguments[index + 1])
         del arguments[index : index + 2]
+    if output is not None and require_tracked:
+        print(
+            "application replay verifier cannot combine --output and --require-tracked",
+            file=sys.stderr,
+        )
+        return 2
     if len(arguments) not in {1, 2}:
         print(
             "usage: python -m scripts.verify_application_replay_evidence "
-            "EVIDENCE_DIR [EXPECTED_COMMIT] [--output ATTESTATION]",
+            "EVIDENCE_DIR [EXPECTED_COMMIT] "
+            "[--output ATTESTATION | --require-tracked]",
             file=sys.stderr,
         )
         return 2
     try:
         expected_commit = arguments[1] if len(arguments) == 2 else _head()
         report = (
-            write_verification_attestation(
+            verify_evidence_tracked_in_head(
                 Path(arguments[0]),
                 expected_commit=expected_commit,
-                output=output,
             )
-            if output is not None
-            else verify_evidence(
-                Path(arguments[0]),
-                expected_commit=expected_commit,
+            if require_tracked
+            else (
+                write_verification_attestation(
+                    Path(arguments[0]),
+                    expected_commit=expected_commit,
+                    output=output,
+                )
+                if output is not None
+                else verify_evidence(
+                    Path(arguments[0]),
+                    expected_commit=expected_commit,
+                )
             )
         )
     except (OSError, RuntimeError, TypeError, ValueError) as exc:
