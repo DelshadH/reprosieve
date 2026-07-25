@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "project": "runsieve",
-  "updated_at": "2026-07-25T11:52:12Z",
+  "updated_at": "2026-07-25T11:56:59Z",
   "tasks": {
     "RS-000": {
       "status": "pending",
@@ -29,8 +29,13 @@
     },
     "RS-040": {
       "status": "pending",
-      "evidence": [],
-      "notes": "Prior generic-verifier evidence was withdrawn pending gate-specific regeneration.",
+      "evidence": [
+        {
+          "path": ".evidence/RS-G07/review-py313/manifest.json",
+          "sha256": "7b4751910bbe87fc63f2acbf6fe11f8fc46d32c50e41e740db95f1b8bec0e6b6"
+        }
+      ],
+      "notes": "Gate-specific Python 3.13 tri-state evidence is recorded; dependency-owned task completion remains pending.",
       "blocker_ids": []
     },
     "RS-050": {
@@ -89,7 +94,12 @@
     },
     "RS-G07": {
       "status": "pending",
-      "evidence": []
+      "evidence": [
+        {
+          "path": ".evidence/RS-G07/review-py313/manifest.json",
+          "sha256": "7b4751910bbe87fc63f2acbf6fe11f8fc46d32c50e41e740db95f1b8bec0e6b6"
+        }
+      ]
     },
     "RS-G08": {
       "status": "pending",

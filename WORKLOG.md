@@ -67,3 +67,15 @@ Observed facts: The original macOS log confirms a temporary-path symlink rejecti
 Decision: continue through clean commit, regenerated evidence, and external CI
 Ending commit: uncommitted review remediation
 Manual item: none
+
+## 2026-07-25T11:56:59Z — RS-040 — attempt 5
+Objective: RS-G07 evidence names exact tri-state tests and is accepted only after command-output and artifact hashes are verified.
+Starting commit: 37d2b0ff9127eea551a6ef874cd6e61795fef6b8
+Deadline state: contract review remediation; external platform evidence remains CI-owned
+Approach: Generate a canonical manifest from the committed gate-specific measurement spec and rerun the registered verifier against the final manifest.
+Commands: `python -m scripts.generate_gate_evidence RS-G07 review-py313`
+Result: passed
+Observed facts: Manifest SHA-256 is `7b4751910bbe87fc63f2acbf6fe11f8fc46d32c50e41e740db95f1b8bec0e6b6`; the proof binds five assertions to three exact pytest nodes and hashed stdout/stderr.
+Decision: continue with Linux/macOS RS-G10 CI proof
+Ending commit: pending evidence/progress commit
+Manual item: none
