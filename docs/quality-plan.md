@@ -19,6 +19,25 @@
 The stable gate IDs appear in CI and release notes. A small list-only delta
 debugging test is not accepted as evidence for RS-G05 or RS-G06.
 
+## Experimental 0.5 application-replay proof
+
+The immutable RS-G01–RS-G13 registry governs 0.1 and is unchanged. A later 0.5
+review additionally requires a separate gate that independently measures:
+
+- the application callback and SDK Runner executed;
+- ordered exact model/tool interactions were fully consumed;
+- changed input, instructions, schemas, arguments, ordering, and early exit
+  diverged;
+- provider-resolution and supplied-original-tool canaries stayed at zero;
+- redacted matching fields and unsupported SDK surfaces failed closed;
+- the reducer removed a real unit while replay still succeeded;
+- independent final-granularity verification reported 1-minimality;
+- one permissioned non-synthetic case reproduced without live provider or
+  original-tool execution.
+
+Synthetic tests validate the adapter machinery. They do not satisfy the
+permissioned-case or independent-evidence requirements.
+
 Run the complete local gate:
 
 ```bash

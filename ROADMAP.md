@@ -25,6 +25,8 @@ Application replay and real-world impact are not 0.1 claims.
 - reliable application replay;
 - multiple active maintainers and sustained external use.
 
-The current repository remains below 0.1 review while the immutable control
-plane and canonical-history migration blockers described in
-`docs/migration-plan.md` remain open.
+The 0.1 candidate has green exact-head and fresh-clone evidence and is ready
+for independent alpha review. Canonical-history owner actions in
+`docs/migration-plan.md` remain pending. Experimental 0.5 application replay
+has synthetic implementation tests but still needs an independent gate and a
+permissioned real case.

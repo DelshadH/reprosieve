@@ -33,3 +33,6 @@ framework adapter demonstrates:
 - measured intercepted-call counts and application exit status;
 - no live provider or original-tool invocation;
 - an end-to-end publishable fixture and independent verifier evidence.
+
+ADR 0003 accepts a narrow experimental implementation for 0.5 evidence work.
+This decision remains unchanged for the 0.1 CLI and promise.
