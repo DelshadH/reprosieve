@@ -523,6 +523,28 @@ def verify_evidence_reference(*, project: str, root: Path, gate: str, gate_spec:
     return manifest, manifest_path
 
 
+def assert_evidence_files_tracked(*, root: Path, gate: str, manifest_path: Path, manifest: dict[str, Any]) -> None:
+    root_real = root.resolve(strict=True)
+    base = manifest_path.parent
+    targets = [manifest_path.resolve(strict=True)]
+    for index, command in enumerate(manifest["commands"]):
+        targets.append(_safe_existing_file(base, command["stdout"]["path"], f"{gate}.commands[{index}].stdout.path"))
+        targets.append(_safe_existing_file(base, command["stderr"]["path"], f"{gate}.commands[{index}].stderr.path"))
+    for index, artifact in enumerate(manifest["artifacts"]):
+        targets.append(_safe_existing_file(base, artifact["path"], f"{gate}.artifacts[{index}].path"))
+    targets.append(_safe_existing_file(root_real, manifest["verifier"]["path"], f"{gate}.verifier.path"))
+
+    for target in dict.fromkeys(targets):
+        try:
+            relative = target.relative_to(root_real).as_posix()
+        except ValueError as exc:
+            raise ValueError(f"{gate}: evidence file escapes repository: {target}") from exc
+        tracked = _git(root_real, "ls-files", "--error-unmatch", "--", relative)
+        committed = _git(root_real, "cat-file", "-e", f"HEAD:{relative}")
+        if tracked.returncode or committed.returncode:
+            raise ValueError(f"{gate}: evidence file is not Git-tracked in HEAD: {relative}")
+
+
 def run_resolved_unblock_check(*, root: Path, item: dict[str, Any]) -> None:
     if item["status"] != "resolved":
         return
