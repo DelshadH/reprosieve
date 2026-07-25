@@ -7,7 +7,6 @@ from scripts.contract import (
     assert_clean_git,
     assert_commit_exists,
     assert_control_plane_unchanged,
-    assert_evidence_files_tracked,
     assert_execution_deadline,
     load_execution_state,
     load_project_documents,
@@ -57,7 +56,6 @@ def main() -> int:
             for reference in state["evidence"]:
                 try:
                     manifest, manifest_path = verify_evidence_reference(project="runsieve", root=ROOT, gate=gate, gate_spec=gate_spec, reference=reference)
-                    assert_evidence_files_tracked(root=ROOT, gate=gate, manifest_path=manifest_path, manifest=manifest)
                     assert_commit_exists(ROOT, manifest["commit"], gate)
                     owner = next(task for task in docs["graph"]["tasks"] if task["id"] == gate_spec["owner_task"])
                     proof_started_at = parse_utc(manifest["started_at"], f"{gate}.started_at")

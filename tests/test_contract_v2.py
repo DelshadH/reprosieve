@@ -13,7 +13,6 @@ from scripts.contract import (
     CONTRACT_V2_PREDECESSOR,
     CONTRACT_VERSION_PATH,
     CONTROL_PLANE_FILES,
-    assert_evidence_files_tracked,
     canonical_json,
     control_plane_bundle_identity,
     validate_contract_version,
@@ -26,6 +25,7 @@ from scripts.contract_self_test import (
     must_reject,
     run_contract_self_tests,
 )
+from scripts.gates.RS_G12 import assert_evidence_files_tracked
 
 
 class ContractV2Tests(unittest.TestCase):
