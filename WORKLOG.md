@@ -175,3 +175,15 @@ Observed facts: Contract self-tests, 100 tests plus 2 subtests, Ruff, strict myp
 Decision: replace superseded G12 evidence; require every release-evidence blob to exist in Git and in HEAD.
 Ending commit: pending release-evidence registration commit
 Manual item: none
+
+## 2026-07-25T20:18:00Z — RS-080 — attempt 4
+Objective: Re-prove the 0.1 release with the evidence-tracking invariant in the mutable RS-G12 verifier.
+Starting commit: 6b18536cd535f8e9ca05f2b81edfd582400090da
+Deadline state: 1.68/96 hours; within budget
+Approach: Preserve the immutable control plane, scan all registered evidence paths against Git and HEAD, then run full verification and the killer demo.
+Commands: `.evidence/RS-G12/tracked-evidence-g12-6b18536/manifest.json`
+Result: passed
+Observed facts: All registered evidence was present in HEAD; contract self-tests, 100 tests plus 2 subtests, Ruff, strict mypy, and the complete killer demo passed.
+Decision: accept this proof and supersede the proof produced while immutable files differed from their root.
+Ending commit: pending release-evidence registration commit
+Manual item: none

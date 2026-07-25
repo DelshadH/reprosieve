@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "project": "runsieve",
-  "updated_at": "2026-07-25T20:10:12.218602Z",
+  "updated_at": "2026-07-25T20:18:00.319695Z",
   "tasks": {
     "RS-000": {
       "status": "passed",
@@ -111,8 +111,8 @@
       "status": "passed",
       "evidence": [
         {
-          "path": ".evidence/RS-G12/release-tracking-fix-91f5bb5/manifest.json",
-          "sha256": "860231501e098472677f79a8d53ae92a6fd947fb0a35041d34c9328be61315de"
+          "path": ".evidence/RS-G12/tracked-evidence-g12-6b18536/manifest.json",
+          "sha256": "29487639d690935d5fd643d37632943084ba71e8446fad75b0d61a2b2ac12341"
         }
       ],
       "notes": "The clean-room 0.1 reduction, materialization, predicate reproduction, export, and minimality demo is measured.",
@@ -232,8 +232,8 @@
       "status": "passed",
       "evidence": [
         {
-          "path": ".evidence/RS-G12/release-tracking-fix-91f5bb5/manifest.json",
-          "sha256": "860231501e098472677f79a8d53ae92a6fd947fb0a35041d34c9328be61315de"
+          "path": ".evidence/RS-G12/tracked-evidence-g12-6b18536/manifest.json",
+          "sha256": "29487639d690935d5fd643d37632943084ba71e8446fad75b0d61a2b2ac12341"
         }
       ]
     }

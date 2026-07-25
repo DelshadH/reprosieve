@@ -1,7 +1,7 @@
 RunSieve contract-v2 self-tests passed: explicit pending/passed fixtures, no-op mutation guard, exact identity, ancestry, timestamps, ownership, evidence references, blockers, and immutable control changes are checked.
 ........................................................................ [ 72%]
 ............................                                           [100%]
-100 passed, 2 subtests passed in 60.10s (0:01:00)
+100 passed, 2 subtests passed in 53.14s
 All checks passed!
 Success: no issues found in 16 source files
 RunSieve autonomous-build contract and reference kernel are structurally valid. Product release remains governed by python -m scripts.release_gate.
