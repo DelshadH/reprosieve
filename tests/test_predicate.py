@@ -201,4 +201,19 @@ def test_predicate_output_is_hashed_not_retained_and_cache_key_is_complete(
     spec = PredicateSpec(("python", "predicate.py"), timeout_seconds=2)
     first = predicate_cache_key(capsule, spec)
     assert first != predicate_cache_key(capsule, replace(spec, timeout_seconds=3))
+    assert first != predicate_cache_key(capsule, replace(spec, output_limit_bytes=2048))
+    assert first != predicate_cache_key(capsule, replace(spec, process_limit=2))
+    assert first != predicate_cache_key(capsule, replace(spec, trials=3))
+    assert first != predicate_cache_key(
+        capsule,
+        replace(spec, trials=3, required_reproductions=2),
+    )
+    assert first != predicate_cache_key(
+        capsule,
+        PredicateSpec(("python", "other.py"), timeout_seconds=2),
+    )
+    assert first != predicate_cache_key(
+        replace(capsule, workspace={**capsule.workspace, "extra.txt": "value"}),
+        spec,
+    )
     assert first != predicate_cache_key(replace(capsule, environment={"OTHER": "1"}), spec)

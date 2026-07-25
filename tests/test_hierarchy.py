@@ -26,6 +26,36 @@ def test_real_247_event_fixture_reduces_to_at_most_ten_and_is_one_minimal() -> N
         PredicateResult.ABSENT,
         PredicateResult.INVALID,
     }
+    assert all(attempt.reason for attempt in proof.attempts)
+
+
+def test_minimality_proof_records_predicate_invalid_reasons() -> None:
+    capsule = Capsule(
+        schema_version="1",
+        trace_id="trace_invalid_reason",
+        events=(
+            Event("run", "run", None, 0, {}),
+            Event("failure", "error", "run", 1, {"needle": True}),
+        ),
+        metadata={},
+    )
+
+    def predicate(candidate: Capsule) -> PredicateResult:
+        if len(candidate.events) != 2:
+            return PredicateResult.INVALID
+        failure = candidate.events[1]
+        return (
+            PredicateResult.REPRODUCES
+            if failure.payload == {"needle": True}
+            else PredicateResult.ABSENT
+        )
+
+    proof = verify_one_minimal(capsule, predicate)
+
+    assert proof.is_one_minimal
+    assert proof.attempts[0].result is PredicateResult.INVALID
+    assert proof.attempts[0].reason == "predicate_invalid"
+    assert proof.attempts[0].to_json()["reason"] == "predicate_invalid"
 
 
 def _hierarchy_fixture() -> Capsule:

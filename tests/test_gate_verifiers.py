@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import importlib
 import importlib.util
 import json
@@ -97,6 +98,217 @@ def test_rs_g10_portable_proof_requires_measured_platform_execution() -> None:
     }
     with pytest.raises(ValueError):
         validate(failed, expected_os="macos", expected_commit=commit)
+
+
+def test_rs_g01_scans_the_committed_adapter_for_private_sdk_imports() -> None:
+    module = importlib.import_module("scripts.gates.RS_G01")
+    scan = getattr(module, "scan_sdk_imports", None)
+    assert callable(scan)
+    adapter = Path("src/runsieve/adapters/openai_agents.py").read_bytes()
+    assert scan(adapter) == ()
+    assert scan(b"from agents._internal import exporter\n") == ("agents._internal",)
+
+
+def test_rs_g13_requires_real_clean_install_proof_for_each_python() -> None:
+    module = importlib.import_module("scripts.gates.RS_G13")
+    validate = getattr(module, "validate_package_proof", None)
+    assert callable(validate)
+    commit = "c" * 40
+    wheel = "runsieve-0.0.1-py3-none-any.whl"
+    proof = {
+        "schema_version": 1,
+        "gate": "RS-G13",
+        "commit": commit,
+        "collector": {
+            "path": "scripts/package_matrix_proof.py",
+            "sha256": "d" * 64,
+        },
+        "runner": {"os": "linux", "arch": "x64", "python": "3.11.15"},
+        "fresh_checkout": True,
+        "clean_install_directory": True,
+        "source_tree_present": False,
+        "commands": [
+            {
+                "argv": ["python", "-m", "build"],
+                "exit_code": 0,
+                "stdout": {"bytes": 10, "sha256": "1" * 64},
+                "stderr": {"bytes": 0, "sha256": "2" * 64},
+            },
+            {
+                "argv": ["python", "-m", "venv", "venv"],
+                "exit_code": 0,
+                "stdout": {"bytes": 0, "sha256": "3" * 64},
+                "stderr": {"bytes": 0, "sha256": "4" * 64},
+            },
+            {
+                "argv": ["python", "-m", "pip", "install", "--no-deps", wheel],
+                "exit_code": 0,
+                "stdout": {"bytes": 10, "sha256": "5" * 64},
+                "stderr": {"bytes": 0, "sha256": "6" * 64},
+            },
+            {
+                "argv": ["runsieve", "--help"],
+                "exit_code": 0,
+                "stdout": {"bytes": 100, "sha256": "7" * 64},
+                "stderr": {"bytes": 0, "sha256": "8" * 64},
+            },
+        ],
+        "artifacts": {
+            "wheel": {"bytes": 1000, "name": wheel, "sha256": "9" * 64},
+            "sdist": {
+                "bytes": 1100,
+                "name": "runsieve-0.0.1.tar.gz",
+                "sha256": "a" * 64,
+            },
+        },
+    }
+
+    assert validate(
+        proof,
+        expected_python="3.11",
+        expected_commit=commit,
+    ) == {
+        "clean-install-py311",
+        "wheel-sdist-smoke",
+        "cli-smoke",
+    }
+    for field, value in (
+        ("fresh_checkout", False),
+        ("clean_install_directory", False),
+        ("source_tree_present", True),
+    ):
+        with pytest.raises(ValueError):
+            validate(
+                {**proof, field: value},
+                expected_python="3.11",
+                expected_commit=commit,
+            )
+    failed = {
+        **proof,
+        "commands": [
+            *proof["commands"][:3],
+            {**proof["commands"][3], "exit_code": 1},
+        ],
+    }
+    with pytest.raises(ValueError):
+        validate(failed, expected_python="3.11", expected_commit=commit)
+
+
+def test_rs_g12_requires_full_verification_and_structured_demo_output() -> None:
+    module = importlib.import_module("scripts.gates.RS_G12")
+    validate = getattr(module, "validate_release_outputs", None)
+    assert callable(validate)
+    verification = (
+        b"RunSieve contract self-tests passed\n"
+        b"68 passed, 2 subtests passed in 40.00s\n"
+        b"All checks passed!\n"
+        b"Success: no issues found in 16 source files\n"
+    )
+    demo = (
+        b"reduced 247 events to 5; 1-minimal; 52 predicate calls\n"
+        b"exported one-command offline issue reproduction\n"
+        b"killer demo passed in 12.454s\n"
+    )
+
+    assert validate(verification, demo) == {
+        "clean-checkout",
+        "full-tests",
+        "killer-minimize",
+        "repro-export",
+        "minimality-verify",
+        "terminal-demo-duration",
+    }
+    with pytest.raises(ValueError):
+        validate(b"All checks passed!\n", demo)
+    with pytest.raises(ValueError):
+        validate(verification, demo.replace(b"12.454s", b"20.001s"))
+
+
+def test_evidence_generator_consumes_three_distinct_package_proofs(
+    tmp_path: Path,
+) -> None:
+    generator = importlib.import_module("scripts.generate_gate_evidence")
+    package_inputs = getattr(generator, "_package_inputs", None)
+    assert callable(package_inputs)
+    gate = importlib.import_module("scripts.gates.RS_G13").SPEC
+    commit = "d" * 40
+    inputs: list[Path] = []
+    for minor in ("3.11", "3.12", "3.13"):
+        source = tmp_path / f"input-{minor}"
+        source.mkdir()
+        wheel = "runsieve-0.0.1-py3-none-any.whl"
+        sdist = "runsieve-0.0.1.tar.gz"
+        commands = []
+        argvs = (
+            ["python", "-m", "build"],
+            ["python", "-m", "venv", "venv"],
+            ["python", "-m", "pip", "install", "--no-deps", wheel],
+            ["runsieve", "--help"],
+        )
+        for index, argv in enumerate(argvs):
+            stdout = b"usage: runsieve\n" if index == 3 else b"passed\n"
+            stderr = b""
+            (source / f"command-{index:02d}.stdout").write_bytes(stdout)
+            (source / f"command-{index:02d}.stderr").write_bytes(stderr)
+            commands.append(
+                {
+                    "argv": argv,
+                    "exit_code": 0,
+                    "stdout": {
+                        "bytes": len(stdout),
+                        "sha256": hashlib.sha256(stdout).hexdigest(),
+                    },
+                    "stderr": {
+                        "bytes": 0,
+                        "sha256": hashlib.sha256(stderr).hexdigest(),
+                    },
+                }
+            )
+        (source / wheel).write_bytes(b"wheel")
+        (source / sdist).write_bytes(b"sdist")
+        proof = {
+            "schema_version": 1,
+            "gate": "RS-G13",
+            "commit": commit,
+            "collector": {
+                "path": "scripts/package_matrix_proof.py",
+                "sha256": "e" * 64,
+            },
+            "runner": {"os": "linux", "arch": "x64", "python": f"{minor}.9"},
+            "fresh_checkout": True,
+            "clean_install_directory": True,
+            "source_tree_present": False,
+            "commands": commands,
+            "artifacts": {
+                "wheel": {
+                    "bytes": 5,
+                    "name": wheel,
+                    "sha256": hashlib.sha256(b"wheel").hexdigest(),
+                },
+                "sdist": {
+                    "bytes": 5,
+                    "name": sdist,
+                    "sha256": hashlib.sha256(b"sdist").hexdigest(),
+                },
+            },
+        }
+        (source / "proof.json").write_text(json.dumps(proof), encoding="utf-8")
+        inputs.append(source)
+    destination = tmp_path / "evidence"
+    destination.mkdir()
+
+    commands, artifacts = package_inputs(
+        gate,
+        commit=commit,
+        directory=destination,
+        proof_inputs=tuple(inputs),
+    )
+
+    assert len(commands) == 3
+    assert len(artifacts) == 27
+    assert {
+        path.name for path in destination.iterdir()
+    } == {"package-py311", "package-py312", "package-py313"}
 
 
 def test_evidence_helpers_write_canonical_hashed_references(tmp_path: Path) -> None:

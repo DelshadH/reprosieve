@@ -10,6 +10,7 @@ SPEC = GateSpec(
                 "invalid-reasons-recorded",
             ),
             "tests/test_hierarchy.py::test_real_247_event_fixture_reduces_to_at_most_ten_and_is_one_minimal",
+            "tests/test_hierarchy.py::test_minimality_proof_records_predicate_invalid_reasons",
         ),
     ),
     expected_support_sha256="0487c43e903dbd2621b94e982dd02c2ad77b319311ad6401c4fcfee9b7a7fc90",

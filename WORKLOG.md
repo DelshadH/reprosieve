@@ -91,3 +91,15 @@ Observed facts: Linux x64 and macOS arm64 each ran `python reproduce.py` success
 Decision: retain the proof and keep RS-G10 pending until its owner task and release dependencies are honestly closed.
 Ending commit: pending evidence/progress commit
 Manual item: none
+
+## 2026-07-25T12:48:00Z - RS-000 - attempt 7
+Objective: Replace the remaining RS-G12 and RS-G13 declaration-based claims with measured gate-specific proof.
+Starting commit: 7139331474dfb07c3f0ba7f68f0940a324fe54b3
+Deadline state: contract closure; no status transitions until evidence is committed and verified
+Approach: Add a real clean-build/install collector for Python 3.11-3.13, require full verification plus structured demo output for RS-G12, and tighten assertion coverage for RS-G01, RS-G06, and RS-G09.
+Commands: targeted red/green pytest runs; `python -m scripts.verify`; `python scripts/security_check.py`
+Result: in_progress
+Observed facts: 74 tests and 2 contract subtests pass; the package collector builds and installs a real wheel in a source-free directory.
+Decision: commit verifier repairs before producing evidence tied to a clean commit.
+Ending commit: pending verifier-repair commit
+Manual item: none

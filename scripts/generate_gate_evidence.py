@@ -144,9 +144,9 @@ def _execute_measurements(
 ) -> tuple[tuple[dict[str, object], ...], tuple[dict[str, object], ...]]:
     commands: list[dict[str, object]] = []
     for index, measurement in enumerate(spec.measurements):
-        if measurement.kind != "pytest":
+        if measurement.kind not in {"pytest", "command"}:
             raise RuntimeError(
-                f"{spec.gate} requires externally produced portable proof inputs"
+                f"{spec.gate} requires externally produced proof inputs"
             )
         executed_argv = [
             sys.executable if position == 0 and part == "python" else part
@@ -259,6 +259,102 @@ def _portable_inputs(
     return tuple(commands), tuple(artifacts)
 
 
+def _package_inputs(
+    spec: GateSpec,
+    *,
+    commit: str,
+    directory: Path,
+    proof_inputs: tuple[Path, ...],
+) -> tuple[tuple[dict[str, object], ...], tuple[dict[str, object], ...]]:
+    from scripts.gates.RS_G13 import PYTHON_MINORS, validate_package_proof
+
+    if len(proof_inputs) != 3:
+        raise RuntimeError("RS-G13 requires Python 3.11, 3.12, and 3.13 proof directories")
+    by_minor: dict[str, tuple[Path, dict[str, Any]]] = {}
+    for input_directory in proof_inputs:
+        if input_directory.is_symlink() or not input_directory.is_dir():
+            raise RuntimeError("package proof input must be a regular directory")
+        source_proof = input_directory / "proof.json"
+        if source_proof.is_symlink() or not source_proof.is_file():
+            raise RuntimeError("package proof input is missing proof.json")
+        try:
+            proof = json.loads(source_proof.read_text(encoding="utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as error:
+            raise RuntimeError("package proof input contains invalid JSON") from error
+        runner = proof.get("runner") if isinstance(proof, dict) else None
+        python_version = runner.get("python") if isinstance(runner, dict) else None
+        minor = next(
+            (
+                candidate
+                for candidate in PYTHON_MINORS
+                if isinstance(python_version, str)
+                and python_version.startswith(candidate + ".")
+            ),
+            None,
+        )
+        if minor is None or minor in by_minor:
+            raise RuntimeError("package proofs must use distinct supported Python minors")
+        validate_package_proof(
+            proof,
+            expected_python=minor,
+            expected_commit=commit,
+        )
+        by_minor[minor] = (input_directory, proof)
+
+    commands: list[dict[str, object]] = []
+    artifacts: list[dict[str, object]] = []
+    for measurement, minor in zip(spec.measurements, PYTHON_MINORS, strict=True):
+        source_directory, proof = by_minor[minor]
+        destination = directory / f"package-py{minor.replace('.', '')}"
+        destination.mkdir()
+        copied_proof = destination / "proof.json"
+        shutil.copyfile(source_directory / "proof.json", copied_proof)
+        artifacts.append(blob_reference(copied_proof, relative_to=directory))
+        for command_index, command in enumerate(proof["commands"]):
+            for stream in ("stdout", "stderr"):
+                name = f"command-{command_index:02d}.{stream}"
+                source = source_directory / name
+                if source.is_symlink() or not source.is_file():
+                    raise RuntimeError(f"package proof input is missing regular file {name}")
+                data = source.read_bytes()
+                reference = command[stream]
+                if (
+                    len(data) != reference["bytes"]
+                    or sha256(data) != reference["sha256"]
+                ):
+                    raise RuntimeError(f"package proof input {name} hash or size mismatch")
+                target = destination / name
+                shutil.copyfile(source, target)
+                if command_index > 0:
+                    artifacts.append(blob_reference(target, relative_to=directory))
+        for artifact in proof["artifacts"].values():
+            source = source_directory / artifact["name"]
+            if source.is_symlink() or not source.is_file():
+                raise RuntimeError("package proof input is missing a package artifact")
+            data = source.read_bytes()
+            if len(data) != artifact["bytes"] or sha256(data) != artifact["sha256"]:
+                raise RuntimeError("package proof artifact hash or size mismatch")
+            target = destination / artifact["name"]
+            shutil.copyfile(source, target)
+            artifacts.append(blob_reference(target, relative_to=directory))
+        build = proof["commands"][0]
+        commands.append(
+            {
+                "argv": list(measurement.argv),
+                "exit_code": build["exit_code"],
+                "stderr": blob_reference(
+                    destination / "command-00.stderr",
+                    relative_to=directory,
+                ),
+                "stdout": blob_reference(
+                    destination / "command-00.stdout",
+                    relative_to=directory,
+                ),
+            }
+        )
+    return tuple(commands), tuple(artifacts)
+
+
 def generate(
     gate: str,
     *,
@@ -287,9 +383,16 @@ def generate(
             directory=directory,
             proof_inputs=proof_inputs,
         )
+    elif gate == "RS-G13":
+        commands, external_artifacts = _package_inputs(
+            measurement_spec,
+            commit=commit,
+            directory=directory,
+            proof_inputs=proof_inputs,
+        )
     else:
         if proof_inputs:
-            raise ValueError("proof inputs are supported only for RS-G10")
+            raise ValueError("proof inputs are supported only for RS-G10 and RS-G13")
         commands, external_artifacts = _execute_measurements(
             measurement_spec,
             directory=directory,

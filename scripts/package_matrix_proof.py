@@ -1,0 +1,274 @@
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+import platform
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+import zipfile
+from pathlib import Path, PurePosixPath
+
+from scripts.evidence import write_canonical_json
+
+ROOT = Path(__file__).resolve().parents[1]
+GIT_SHA = re.compile(r"^[a-f0-9]{40}$")
+MAX_OUTPUT_BYTES = 1_000_000
+
+
+def _sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _output_reference(path: Path) -> dict[str, object]:
+    return {"bytes": path.stat().st_size, "sha256": _sha256(path)}
+
+
+def _run(
+    argv: list[str],
+    *,
+    proof_argv: list[str],
+    cwd: Path,
+    output: Path,
+    index: int,
+    environment: dict[str, str],
+) -> dict[str, object]:
+    completed = subprocess.run(
+        argv,
+        cwd=cwd,
+        env=environment,
+        capture_output=True,
+        check=False,
+        timeout=180,
+    )
+    stdout = completed.stdout[: MAX_OUTPUT_BYTES + 1]
+    stderr = completed.stderr[: MAX_OUTPUT_BYTES + 1]
+    stdout_path = output / f"command-{index:02d}.stdout"
+    stderr_path = output / f"command-{index:02d}.stderr"
+    stdout_path.write_bytes(stdout)
+    stderr_path.write_bytes(stderr)
+    if (
+        completed.returncode != 0
+        or len(stdout) > MAX_OUTPUT_BYTES
+        or len(stderr) > MAX_OUTPUT_BYTES
+    ):
+        raise RuntimeError(f"package proof command {index} failed or exceeded output limits")
+    return {
+        "argv": proof_argv,
+        "exit_code": 0,
+        "stderr": _output_reference(stderr_path),
+        "stdout": _output_reference(stdout_path),
+    }
+
+
+def _extract_git_archive(archive_path: Path, checkout: Path) -> None:
+    with zipfile.ZipFile(archive_path) as archive:
+        for info in archive.infolist():
+            path = PurePosixPath(info.filename)
+            if path.is_absolute() or any(part in {"", ".", ".."} for part in path.parts):
+                raise RuntimeError("git archive contains an unsafe path")
+            target = checkout.joinpath(*path.parts)
+            if info.is_dir():
+                target.mkdir(parents=True, exist_ok=True)
+                continue
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(archive.read(info))
+
+
+def collect_package_proof(output: Path, *, commit: str) -> dict[str, object]:
+    if GIT_SHA.fullmatch(commit) is None:
+        raise ValueError("package proof requires a full commit SHA")
+    if output.exists() or output.is_symlink():
+        raise FileExistsError("package proof output already exists")
+    output.mkdir(parents=True)
+    environment = {
+        **os.environ,
+        "PIP_NO_INPUT": "1",
+        "PYTHONPATH": "",
+    }
+    with tempfile.TemporaryDirectory(prefix="runsieve-package-proof-") as temporary:
+        temporary_root = Path(temporary)
+        archive_path = temporary_root / "checkout.zip"
+        archived = subprocess.run(
+            ["git", "archive", "--format=zip", f"--output={archive_path}", commit],
+            cwd=ROOT,
+            capture_output=True,
+            check=False,
+            timeout=60,
+        )
+        if archived.returncode != 0 or not archive_path.is_file():
+            raise RuntimeError("package proof could not create a clean Git archive")
+        checkout = temporary_root / "checkout"
+        checkout.mkdir()
+        _extract_git_archive(archive_path, checkout)
+
+        commands: list[dict[str, object]] = []
+        commands.append(
+            _run(
+                [sys.executable, "-m", "build"],
+                proof_argv=["python", "-m", "build"],
+                cwd=checkout,
+                output=output,
+                index=0,
+                environment=environment,
+            )
+        )
+        wheels = tuple((checkout / "dist").glob("*.whl"))
+        sdists = tuple((checkout / "dist").glob("*.tar.gz"))
+        if len(wheels) != 1 or len(sdists) != 1:
+            raise RuntimeError("package proof requires exactly one wheel and one sdist")
+        wheel = wheels[0]
+        sdist = sdists[0]
+        copied_wheel = output / wheel.name
+        copied_sdist = output / sdist.name
+        shutil.copyfile(wheel, copied_wheel)
+        shutil.copyfile(sdist, copied_sdist)
+
+        install_root = temporary_root / "install"
+        install_root.mkdir()
+        install_wheel = install_root / wheel.name
+        shutil.copyfile(wheel, install_wheel)
+        commands.append(
+            _run(
+                [sys.executable, "-m", "venv", "venv"],
+                proof_argv=["python", "-m", "venv", "venv"],
+                cwd=install_root,
+                output=output,
+                index=1,
+                environment=environment,
+            )
+        )
+        scripts_directory = "Scripts" if os.name == "nt" else "bin"
+        python_name = "python.exe" if os.name == "nt" else "python"
+        cli_name = "runsieve.exe" if os.name == "nt" else "runsieve"
+        clean_python = install_root / "venv" / scripts_directory / python_name
+        clean_cli = install_root / "venv" / scripts_directory / cli_name
+        commands.append(
+            _run(
+                [
+                    str(clean_python),
+                    "-m",
+                    "pip",
+                    "install",
+                    "--no-deps",
+                    wheel.name,
+                ],
+                proof_argv=[
+                    "python",
+                    "-m",
+                    "pip",
+                    "install",
+                    "--no-deps",
+                    wheel.name,
+                ],
+                cwd=install_root,
+                output=output,
+                index=2,
+                environment=environment,
+            )
+        )
+        commands.append(
+            _run(
+                [str(clean_cli), "--help"],
+                proof_argv=["runsieve", "--help"],
+                cwd=install_root,
+                output=output,
+                index=3,
+                environment=environment,
+            )
+        )
+        source_tree_present = any(
+            (install_root / name).exists()
+            for name in ("pyproject.toml", "setup.py", "src")
+        )
+
+    proof = {
+        "artifacts": {
+            "sdist": {
+                "bytes": copied_sdist.stat().st_size,
+                "name": copied_sdist.name,
+                "sha256": _sha256(copied_sdist),
+            },
+            "wheel": {
+                "bytes": copied_wheel.stat().st_size,
+                "name": copied_wheel.name,
+                "sha256": _sha256(copied_wheel),
+            },
+        },
+        "clean_install_directory": True,
+        "collector": {
+            "path": "scripts/package_matrix_proof.py",
+            "sha256": _sha256(Path(__file__)),
+        },
+        "commands": commands,
+        "commit": commit,
+        "fresh_checkout": True,
+        "gate": "RS-G13",
+        "runner": {
+            "arch": platform.machine().lower(),
+            "os": platform.system().lower(),
+            "python": platform.python_version(),
+        },
+        "schema_version": 1,
+        "source_tree_present": source_tree_present,
+    }
+    write_canonical_json(output / "proof.json", proof)
+    return proof
+
+
+def _clean_commit() -> str:
+    status = subprocess.run(
+        ["git", "status", "--porcelain=v1", "--untracked-files=all"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    commit = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if status.returncode != 0 or status.stdout.strip():
+        raise RuntimeError("package proof requires a clean committed tree")
+    if commit.returncode != 0 or GIT_SHA.fullmatch(commit.stdout.strip()) is None:
+        raise RuntimeError("package proof could not resolve HEAD")
+    expected = os.environ.get("RUNSIEVE_EVIDENCE_COMMIT")
+    if expected is not None and expected != commit.stdout.strip():
+        raise RuntimeError("package proof checkout differs from the requested evidence commit")
+    return commit.stdout.strip()
+
+
+def main(argv: list[str] | None = None) -> int:
+    arguments = list(sys.argv[1:] if argv is None else argv)
+    if len(arguments) != 2 or arguments[0] != "--output":
+        print(
+            "usage: python -m scripts.package_matrix_proof --output DIRECTORY",
+            file=sys.stderr,
+        )
+        return 2
+    try:
+        proof = collect_package_proof(Path(arguments[1]), commit=_clean_commit())
+    except (OSError, RuntimeError, ValueError) as error:
+        print(f"package proof failed: {error}", file=sys.stderr)
+        return 1
+    print(
+        json.dumps(
+            {
+                "commit": proof["commit"],
+                "python": proof["runner"]["python"],
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

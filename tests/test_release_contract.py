@@ -21,6 +21,9 @@ def test_ci_declares_supported_python_and_portable_reproduction_matrix() -> None
     assert "scripts.portable_reproduction_proof" in workflow
     assert "scripts.generate_gate_evidence" in workflow
     assert "RS-G10" in workflow
+    assert "scripts.package_matrix_proof" in workflow
+    assert "RS-G13" in workflow
+    assert "rs-g13-evidence" in workflow
     assert "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a" in workflow
     assert "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c" in workflow
 
