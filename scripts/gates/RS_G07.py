@@ -1,26 +1,23 @@
-from __future__ import annotations
+from scripts.gates._verify import GateSpec, pytest_measurement, verify_gate
 
-from scripts.gates._verify import verify_gate
-
-_SUPPORT_SHA256 = "2ed3d8ca8f51d6d8790a39abba8588110273229997156ac258d70abb62be53b9"
-
-
-if __name__ == "__main__":
-    raise SystemExit(
-        verify_gate(
-            gate="RS-G07",
-            assertions=(
+SPEC = GateSpec(
+    gate="RS-G07",
+    measurements=(
+        pytest_measurement(
+            (
                 "reproduces-distinct",
                 "absent-distinct",
                 "invalid-distinct",
                 "timeout-invalid",
                 "signal-invalid",
             ),
-            pytest_nodes=(
-                "tests/test_predicate.py::test_exit_protocol_is_strict",
-                "tests/test_predicate.py::test_timeout_output_limit_and_signal_are_invalid",
-                "tests/test_hierarchy.py::test_invalid_candidates_are_never_accepted",
-            ),
-            expected_support_sha256=_SUPPORT_SHA256,
-        )
-    )
+            "tests/test_predicate.py::test_exit_protocol_is_strict",
+            "tests/test_predicate.py::test_timeout_output_limit_and_signal_are_invalid",
+            "tests/test_hierarchy.py::test_invalid_candidates_are_never_accepted",
+        ),
+    ),
+    expected_support_sha256="0487c43e903dbd2621b94e982dd02c2ad77b319311ad6401c4fcfee9b7a7fc90",
+)
+
+if __name__ == "__main__":
+    raise SystemExit(verify_gate(SPEC))

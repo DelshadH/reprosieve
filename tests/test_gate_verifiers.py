@@ -7,10 +7,12 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 from scripts import evidence
 
 
-def test_tri_state_gate_runs_its_real_proof_and_reports_registered_assertions(
+def test_gate_verifier_rejects_an_identity_only_manifest(
     tmp_path: Path,
 ) -> None:
     manifest = tmp_path / "manifest.json"
@@ -24,17 +26,77 @@ def test_tri_state_gate_runs_its_real_proof_and_reports_registered_assertions(
         check=False,
     )
 
-    assert completed.returncode == 0, completed.stderr
-    report = json.loads(completed.stdout)
-    assert report["gate"] == "RS-G07"
-    assert report["passed"] is True
-    assert {item["id"] for item in report["assertions"]} == {
-        "reproduces-distinct",
-        "absent-distinct",
-        "invalid-distinct",
-        "timeout-invalid",
-        "signal-invalid",
+    assert completed.returncode == 2
+    assert "measured evidence" in completed.stderr
+
+
+def test_every_gate_maps_each_registered_assertion_to_a_specific_measurement() -> None:
+    registry = json.loads(Path("GATE_REGISTRY.json").read_text(encoding="utf-8"))
+    for registered in registry["gates"]:
+        module = importlib.import_module(
+            f"scripts.gates.{registered['id'].replace('-', '_')}"
+        )
+        spec = getattr(module, "SPEC", None)
+        assert spec is not None, registered["id"]
+        measured = [
+            assertion
+            for measurement in spec.measurements
+            for assertion in measurement.assertions
+        ]
+        assert sorted(measured) == sorted(registered["required_assertions"])
+        assert len(measured) == len(set(measured))
+
+
+def test_rs_g10_portable_proof_requires_measured_platform_execution() -> None:
+    module = importlib.import_module("scripts.gates.RS_G10")
+    validate = getattr(module, "validate_portable_proof", None)
+    assert callable(validate)
+    commit = "b" * 40
+    proof = {
+        "schema_version": 1,
+        "gate": "RS-G10",
+        "commit": commit,
+        "collector": {
+            "path": "scripts/portable_reproduction_proof.py",
+            "sha256": "e" * 64,
+        },
+        "runner": {"os": "macos", "arch": "arm64"},
+        "fresh_temporary_directory": True,
+        "source_tree_present": False,
+        "provider_keys_present": [],
+        "command": {
+            "argv": ["python", "reproduce.py"],
+            "exit_code": 0,
+            "output_limit_bytes": 65536,
+            "stdout": {"bytes": 35, "sha256": "a" * 64},
+            "stderr": {"bytes": 0, "sha256": "b" * 64},
+        },
+        "export": {
+            "capsule_sha256": "c" * 64,
+            "reproducer_sha256": "d" * 64,
+        },
     }
+
+    assert validate(proof, expected_os="macos", expected_commit=commit) == {
+        "fresh-temp-run",
+        "macos-one-command",
+        "no-api-key",
+        "no-source-repository",
+    }
+    for field, value in (
+        ("fresh_temporary_directory", False),
+        ("source_tree_present", True),
+        ("provider_keys_present", ["OPENAI_API_KEY"]),
+    ):
+        invalid = {**proof, field: value}
+        with pytest.raises(ValueError):
+            validate(invalid, expected_os="macos", expected_commit=commit)
+    failed = {
+        **proof,
+        "command": {**proof["command"], "exit_code": 1},
+    }
+    with pytest.raises(ValueError):
+        validate(failed, expected_os="macos", expected_commit=commit)
 
 
 def test_evidence_helpers_write_canonical_hashed_references(tmp_path: Path) -> None:
@@ -103,3 +165,41 @@ def test_evidence_generator_builds_the_exact_manifest_shape() -> None:
     }
     assert manifest["dirty"] is False
     assert manifest["result"] == "passed"
+
+
+def test_evidence_generator_derives_proof_records_from_gate_measurements() -> None:
+    module = importlib.import_module("scripts.generate_gate_evidence")
+    build_measurement_proof = getattr(module, "build_measurement_proof", None)
+    assert callable(build_measurement_proof)
+    gate = importlib.import_module("scripts.gates.RS_G07").SPEC
+    commands = (
+        {
+            "argv": list(gate.measurements[0].argv),
+            "exit_code": 0,
+            "stdout": {"bytes": 4, "path": "command-00.stdout", "sha256": "a" * 64},
+            "stderr": {"bytes": 0, "path": "command-00.stderr", "sha256": "b" * 64},
+        },
+    )
+
+    proof = build_measurement_proof(
+        gate,
+        commit="c" * 40,
+        commands=commands,
+    )
+
+    assert proof == {
+        "schema_version": 1,
+        "gate": "RS-G07",
+        "commit": "c" * 40,
+        "measurements": [
+            {
+                "argv": list(gate.measurements[0].argv),
+                "assertions": list(gate.measurements[0].assertions),
+                "exit_code": 0,
+                "kind": "pytest",
+                "platform": None,
+                "stderr_sha256": "b" * 64,
+                "stdout_sha256": "a" * 64,
+            }
+        ],
+    }

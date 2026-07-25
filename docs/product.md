@@ -29,13 +29,20 @@ SDK objects are converted to bounded primitives and redacted in memory. Unknown
 span types remain explicit. Missing parents, incomplete spans, excess events,
 unsupported SDK versions, or more than one completed trace fail closed.
 
-## Offline replay
+## Recorded outputs and application replay
 
-Replay walks the retained event graph and substitutes recorded model and tool
-outputs. It does not import a provider SDK or execute an original tool. This
-reproduces failures in orchestration, serialization, tool protocols, and
-application logic under one fixed trajectory. It does not prove a model would
-generate the same trajectory again.
+`runsieve replay` walks the retained event graph and materializes recorded model
+and tool outputs as deterministic JSON. That command does not execute
+application or orchestration code.
+
+A capsule may additionally declare an embedded `runsieve-recorded-v1`
+application adapter. Predicate trials and the standalone reproduction execute
+that entry point first, with `next_model_output()` and `next_tool_output()`
+backed only by the recorded trajectory. The application writes a bounded JSON
+result for the embedded failure predicate. This adapter-backed path reproduces
+application, orchestration, serialization, and tool-protocol failures under one
+fixed trajectory. It does not prove a model would generate that trajectory
+again, and undeclared applications are not executed.
 
 Predicates run in fresh directories with copied declared files, provider keys
 removed, proxy variables emptied, direct argument vectors, time/output/process

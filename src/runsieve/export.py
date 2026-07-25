@@ -18,6 +18,8 @@ import stat
 import subprocess
 import sys
 import tempfile
+import threading
+import time
 import zipfile
 from pathlib import Path, PurePosixPath
 
@@ -128,6 +130,35 @@ def replay(members: dict[str, bytes], trace_id: str) -> dict[str, object]:
     }
 
 
+def adapter_source() -> str:
+    return (
+        "import json, os, pathlib\n"
+        "_data=json.loads(pathlib.Path(os.environ['RUNSIEVE_REPLAY']).read_text("
+        "encoding='utf-8'))\n"
+        "_models=list(_data['model_outputs'])\n"
+        "_tools=list(_data['tool_outputs'])\n"
+        "_model_index=0\n"
+        "_tool_index=0\n"
+        "def next_model_output():\n"
+        " global _model_index\n"
+        " if _model_index >= len(_models): raise RuntimeError('recorded model outputs exhausted')\n"
+        " item=_models[_model_index]\n"
+        " _model_index+=1\n"
+        " return item.get('output')\n"
+        "def next_tool_output(expected_name=None):\n"
+        " global _tool_index\n"
+        " if _tool_index >= len(_tools): raise RuntimeError('recorded tool outputs exhausted')\n"
+        " item=_tools[_tool_index]\n"
+        " if expected_name is not None and item.get('name') != expected_name:\n"
+        "  raise RuntimeError('recorded tool trajectory mismatch')\n"
+        " _tool_index+=1\n"
+        " if 'error' in item: raise RuntimeError('recorded tool error')\n"
+        " return item.get('output')\n"
+        "def consumption():\n"
+        " return {'model_outputs':_model_index,'tool_outputs':_tool_index}\n"
+    )
+
+
 def guard_source(timeout: float, output_limit: int, process_limit: int) -> str:
     cpu = max(1, int(timeout) + 2)
     return (
@@ -186,6 +217,67 @@ def terminate(process: subprocess.Popen[bytes]) -> None:
             process.kill()
     except OSError:
         pass
+
+
+def run_command(
+    command: list[str],
+    *,
+    root: Path,
+    environment: dict[str, str],
+    deadline: float,
+    output_limit: int,
+    label: str,
+) -> tuple[int | None, int]:
+    creationflags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0) if os.name == "nt" else 0
+    process = subprocess.Popen(
+        command,
+        cwd=root,
+        env=environment,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        shell=False,
+        start_new_session=os.name == "posix",
+        creationflags=creationflags,
+    )
+    counts = [0, 0]
+    exceeded = threading.Event()
+    lock = threading.Lock()
+
+    def drain(stream: object, index: int) -> None:
+        while True:
+            try:
+                chunk = stream.read(4096)
+            except OSError:
+                return
+            if not chunk:
+                return
+            with lock:
+                counts[index] += len(chunk)
+                if sum(counts) > output_limit:
+                    exceeded.set()
+                    return
+
+    threads = [
+        threading.Thread(target=drain, args=(process.stdout, 0), daemon=True),
+        threading.Thread(target=drain, args=(process.stderr, 1), daemon=True),
+    ]
+    for thread in threads:
+        thread.start()
+    while process.poll() is None:
+        if exceeded.is_set() or time.monotonic() >= deadline:
+            terminate(process)
+            process.wait()
+            for thread in threads:
+                thread.join(timeout=1)
+            return None, sum(counts)
+        time.sleep(0.01)
+    for thread in threads:
+        thread.join(timeout=1)
+    output_bytes = sum(counts)
+    if exceeded.is_set() or output_bytes > output_limit:
+        return None, output_bytes
+    return process.returncode, output_bytes
 
 
 def trial(
@@ -268,24 +360,75 @@ def trial(
             "RUNSIEVE_TRIAL": str(index),
             "RUNSIEVE_WORKSPACE": str(root),
         })
-        creationflags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0) if os.name == "nt" else 0
-        process = subprocess.Popen(
-            command,
-            cwd=root,
-            env=environment,
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            shell=False,
-            start_new_session=os.name == "posix",
-            creationflags=creationflags,
-        )
-        try:
-            return process.wait(timeout=timeout)
-        except subprocess.TimeoutExpired:
-            terminate(process)
-            process.wait()
+        deadline = time.monotonic() + timeout
+        metadata = json.loads(members["metadata.json"])
+        if not isinstance(metadata, dict):
             return None
+        application = metadata.get("application_replay")
+        consumed_output = 0
+        if application is not None:
+            if (
+                not isinstance(application, dict)
+                or set(application) != {"argv", "protocol"}
+                or application.get("protocol") != "runsieve-recorded-v1"
+            ):
+                return None
+            application_argv = application.get("argv")
+            if (
+                not isinstance(application_argv, list)
+                or len(application_argv) < 2
+                or not all(isinstance(item, str) and item for item in application_argv)
+                or Path(application_argv[0]).name.lower()
+                not in {"python", "python3", "python.exe", "py"}
+            ):
+                return None
+            application_script = safe_path(application_argv[1])
+            if application_script not in workspace_index:
+                return None
+            (guard / "runsieve_replay_adapter.py").write_text(
+                adapter_source(),
+                encoding="utf-8",
+            )
+            application_result = root / "application-result.json"
+            environment["RUNSIEVE_APPLICATION_RESULT"] = str(application_result)
+            application_command = [
+                sys.executable,
+                application_script,
+                *application_argv[2:],
+            ]
+            application_exit, consumed_output = run_command(
+                application_command,
+                root=root,
+                environment=environment,
+                deadline=deadline,
+                output_limit=output_limit,
+                label="application",
+            )
+            if (
+                application_exit != 0
+                or application_result.is_symlink()
+                or not application_result.is_file()
+                or application_result.stat().st_size > output_limit
+            ):
+                return None
+            try:
+                json.loads(application_result.read_text(encoding="utf-8"))
+            except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+                return None
+        remaining_output = output_limit - consumed_output
+        if remaining_output < 1:
+            return None
+        predicate_exit, predicate_output = run_command(
+            command,
+            root=root,
+            environment=environment,
+            deadline=deadline,
+            output_limit=remaining_output,
+            label="predicate",
+        )
+        if consumed_output + predicate_output > output_limit:
+            return None
+        return predicate_exit
 
 
 def main() -> int:
@@ -338,8 +481,8 @@ def export_reproduction(source: str | Path, output: str | Path) -> Path:
             "Run the redacted, offline reproduction with:\n\n"
             "```bash\npython reproduce.py\n```\n\n"
             "The command validates the capsule, reconstructs recorded model and tool outputs, "
-            "denies outbound network for the embedded Python predicate, and never calls the "
-            "original provider or tools.\n",
+            "runs any declared embedded application adapter before the predicate, denies "
+            "outbound network, and never calls the original provider or tools.\n",
             encoding="utf-8",
             newline="\n",
         )

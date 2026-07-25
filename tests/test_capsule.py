@@ -4,6 +4,7 @@ import hashlib
 import io
 import json
 import stat
+import tempfile
 import warnings
 import zipfile
 from pathlib import Path
@@ -120,3 +121,30 @@ def test_capsule_paths_reject_symlink_ancestors(tmp_path: Path) -> None:
         pytest.skip("symlink creation is unavailable")
     with pytest.raises(ValueError, match="symlink|junction"):
         write_capsule(sample_capsule(), linked / "escape.runsieve")
+
+
+def test_capsule_paths_allow_only_a_symlinked_system_temp_prefix(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from runsieve import safeio
+
+    temp_root = tmp_path / "system-temp"
+    temp_root.mkdir()
+    safe_directory = temp_root / "pytest-run"
+    safe_directory.mkdir()
+    user_link = safe_directory / "user-link"
+    user_link.mkdir()
+    monkeypatch.setattr(tempfile, "gettempdir", lambda: str(temp_root))
+    monkeypatch.setattr(
+        safeio,
+        "is_link_like",
+        lambda path: path in {temp_root, user_link},
+    )
+
+    output = safe_directory / "portable.runsieve"
+    write_capsule(sample_capsule(), output)
+    assert output.is_file()
+
+    with pytest.raises(ValueError, match="symlink|junction"):
+        write_capsule(sample_capsule(), user_link / "escape.runsieve")

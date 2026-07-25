@@ -17,7 +17,8 @@ Development dependencies are exact-pinned in `pyproject.toml`:
 - Ruff and mypy for static checks;
 - pip-audit for vulnerability data;
 - Bandit for high-severity source findings;
-- detect-secrets plus the repository scanner for secret review;
+- detect-secrets with an audited false-positive baseline; CI checks all repository
+  files through `detect-secrets-hook` and fails on findings absent from that baseline;
 - pip-licenses for the transitive license inventory;
 - openai-agents 0.18.3 for the real public-processor fixture.
 

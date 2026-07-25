@@ -5,6 +5,8 @@ import sys
 import time
 from pathlib import Path
 
+from runsieve.fixtures import killer_capsule
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -16,6 +18,11 @@ def test_ci_declares_supported_python_and_portable_reproduction_matrix() -> None
     assert "macos-latest" in workflow
     assert "persist-credentials: false" in workflow
     assert "Smoke-test wheel without source tree" in workflow
+    assert "scripts.portable_reproduction_proof" in workflow
+    assert "scripts.generate_gate_evidence" in workflow
+    assert "RS-G10" in workflow
+    assert "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a" in workflow
+    assert "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c" in workflow
 
 
 def test_killer_demo_completes_the_full_claim_within_twenty_seconds() -> None:
@@ -47,3 +54,16 @@ def test_cli_help_starts_without_the_optional_sdk_imported() -> None:
     assert completed.returncode == 0, completed.stderr
     assert "capture" in completed.stdout
     assert "minimize" in completed.stdout
+
+
+def test_public_fixture_replays_declared_application_logic_before_its_predicate() -> None:
+    capsule = killer_capsule()
+    assert capsule.metadata["application_replay"] == {
+        "protocol": "runsieve-recorded-v1",
+        "argv": ["python", "replay_application.py"],
+    }
+    application = capsule.workspace["replay_application.py"]
+    predicate = capsule.workspace["verify_failure.py"]
+    assert "next_tool_output" in application
+    assert "RUNSIEVE_APPLICATION_RESULT" in predicate
+    assert "RUNSIEVE_REPLAY" not in predicate

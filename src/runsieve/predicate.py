@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import math
 import os
 import signal
@@ -14,7 +15,12 @@ from pathlib import Path
 
 from .capsule import canonical_json, capsule_bytes, write_capsule
 from .ddmin import PredicateResult
-from .replay import offline_replay, write_replay
+from .replay import (
+    application_replay_spec,
+    offline_replay,
+    replay_adapter_source,
+    write_replay,
+)
 from .safeio import ensure_regular_file
 from .schema import Capsule, JsonValue, safe_relative_path, validate_capsule
 
@@ -96,13 +102,21 @@ class PredicateAttempt:
     stderr_sha256: str
     workspace_id: str
     network_guard: str
+    application_replay: bool = False
+    application_exit_code: int | None = None
+    provider_calls: int = 0
+    original_tool_calls: int = 0
 
     def to_json(self) -> dict[str, JsonValue]:
         return {
+            "application_exit_code": self.application_exit_code,
+            "application_replay": self.application_replay,
             "duration_seconds": round(self.duration_seconds, 6),
             "exit_code": self.exit_code,
             "network_guard": self.network_guard,
+            "original_tool_calls": self.original_tool_calls,
             "output_bytes": self.output_bytes,
+            "provider_calls": self.provider_calls,
             "reason": self.reason,
             "result": self.result.value,
             "signal": self.signal,
@@ -258,6 +272,7 @@ def _minimal_environment(
     replay_path: Path,
     capsule_path: Path,
     guard_directory: Path | None,
+    application_result_path: Path | None,
     trial: int,
 ) -> dict[str, str]:
     environment: dict[str, str] = {}
@@ -289,6 +304,8 @@ def _minimal_environment(
         environment[name] = ""
     if guard_directory is not None:
         environment["PYTHONPATH"] = str(guard_directory)
+    if application_result_path is not None:
+        environment["RUNSIEVE_APPLICATION_RESULT"] = str(application_result_path)
     return environment
 
 
@@ -307,6 +324,100 @@ def _terminate(process: subprocess.Popen[bytes]) -> None:
             pass
 
 
+@dataclass(frozen=True, slots=True)
+class _ProcessOutcome:
+    return_code: int
+    reason: str | None
+    output_bytes: int
+    stdout_sha256: str
+    stderr_sha256: str
+
+
+def _run_bounded_process(
+    argv: list[str],
+    *,
+    workspace: Path,
+    environment: dict[str, str],
+    deadline: float,
+    output_limit_bytes: int,
+    cancel_event: threading.Event | None,
+) -> _ProcessOutcome:
+    creationflags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0) if os.name == "nt" else 0
+    try:
+        process = subprocess.Popen(
+            argv,
+            cwd=workspace,
+            env=environment,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            shell=False,
+            start_new_session=os.name == "posix",
+            creationflags=creationflags,
+        )
+    except (OSError, ValueError) as error:
+        raise ValueError("replay process could not be started") from error
+
+    output_limit = threading.Event()
+    counts = [0, 0]
+    hashes = [hashlib.sha256(), hashlib.sha256()]
+    lock = threading.Lock()
+
+    def drain(stream: object, index: int) -> None:
+        reader = stream
+        while True:
+            try:
+                chunk = reader.read(4096)  # type: ignore[attr-defined]
+            except OSError:
+                return
+            if not chunk:
+                return
+            hashes[index].update(chunk)
+            with lock:
+                counts[index] += len(chunk)
+                if sum(counts) > output_limit_bytes:
+                    output_limit.set()
+                    return
+
+    threads = [
+        threading.Thread(target=drain, args=(process.stdout, 0), daemon=True),
+        threading.Thread(target=drain, args=(process.stderr, 1), daemon=True),
+    ]
+    for thread in threads:
+        thread.start()
+
+    reason: str | None = None
+    while process.poll() is None:
+        if cancel_event is not None and cancel_event.is_set():
+            reason = "cancelled"
+            break
+        if output_limit.is_set():
+            reason = "output_limit"
+            break
+        if time.monotonic() >= deadline:
+            reason = "timeout"
+            break
+        time.sleep(0.01)
+    if reason is not None:
+        _terminate(process)
+    try:
+        return_code = process.wait(timeout=2)
+    except subprocess.TimeoutExpired:
+        _terminate(process)
+        return_code = process.wait(timeout=2)
+    for thread in threads:
+        thread.join(timeout=1)
+    if output_limit.is_set() and reason is None:
+        reason = "output_limit"
+    return _ProcessOutcome(
+        return_code=return_code,
+        reason=reason,
+        output_bytes=sum(counts),
+        stdout_sha256=hashes[0].hexdigest(),
+        stderr_sha256=hashes[1].hexdigest(),
+    )
+
+
 def _execute_attempt(
     capsule: Capsule,
     spec: PredicateSpec,
@@ -315,6 +426,44 @@ def _execute_attempt(
     cancel_event: threading.Event | None,
 ) -> PredicateAttempt:
     started = time.monotonic()
+
+    def invalid_attempt(
+        reason: str,
+        *,
+        network_guard: str = "unavailable",
+        application_replay: bool = False,
+        application_exit_code: int | None = None,
+        outcome: _ProcessOutcome | None = None,
+    ) -> PredicateAttempt:
+        return PredicateAttempt(
+            trial=trial,
+            result=PredicateResult.INVALID,
+            reason=reason,
+            exit_code=None,
+            signal=None,
+            duration_seconds=time.monotonic() - started,
+            output_bytes=outcome.output_bytes if outcome is not None else 0,
+            stdout_sha256=(
+                outcome.stdout_sha256
+                if outcome is not None
+                else hashlib.sha256().hexdigest()
+            ),
+            stderr_sha256=(
+                outcome.stderr_sha256
+                if outcome is not None
+                else hashlib.sha256().hexdigest()
+            ),
+            workspace_id=f"trial-{trial:03d}",
+            network_guard=network_guard,
+            application_replay=application_replay,
+            application_exit_code=application_exit_code,
+        )
+
+    try:
+        replay_application = application_replay_spec(capsule)
+    except ValueError:
+        return invalid_attempt("application_replay_invalid", application_replay=True)
+
     with tempfile.TemporaryDirectory(prefix="runsieve-predicate-") as temporary:
         workspace = Path(temporary)
         for name, content in capsule.workspace.items():
@@ -328,19 +477,7 @@ def _execute_attempt(
         try:
             argv, is_python = _resolve_executable(spec.argv, workspace)
         except ValueError:
-            return PredicateAttempt(
-                trial=trial,
-                result=PredicateResult.INVALID,
-                reason="harness_invalid",
-                exit_code=None,
-                signal=None,
-                duration_seconds=time.monotonic() - started,
-                output_bytes=0,
-                stdout_sha256=hashlib.sha256().hexdigest(),
-                stderr_sha256=hashlib.sha256().hexdigest(),
-                workspace_id=f"trial-{trial:03d}",
-                network_guard="unavailable",
-            )
+            return invalid_attempt("harness_invalid")
         guard_directory: Path | None = None
         network_guard = "unavailable"
         if is_python:
@@ -355,88 +492,143 @@ def _execute_attempt(
                 encoding="utf-8",
                 newline="\n",
             )
+            if replay_application is not None:
+                (guard_directory / "runsieve_replay_adapter.py").write_text(
+                    replay_adapter_source(),
+                    encoding="utf-8",
+                    newline="\n",
+                )
             network_guard = "python-sitecustomize"
+        application_result_path = (
+            workspace / "application-result.json"
+            if replay_application is not None
+            else None
+        )
         environment = _minimal_environment(
             capsule,
             workspace=workspace,
             replay_path=replay_path,
             capsule_path=capsule_path,
             guard_directory=guard_directory,
+            application_result_path=application_result_path,
             trial=trial,
         )
-        creationflags = (
-            getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0) if os.name == "nt" else 0
-        )
-        try:
-            process = subprocess.Popen(
-                argv,
-                cwd=workspace,
-                env=environment,
-                stdin=subprocess.DEVNULL,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                shell=False,
-                start_new_session=os.name == "posix",
-                creationflags=creationflags,
-            )
-        except (OSError, ValueError) as error:
-            raise ValueError("predicate process could not be started") from error
-
-        output_limit = threading.Event()
-        counts = [0, 0]
-        hashes = [hashlib.sha256(), hashlib.sha256()]
-        lock = threading.Lock()
-
-        def drain(stream: object, index: int) -> None:
-            reader = stream
-            while True:
-                try:
-                    chunk = reader.read(4096)  # type: ignore[attr-defined]
-                except OSError:
-                    return
-                if not chunk:
-                    return
-                hashes[index].update(chunk)
-                with lock:
-                    counts[index] += len(chunk)
-                    if sum(counts) > spec.output_limit_bytes:
-                        output_limit.set()
-                        return
-
-        threads = [
-            threading.Thread(target=drain, args=(process.stdout, 0), daemon=True),
-            threading.Thread(target=drain, args=(process.stderr, 1), daemon=True),
-        ]
-        for thread in threads:
-            thread.start()
-
-        reason: str | None = None
         deadline = started + spec.timeout_seconds
-        while process.poll() is None:
-            if cancel_event is not None and cancel_event.is_set():
-                reason = "cancelled"
-                break
-            if output_limit.is_set():
-                reason = "output_limit"
-                break
-            if time.monotonic() >= deadline:
-                reason = "timeout"
-                break
-            time.sleep(0.01)
-        if reason is not None:
-            _terminate(process)
-        try:
-            return_code = process.wait(timeout=2)
-        except subprocess.TimeoutExpired:
-            _terminate(process)
-            return_code = process.wait(timeout=2)
-        for thread in threads:
-            thread.join(timeout=1)
-        if output_limit.is_set() and reason is None:
-            reason = "output_limit"
+        application_outcome: _ProcessOutcome | None = None
+        application_exit_code: int | None = None
+        if replay_application is not None:
+            try:
+                application_argv, application_is_python = _resolve_executable(
+                    replay_application.argv,
+                    workspace,
+                )
+            except ValueError:
+                return invalid_attempt(
+                    "application_replay_invalid",
+                    network_guard=network_guard,
+                    application_replay=True,
+                )
+            if not application_is_python or application_result_path is None:
+                return invalid_attempt(
+                    "application_replay_invalid",
+                    network_guard=network_guard,
+                    application_replay=True,
+                )
+            application_outcome = _run_bounded_process(
+                application_argv,
+                workspace=workspace,
+                environment=environment,
+                deadline=deadline,
+                output_limit_bytes=spec.output_limit_bytes,
+                cancel_event=cancel_event,
+            )
+            application_return_code = application_outcome.return_code
+            application_exit_code = (
+                application_return_code if application_return_code >= 0 else None
+            )
+            if application_outcome.reason is not None:
+                return invalid_attempt(
+                    f"application_{application_outcome.reason}",
+                    network_guard=network_guard,
+                    application_replay=True,
+                    application_exit_code=application_exit_code,
+                    outcome=application_outcome,
+                )
+            if application_return_code < 0:
+                return invalid_attempt(
+                    "application_signal",
+                    network_guard=network_guard,
+                    application_replay=True,
+                    outcome=application_outcome,
+                )
+            if application_return_code != 0:
+                return invalid_attempt(
+                    "application_unexpected_exit",
+                    network_guard=network_guard,
+                    application_replay=True,
+                    application_exit_code=application_exit_code,
+                    outcome=application_outcome,
+                )
+            if (
+                application_result_path.is_symlink()
+                or not application_result_path.is_file()
+                or application_result_path.stat().st_size > spec.output_limit_bytes
+            ):
+                return invalid_attempt(
+                    "application_result_invalid",
+                    network_guard=network_guard,
+                    application_replay=True,
+                    application_exit_code=application_exit_code,
+                    outcome=application_outcome,
+                )
+            try:
+                application_result = json.loads(
+                    application_result_path.read_text(encoding="utf-8")
+                )
+                canonical_json(application_result)
+            except (
+                OSError,
+                UnicodeDecodeError,
+                json.JSONDecodeError,
+                TypeError,
+                ValueError,
+                RecursionError,
+            ):
+                return invalid_attempt(
+                    "application_result_invalid",
+                    network_guard=network_guard,
+                    application_replay=True,
+                    application_exit_code=application_exit_code,
+                    outcome=application_outcome,
+                )
 
+        application_output_bytes = (
+            application_outcome.output_bytes if application_outcome is not None else 0
+        )
+        remaining_output = spec.output_limit_bytes - application_output_bytes
+        if remaining_output < 1:
+            return invalid_attempt(
+                "output_limit",
+                network_guard=network_guard,
+                application_replay=replay_application is not None,
+                application_exit_code=application_exit_code,
+                outcome=application_outcome,
+            )
+        predicate_outcome = _run_bounded_process(
+            argv,
+            workspace=workspace,
+            environment=environment,
+            deadline=deadline,
+            output_limit_bytes=remaining_output,
+            cancel_event=cancel_event,
+        )
+        return_code = predicate_outcome.return_code
+        reason = predicate_outcome.reason
         signal_number = -return_code if return_code < 0 else None
         exit_code = return_code if return_code >= 0 else None
+        total_output = application_output_bytes + predicate_outcome.output_bytes
+        if total_output > spec.output_limit_bytes:
+            reason = "output_limit"
         if reason is not None:
             result = PredicateResult.INVALID
         elif signal_number is not None:
@@ -454,6 +646,14 @@ def _execute_attempt(
         else:
             reason = "unexpected_exit"
             result = PredicateResult.INVALID
+
+        stdout_digest = hashlib.sha256()
+        stderr_digest = hashlib.sha256()
+        if application_outcome is not None:
+            stdout_digest.update(bytes.fromhex(application_outcome.stdout_sha256))
+            stderr_digest.update(bytes.fromhex(application_outcome.stderr_sha256))
+        stdout_digest.update(bytes.fromhex(predicate_outcome.stdout_sha256))
+        stderr_digest.update(bytes.fromhex(predicate_outcome.stderr_sha256))
         return PredicateAttempt(
             trial=trial,
             result=result,
@@ -461,11 +661,13 @@ def _execute_attempt(
             exit_code=exit_code,
             signal=signal_number,
             duration_seconds=time.monotonic() - started,
-            output_bytes=min(sum(counts), spec.output_limit_bytes * 2),
-            stdout_sha256=hashes[0].hexdigest(),
-            stderr_sha256=hashes[1].hexdigest(),
+            output_bytes=min(total_output, spec.output_limit_bytes * 2),
+            stdout_sha256=stdout_digest.hexdigest(),
+            stderr_sha256=stderr_digest.hexdigest(),
             workspace_id=f"trial-{trial:03d}",
             network_guard=network_guard,
+            application_replay=replay_application is not None,
+            application_exit_code=application_exit_code,
         )
 
 

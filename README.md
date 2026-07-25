@@ -20,8 +20,11 @@ hash-addressed capsule with an independent 1-minimality proof.
   a clean temporary directory, provider keys removed, bounded time/output/process
   resources, and Python audit hooks that deny outbound network, child processes,
   native loading, and host-file access.
-- Offline replay of recorded model and tool outputs. Replay never imports the
-  Agents SDK, calls a provider, or executes an original tool.
+- Deterministic recorded-output materialization. When a capsule declares an
+  embedded `runsieve-recorded-v1` application adapter, predicate evaluation and
+  exported reproduction run that adapter against recorded model/tool interfaces
+  before checking the failure. Neither path imports the Agents SDK, calls a
+  provider, or executes an original tool.
 
 Install the core:
 
@@ -63,6 +66,10 @@ runsieve export reduced/<sha256>.runsieve \
 cd issue-repro
 python reproduce.py
 ```
+
+The `replay` command writes recorded outputs as JSON; by itself it does not
+execute application code. Application replay is explicit and adapter-backed
+during predicate evaluation and `reproduce.py`.
 
 Predicate exit codes are strict:
 

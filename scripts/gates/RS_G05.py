@@ -1,20 +1,20 @@
-from scripts.gates._verify import verify_gate
+from scripts.gates._verify import GateSpec, pytest_measurement, verify_gate
 
-_SUPPORT = "2ed3d8ca8f51d6d8790a39abba8588110273229997156ac258d70abb62be53b9"
-
-if __name__ == "__main__":
-    raise SystemExit(
-        verify_gate(
-            gate="RS-G05",
-            assertions=(
+SPEC = GateSpec(
+    gate="RS-G05",
+    measurements=(
+        pytest_measurement(
+            (
                 "source-events-247",
                 "reduced-events-max-10",
                 "predicate-preserved",
                 "referential-integrity",
             ),
-            pytest_nodes=(
-                "tests/test_hierarchy.py::test_real_247_event_fixture_reduces_to_at_most_ten_and_is_one_minimal",
-            ),
-            expected_support_sha256=_SUPPORT,
-        )
-    )
+            "tests/test_hierarchy.py::test_real_247_event_fixture_reduces_to_at_most_ten_and_is_one_minimal",
+        ),
+    ),
+    expected_support_sha256="0487c43e903dbd2621b94e982dd02c2ad77b319311ad6401c4fcfee9b7a7fc90",
+)
+
+if __name__ == "__main__":
+    raise SystemExit(verify_gate(SPEC))

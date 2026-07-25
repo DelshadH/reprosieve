@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import stat
+import tempfile
 from pathlib import Path
 
 _FILE_ATTRIBUTE_REPARSE_POINT = 0x0400
@@ -19,9 +20,11 @@ def is_link_like(path: Path) -> bool:
 
 def _reject_link_ancestors(path: Path, *, label: str) -> Path:
     absolute = Path(os.path.abspath(path))
+    temp_root = Path(os.path.abspath(tempfile.gettempdir()))
     candidates = (absolute, *absolute.parents)
     for candidate in candidates:
-        if candidate.exists() and is_link_like(candidate):
+        trusted_temp_prefix = candidate == temp_root or candidate in temp_root.parents
+        if candidate.exists() and is_link_like(candidate) and not trusted_temp_prefix:
             raise ValueError(f"{label} must not use symlink or junction components")
     return absolute
 

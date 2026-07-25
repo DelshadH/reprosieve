@@ -90,6 +90,7 @@ def test_minimize_verify_replay_and_one_command_export(tmp_path: Path, capfd: ob
 
     replay_path = tmp_path / "replay.json"
     assert main(["replay", str(reduced_path), "--output", str(replay_path)]) == 0
+    assert "recorded-output materialization" in capfd.readouterr().out  # type: ignore[attr-defined]
     assert b'"provider_calls":0' in replay_path.read_bytes()
     assert b'"original_tool_calls":0' in replay_path.read_bytes()
 

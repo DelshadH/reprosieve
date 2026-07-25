@@ -6,7 +6,7 @@
 | RS-G01 | Official-adapter capture | `test_public_processor_captures_real_sdk_spans_without_duplicate_export` uses real 0.18.3 public spans and proves the replaced canary processor receives zero calls. |
 | RS-G02 | Before-disk redaction | `test_openai_adapter.py`, `test_capsule.py`, `test_redact.py`, and CLI capture tests byte-scan synthetic canaries. |
 | RS-G03 | Deterministic capsule | `test_capsule.py` proves byte equality and rejects traversal, duplicate names, symlinks, expansion, excess size, corruption, and hash mismatch. |
-| RS-G04 | Offline hermetic replay | `test_replay.py`, predicate isolation tests, and standalone export tests prove zero provider/tool calls with keys absent and network denied. |
+| RS-G04 | Offline hermetic replay | `test_replay.py`, predicate isolation tests, and standalone export tests prove a declared application adapter executes against recorded interfaces with zero provider/original-tool calls, keys absent, and network denied. The standalone `replay` command is tested only as recorded-output materialization. |
 | RS-G05 | Meaningful reduction | `killer_capsule()` contains exactly 247 validated events and reduces to 5 events, below the limit of 10. |
 | RS-G06 | 1-minimality | `verify_one_minimal()` independently tries every declared final unit; `test_hierarchy.py` requires no reproducing deletion. |
 | RS-G07 | Tri-state correctness | Predicate tests cover reproduces, absent, invalid, timeout, signal, output overflow, missing harness, and cancellation. |

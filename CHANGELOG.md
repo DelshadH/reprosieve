@@ -12,3 +12,7 @@ All notable changes will be recorded here.
 - Delayed capture publication until processor shutdown so multi-trace runs fail closed.
 - Preserved declared environment entries in standalone reproductions.
 - Hardened offline network audit denial and bounded user regex validation.
+- Replaced self-attested generic gates with gate-specific measured command and artifact validation.
+- Added commit-bound Linux/macOS clean-room proof bundles for RS-G10.
+- Added declared application-adapter replay while narrowing `runsieve replay` to recorded-output materialization.
+- Allowed only operating-system temporary-directory symlink prefixes and added a reviewed secret-scan baseline.

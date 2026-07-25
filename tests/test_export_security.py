@@ -103,3 +103,59 @@ def test_standalone_reproducer_restores_declared_environment(tmp_path: Path) -> 
     )
     assert result.returncode == 0
     assert result.stdout.strip() == "target failure reproduced offline"
+
+
+def test_standalone_reproducer_executes_declared_application_adapter(
+    tmp_path: Path,
+) -> None:
+    capsule = replace(
+        sample_capsule(),
+        metadata={
+            **sample_capsule().metadata,
+            "application_replay": {
+                "protocol": "runsieve-recorded-v1",
+                "argv": ["python", "replay_application.py"],
+            },
+        },
+        workspace={
+            "replay_application.py": (
+                "import json, os, pathlib\n"
+                "from runsieve_replay_adapter import next_tool_output\n"
+                "print('RUNSIEVE-SYNTHETIC-OUTPUT-CANARY')\n"
+                "persisted = list(pathlib.Path('.').glob('.*.stdout')) + "
+                "list(pathlib.Path('.').glob('.*.stderr'))\n"
+                "failure = next_tool_output('probe')['failure'] if not persisted "
+                "else 'output-persisted'\n"
+                "result = {'failure': failure}\n"
+                "pathlib.Path(os.environ['RUNSIEVE_APPLICATION_RESULT']).write_text("
+                "json.dumps(result), encoding='utf-8')\n"
+            ),
+            "predicate.py": (
+                "import json, os, pathlib\n"
+                "result=json.loads(pathlib.Path("
+                "os.environ['RUNSIEVE_APPLICATION_RESULT']).read_text())\n"
+                "raise SystemExit(0 if result.get('failure') == 'needle' else 1)\n"
+            ),
+        },
+    )
+    source = tmp_path / "application.runsieve"
+    write_capsule(
+        capsule,
+        source,
+        predicate=PredicateSpec(("python", "predicate.py")).to_json(),
+    )
+    output = tmp_path / "application-repro"
+    export_reproduction(source, output)
+
+    result = subprocess.run(
+        [sys.executable, "reproduce.py"],
+        cwd=output,
+        env={"PATH": os.environ.get("PATH", ""), "SYSTEMROOT": os.environ.get("SYSTEMROOT", "")},
+        capture_output=True,
+        text=True,
+        timeout=10,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert result.stdout.strip() == "target failure reproduced offline"

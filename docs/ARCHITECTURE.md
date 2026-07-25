@@ -8,7 +8,7 @@
 - `adapters/openai_agents.py`: public SDK processor and trace conversion.
 - `_capture_bootstrap.py`: validated child-process processor installation.
 - `capsule.py`: deterministic archive writing, hostile archive reading, and hash verification.
-- `replay.py`: recorded output substitution with no provider or tool imports.
+- `replay.py`: recorded-output materialization and the declared application-adapter protocol.
 - `predicate.py`: isolated tri-state and K-of-N execution.
 - `ddmin.py`: generic tri-state delta debugging.
 - `hierarchy.py`: dependency-aware hierarchical reduction and memoization.
@@ -71,3 +71,11 @@ that denies host-file access, child processes, native loading, and destructive
 operations outside the trial directory. This is meaningful defense in depth,
 not an operating-system or virtual-machine sandbox; see the residual risks in
 `docs/security-review.md`.
+
+When `metadata.application_replay` declares `runsieve-recorded-v1`, the isolated
+trial first runs the embedded application entry point. A generated standard-
+library adapter supplies recorded model and tool outputs in trajectory order.
+The entry point writes bounded JSON to `RUNSIEVE_APPLICATION_RESULT`; only then
+does the predicate run. Without that declaration, `runsieve replay` and
+predicate setup only materialize recorded outputs and make no application-replay
+claim.

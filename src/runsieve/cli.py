@@ -59,7 +59,10 @@ def build_parser() -> argparse.ArgumentParser:
     minimize.add_argument("--output-dir", required=True)
     _predicate_arguments(minimize)
 
-    replay = subparsers.add_parser("replay", help="replay recorded outputs without providers")
+    replay = subparsers.add_parser(
+        "replay",
+        help="materialize recorded outputs without executing application code",
+    )
     replay.add_argument("source")
     replay.add_argument("--offline", action="store_true", default=True)
     replay.add_argument("--output")
@@ -279,7 +282,7 @@ def _replay(args: argparse.Namespace) -> int:
     report = offline_replay(load_capsule(args.source))
     if args.output:
         write_replay(report, args.output)
-        print("wrote deterministic offline replay")
+        print("wrote deterministic recorded-output materialization")
     else:
         sys.stdout.buffer.write(canonical_json(report.to_json()))
     return 0

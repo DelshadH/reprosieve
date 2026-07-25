@@ -55,3 +55,15 @@ Observed facts: Evidence helper tests and Ruff passed; the generator refuses dir
 Decision: continue
 Ending commit: pending evidence-generator commit
 Manual item: none
+
+## 2026-07-25T11:52:12Z — RS-000 — attempt 4
+Objective: Gate reports are derived from measured evidence, and the public replay fixture executes application logic through recorded interfaces.
+Starting commit: 2c8ac7ee300fa7f2d00182a08655693bf6a332e3
+Deadline state: contract review remediation; safety and release invariants take precedence over the elapsed bootstrap target
+Approach: Reject identity-only manifests, bind assertions to exact commands and hashed artifacts, require Linux/macOS RS-G10 bundles, add an embedded application-adapter protocol, and use a reviewed secret baseline.
+Commands: targeted red/green pytest runs; `python -m pytest`; `python -m ruff check .`; `python -m mypy`; `python scripts/detect_secrets_check.py`
+Result: in_progress
+Observed facts: The original macOS log confirms a temporary-path symlink rejection; the original security log reports only reviewed hash fixtures. The obsolete generic RS-G07 evidence was withdrawn.
+Decision: continue through clean commit, regenerated evidence, and external CI
+Ending commit: uncommitted review remediation
+Manual item: none
