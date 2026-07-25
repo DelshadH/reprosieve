@@ -1,2 +1,4 @@
 * text=auto eol=lf
 .evidence/** -text
+.evidence/**/command-*.stdout binary
+.evidence/**/command-*.stderr binary
