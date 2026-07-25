@@ -1,15 +1,5 @@
 from __future__ import annotations
 
-import shutil
-from pathlib import Path
-
-from .capsule import load_capsule, read_capsule_document
-from .predicate import predicate_spec_from_json
-from .safeio import ensure_new_path, ensure_regular_file
-from .schema import safe_relative_path
-
-_REPRODUCER = r'''from __future__ import annotations
-
 import hashlib
 import json
 import os
@@ -446,47 +436,9 @@ def main() -> int:
             print("target failure reproduced offline")
             return 0
         return fail("target failure absent", 1)
-    except Exception:  # noqa: BLE001 - reject untrusted capsules without a traceback.
+    except Exception:
         return fail("reproduction capsule invalid")
 
 
 if __name__ == "__main__":
     raise SystemExit(main())
-'''
-
-
-def export_reproduction(source: str | Path, output: str | Path) -> Path:
-    source_path = ensure_regular_file(source, label="export source")
-    capsule = load_capsule(source_path)
-    predicate_document = read_capsule_document(source_path, "predicate.json")
-    spec = predicate_spec_from_json(predicate_document)
-    if len(spec.argv) < 2 or Path(spec.argv[0]).name.casefold() not in {
-        "python",
-        "python3",
-        "python.exe",
-        "py",
-    }:
-        raise ValueError("export requires an embedded Python predicate")
-    script = safe_relative_path(spec.argv[1], label="predicate script")
-    if script not in capsule.workspace:
-        raise ValueError("export predicate script is not embedded in the capsule")
-
-    destination = ensure_new_path(output, label="export output")
-    destination.mkdir(mode=0o700)
-    try:
-        (destination / "capsule.runsieve").write_bytes(source_path.read_bytes())
-        (destination / "reproduce.py").write_text(_REPRODUCER, encoding="utf-8", newline="\n")
-        (destination / "README.md").write_text(
-            "# RunSieve issue reproduction\n\n"
-            "Run the redacted, offline reproduction with:\n\n"
-            "```bash\npython reproduce.py\n```\n\n"
-            "The command validates the capsule, reconstructs recorded model and tool outputs, "
-            "runs any declared embedded application adapter before the predicate, denies "
-            "outbound network, and never calls the original provider or tools.\n",
-            encoding="utf-8",
-            newline="\n",
-        )
-    except Exception:
-        shutil.rmtree(destination)
-        raise
-    return destination

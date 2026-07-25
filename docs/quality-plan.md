@@ -26,7 +26,7 @@ python -m pytest
 python -m ruff check .
 python -m mypy
 python -m build
-python -m pip_audit --strict
+python -m pip_audit --strict --requirement requirements-audit.txt
 python -m bandit -q -r src -lll
 python scripts/security_check.py
 python scripts/killer_demo.py

@@ -79,3 +79,15 @@ Observed facts: Manifest SHA-256 is `7b4751910bbe87fc63f2acbf6fe11f8fc46d32c50e4
 Decision: continue with Linux/macOS RS-G10 CI proof
 Ending commit: pending evidence/progress commit
 Manual item: none
+
+## 2026-07-25T12:09:24Z - RS-060 - attempt 6
+Objective: Preserve RS-G10 proof only after successful Linux and macOS clean-room measurements.
+Starting commit: 242be111a08c96473a4f603e89354cf73ef1bcc5
+Deadline state: contract review remediation; release status remains pending
+Approach: Inspect the successful GitHub Actions proof bundle, retain its measured files, and register its manifest without changing task or gate status.
+Commands: `gh run view 30157376066`; `gh run download 30157376066 --name rs-g10-evidence`
+Result: passed
+Observed facts: Linux x64 and macOS arm64 each ran `python reproduce.py` successfully at the exact starting commit in fresh temporary directories, without a source tree or provider keys.
+Decision: retain the proof and keep RS-G10 pending until its owner task and release dependencies are honestly closed.
+Ending commit: pending evidence/progress commit
+Manual item: none

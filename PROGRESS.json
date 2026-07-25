@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "project": "runsieve",
-  "updated_at": "2026-07-25T11:56:59Z",
+  "updated_at": "2026-07-25T12:09:24Z",
   "tasks": {
     "RS-000": {
       "status": "pending",
@@ -46,8 +46,13 @@
     },
     "RS-060": {
       "status": "pending",
-      "evidence": [],
-      "notes": "",
+      "evidence": [
+        {
+          "path": ".evidence/RS-G10/github-30157376066/manifest.json",
+          "sha256": "5ec23eb2cb6d4b88723c857584120d79077e038f40c0ce4a253c03489dbd0fb0"
+        }
+      ],
+      "notes": "Measured Linux and macOS clean-room evidence is recorded; dependency-owned task completion remains pending.",
       "blocker_ids": []
     },
     "RS-070": {
@@ -111,7 +116,12 @@
     },
     "RS-G10": {
       "status": "pending",
-      "evidence": []
+      "evidence": [
+        {
+          "path": ".evidence/RS-G10/github-30157376066/manifest.json",
+          "sha256": "5ec23eb2cb6d4b88723c857584120d79077e038f40c0ce4a253c03489dbd0fb0"
+        }
+      ]
     },
     "RS-G11": {
       "status": "pending",
