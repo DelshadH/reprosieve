@@ -51,10 +51,13 @@ jobs:
   security:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      RUNSIEVE_EVIDENCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          ref: ${{ env.RUNSIEVE_EVIDENCE_COMMIT }}
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13"

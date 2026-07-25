@@ -28,6 +28,15 @@ def test_ci_declares_supported_python_and_portable_reproduction_matrix() -> None
     assert "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c" in workflow
 
 
+def test_every_ci_checkout_uses_the_exact_evidence_commit() -> None:
+    workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    checkout = "uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1"
+    exact_ref = "ref: ${{ env.RUNSIEVE_EVIDENCE_COMMIT }}"
+
+    assert workflow.count(checkout) > 0
+    assert workflow.count(exact_ref) == workflow.count(checkout)
+
+
 def test_killer_demo_completes_the_full_claim_within_twenty_seconds() -> None:
     started = time.monotonic()
     completed = subprocess.run(
