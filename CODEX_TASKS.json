@@ -1,0 +1,216 @@
+{
+  "schema_version": 1,
+  "project": "runsieve",
+  "deadline_hours_total": 72,
+  "selection_rule": "lowest priority number among unblocked tasks, then earliest deadline_hour",
+  "tasks": [
+    {
+      "id": "RS-000",
+      "priority": 0,
+      "deadline_hour": 4,
+      "depends_on": [],
+      "objective": "Make the scaffold package, typecheck, test, and verify on Python 3.11-3.13.",
+      "deliverables": [
+        "locked environment",
+        "CI matrix",
+        "evidence verifier",
+        "CLI smoke test"
+      ],
+      "proofs": [
+        "RS-G13"
+      ],
+      "kill_or_pivot": "Remove optional tooling; core remains standard-library-first.",
+      "owns_gates": [
+        "RS-G13"
+      ]
+    },
+    {
+      "id": "RS-010",
+      "priority": 1,
+      "deadline_hour": 12,
+      "depends_on": [
+        "RS-000"
+      ],
+      "objective": "Prove capture through the OpenAI Agents SDK public tracing processor and deterministic recorded-output materialization of one synthetic failed run.",
+      "deliverables": [
+        "adapter spike",
+        "synthetic agent/tool fixture",
+        "capture mapping",
+        "recorded-output materialization spike"
+      ],
+      "proofs": [
+        "RS-G01",
+        "initial RS-G04"
+      ],
+      "kill_or_pivot": "If the public processor omits required recorded values, document the exact gap and narrow the promise or add an explicit user wrapper; never use SDK-private imports as the product contract.",
+      "owns_gates": [
+        "RS-G01"
+      ]
+    },
+    {
+      "id": "RS-020",
+      "priority": 2,
+      "deadline_hour": 20,
+      "depends_on": [
+        "RS-010"
+      ],
+      "objective": "Freeze versioned capsule schema, referential validation, deterministic archive, and before-disk redaction.",
+      "deliverables": [
+        "schema",
+        "capsule writer/reader",
+        "redactor",
+        "archive limits"
+      ],
+      "proofs": [
+        "RS-G02",
+        "RS-G03"
+      ],
+      "kill_or_pivot": "Drop captured fields not essential to reduction, materialization, or predicate reproduction; never defer redaction.",
+      "owns_gates": [
+        "RS-G02",
+        "RS-G03"
+      ]
+    },
+    {
+      "id": "RS-030",
+      "priority": 3,
+      "deadline_hour": 30,
+      "depends_on": [
+        "RS-020"
+      ],
+      "objective": "Build constrained offline predicate reproduction over materialized recorded values with tri-state predicate execution.",
+      "deliverables": [
+        "recorded-value materialization input",
+        "fresh constrained trial runner",
+        "predicate protocol",
+        "network-denial proof"
+      ],
+      "proofs": [
+        "RS-G04",
+        "RS-G07"
+      ],
+      "kill_or_pivot": "Reject unsupported predicate behavior and side effects explicitly; do not call this boundary application replay or a universal sandbox.",
+      "owns_gates": [
+        "RS-G04"
+      ]
+    },
+    {
+      "id": "RS-040",
+      "priority": 4,
+      "deadline_hour": 40,
+      "depends_on": [
+        "RS-030"
+      ],
+      "objective": "Implement memoized dependency-aware ddmin plus independent 1-minimality verification.",
+      "deliverables": [
+        "generic kernel",
+        "candidate validator",
+        "cache",
+        "minimality verifier"
+      ],
+      "proofs": [
+        "RS-G06",
+        "RS-G07"
+      ],
+      "kill_or_pivot": "Prefer fewer reduction unit types with correct dependencies over unsafe generic deletion.",
+      "owns_gates": [
+        "RS-G06",
+        "RS-G07"
+      ]
+    },
+    {
+      "id": "RS-050",
+      "priority": 5,
+      "deadline_hour": 50,
+      "depends_on": [
+        "RS-040"
+      ],
+      "objective": "Implement full hierarchy and reduce the 247-event killer fixture to at most 10 events.",
+      "deliverables": [
+        "hierarchical reducers",
+        "large fixture",
+        "reduction report"
+      ],
+      "proofs": [
+        "RS-G05",
+        "RS-G08"
+      ],
+      "kill_or_pivot": "Profile predicate calls and improve chunk ordering/memoization; do not fake the fixture count or weaken its predicate.",
+      "owns_gates": [
+        "RS-G05",
+        "RS-G08"
+      ]
+    },
+    {
+      "id": "RS-060",
+      "priority": 6,
+      "deadline_hour": 58,
+      "depends_on": [
+        "RS-050"
+      ],
+      "objective": "Export a clean issue reproduction and add optional K-of-N predicate-trial reporting.",
+      "deliverables": [
+        "repro-dir exporter",
+        "portable launcher",
+        "probabilistic predicate-trial runner/report"
+      ],
+      "proofs": [
+        "RS-G09",
+        "RS-G10"
+      ],
+      "kill_or_pivot": "Cut probabilistic predicate trials before compromising clean offline export; do not add live model calls to the 0.1 contract.",
+      "owns_gates": [
+        "RS-G09",
+        "RS-G10"
+      ]
+    },
+    {
+      "id": "RS-070",
+      "priority": 7,
+      "deadline_hour": 65,
+      "depends_on": [
+        "RS-060"
+      ],
+      "objective": "Harden malformed inputs, resource bounds, cancellation, and cross-version schema handling.",
+      "deliverables": [
+        "adversarial corpus",
+        "limits",
+        "compatibility tests",
+        "security documentation"
+      ],
+      "proofs": [
+        "RS-G11",
+        "prior privacy/archive gates remain green"
+      ],
+      "kill_or_pivot": "Narrow accepted input rather than relaxing limits.",
+      "owns_gates": [
+        "RS-G11"
+      ]
+    },
+    {
+      "id": "RS-080",
+      "priority": 8,
+      "deadline_hour": 72,
+      "depends_on": [
+        "RS-070"
+      ],
+      "objective": "Produce a clean-room 0.1 release candidate with every independent evidence gate green, plus generated demo, comparison, contribution surface, and installed-package smoke tests.",
+      "deliverables": [
+        "release candidate",
+        "terminal demo",
+        "support matrix",
+        "issue forms",
+        "static viewer only if time remains"
+      ],
+      "proofs": [
+        "RS-G12",
+        "all gates",
+        "release-gate exits 0"
+      ],
+      "kill_or_pivot": "Omit viewer and cosmetic assets; never release with a red proof gate.",
+      "owns_gates": [
+        "RS-G12"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,237 @@
+{
+  "schema_version": 1,
+  "project": "runsieve",
+  "verifier_protocol": {
+    "argument": "manifest path",
+    "stdout": "one JSON object {gate, passed, assertions}",
+    "success_exit_code": 0
+  },
+  "gates": [
+    {
+      "id": "RS-G13",
+      "owner_task": "RS-000",
+      "argv": [
+        "python",
+        "-m",
+        "scripts.gates.RS_G13"
+      ],
+      "timeout_seconds": 600,
+      "required_assertions": [
+        "clean-install-py311",
+        "clean-install-py312",
+        "clean-install-py313",
+        "wheel-sdist-smoke",
+        "cli-smoke"
+      ]
+    },
+    {
+      "id": "RS-G01",
+      "owner_task": "RS-010",
+      "argv": [
+        "python",
+        "-m",
+        "scripts.gates.RS_G01"
+      ],
+      "timeout_seconds": 600,
+      "required_assertions": [
+        "public-processor-only",
+        "default-exporter-replaced",
+        "no-duplicate-export",
+        "sdk-private-import-scan",
+        "synthetic-trace-captured"
+      ]
+    },
+    {
+      "id": "RS-G02",
+      "owner_task": "RS-020",
+      "argv": [
+        "python",
+        "-m",
+        "scripts.gates.RS_G02"
+      ],
+      "timeout_seconds": 600,
+      "required_assertions": [
+        "files-canary-free",
+        "archives-canary-free",
+        "stdio-canary-free",
+        "exceptions-canary-free",
+        "redaction-before-write"
+      ]
+    },
+    {
+      "id": "RS-G03",
+      "owner_task": "RS-020",
+      "argv": [
+        "python",
+        "-m",
+        "scripts.gates.RS_G03"
+      ],
+      "timeout_seconds": 600,
+      "required_assertions": [
+        "capsule-hash-repeatable",
+        "member-hashes-verified",
+        "traversal-rejected",
+        "archive-bomb-rejected",
+        "malformed-reference-rejected"
+      ]
+    },
+    {
+      "id": "RS-G04",
+      "owner_task": "RS-030",
+      "argv": [
+        "python",
+        "-m",
+        "scripts.gates.RS_G04"
+      ],
+      "timeout_seconds": 600,
+      "required_assertions": [
+        "provider-key-absent",
+        "network-denied",
+        "recorded-values-materialized",
+        "predicate-only-executed",
+        "provider-call-canary-untouched",
+        "original-tool-canary-untouched",
+        "target-failure-reproduced"
+      ]
+    },
+    {
+      "id": "RS-G05",
+      "owner_task": "RS-050",
+      "argv": [
+        "python",
+        "-m",
+        "scripts.gates.RS_G05"
+      ],
+      "timeout_seconds": 600,
+      "required_assertions": [
+        "source-events-247",
+        "reduced-events-max-10",
+        "predicate-preserved",
+        "referential-integrity"
+      ]
+    },
+    {
+      "id": "RS-G06",
+      "owner_task": "RS-040",
+      "argv": [
+        "python",
+        "-m",
+        "scripts.gates.RS_G06"
+      ],
+      "timeout_seconds": 600,
+      "required_assertions": [
+        "every-unit-removal-checked",
+        "no-removable-reproducer",
+        "invalid-reasons-recorded"
+      ]
+    },
+    {
+      "id": "RS-G07",
+      "owner_task": "RS-040",
+      "argv": [
+        "python",
+        "-m",
+        "scripts.gates.RS_G07"
+      ],
+      "timeout_seconds": 600,
+      "required_assertions": [
+        "reproduces-distinct",
+        "absent-distinct",
+        "invalid-distinct",
+        "timeout-invalid",
+        "signal-invalid"
+      ]
+    },
+    {
+      "id": "RS-G08",
+      "owner_task": "RS-050",
+      "argv": [
+        "python",
+        "-m",
+        "scripts.gates.RS_G08"
+      ],
+      "timeout_seconds": 600,
+      "required_assertions": [
+        "span-reduction",
+        "message-reduction",
+        "tool-pair-reduction",
+        "json-field-reduction",
+        "text-reduction",
+        "file-reduction",
+        "environment-reduction"
+      ]
+    },
+    {
+      "id": "RS-G09",
+      "owner_task": "RS-060",
+      "argv": [
+        "python",
+        "-m",
+        "scripts.gates.RS_G09"
+      ],
+      "timeout_seconds": 600,
+      "required_assertions": [
+        "k-of-n-predicate-bookkeeping",
+        "fresh-trial-isolation",
+        "cache-key-complete",
+        "attempt-report-complete",
+        "probabilistic-predicate-label"
+      ]
+    },
+    {
+      "id": "RS-G10",
+      "owner_task": "RS-060",
+      "argv": [
+        "python",
+        "-m",
+        "scripts.gates.RS_G10"
+      ],
+      "timeout_seconds": 600,
+      "required_assertions": [
+        "fresh-temp-run",
+        "linux-one-command",
+        "macos-one-command",
+        "no-source-repository",
+        "no-api-key"
+      ]
+    },
+    {
+      "id": "RS-G11",
+      "owner_task": "RS-070",
+      "argv": [
+        "python",
+        "-m",
+        "scripts.gates.RS_G11"
+      ],
+      "timeout_seconds": 600,
+      "required_assertions": [
+        "timeout-bound",
+        "output-cap",
+        "event-cap",
+        "archive-cap",
+        "recursion-cap",
+        "cancellation"
+      ]
+    },
+    {
+      "id": "RS-G12",
+      "owner_task": "RS-080",
+      "argv": [
+        "python",
+        "-m",
+        "scripts.gates.RS_G12"
+      ],
+      "timeout_seconds": 600,
+      "required_assertions": [
+        "clean-checkout",
+        "full-tests",
+        "killer-reduce",
+        "recorded-values-materialize",
+        "predicate-reproduce",
+        "repro-export",
+        "minimality-verify",
+        "terminal-demo-duration"
+      ]
+    }
+  ]
+}
