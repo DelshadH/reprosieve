@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -12,6 +13,24 @@ from scripts.verify_application_replay_evidence import (
     verify_evidence,
     write_verification_attestation,
 )
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_application_replay_evidence_capsules_are_not_ignored() -> None:
+    completed = subprocess.run(
+        [
+            "git",
+            "check-ignore",
+            "--no-index",
+            ".evidence/RS-05-AR1/fixture/source.runsieve",
+        ],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert completed.returncode == 1, completed.stdout
 
 
 def test_independent_application_replay_evidence_verifier(tmp_path: Path) -> None:
