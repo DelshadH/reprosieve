@@ -139,3 +139,27 @@ Observed facts: All three Python jobs, security, both platform jobs, and both CI
 Decision: register the final evidence set and run the independent release gate.
 Ending commit: pending evidence-registration commit
 Manual item: none
+
+## 2026-07-25T19:48:17Z — RS-000 — attempt 3
+Objective: Produce a `0.1.0a1` wheel and public sdist twice from one clean commit with byte-identical results.
+Starting commit: 04c3d6b5dc1d9dd1c1911f80e8e23c43ebe928b2
+Deadline state: 1.18/4 hours; within budget
+Approach: Use an explicit Hatch sdist allowlist, commit-derived `SOURCE_DATE_EPOCH`, two clean exports, installed-wheel smoke, and CI aggregation on Python 3.11-3.13.
+Commands: `.evidence/RS-G13/github-30172192165-1/manifest.json`; CI run 30172192165
+Result: passed
+Observed facts: Every Python job produced byte-identical rebuilds; the sdist shrank from 704287 bytes to 42872 bytes and contains no evidence or control-plane state.
+Decision: replace the superseded package evidence and retain the full reproducibility proof bundle.
+Ending commit: pending release-evidence registration commit
+Manual item: none
+
+## 2026-07-25T19:48:18Z — RS-080 — attempt 2
+Objective: Re-run the complete clean-room 0.1 proof after package metadata and release-verifier changes.
+Starting commit: 04c3d6b5dc1d9dd1c1911f80e8e23c43ebe928b2
+Deadline state: 1.18/96 hours; within budget
+Approach: Run full verification and the killer demo from a fresh detached worktree.
+Commands: `.evidence/RS-G12/local-04c3d6b-g12/manifest.json`
+Result: passed
+Observed facts: The all-passed contract self-test, 99 tests plus 2 subtests, Ruff, strict mypy, reduction, materialization, predicate reproduction, export, and 1-minimality passed.
+Decision: replace the superseded clean-room evidence.
+Ending commit: pending release-evidence registration commit
+Manual item: none

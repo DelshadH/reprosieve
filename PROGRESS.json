@@ -1,17 +1,17 @@
 {
   "schema_version": 1,
   "project": "runsieve",
-  "updated_at": "2026-07-25T19:16:00.503299Z",
+  "updated_at": "2026-07-25T19:48:17.673145Z",
   "tasks": {
     "RS-000": {
       "status": "passed",
       "evidence": [
         {
-          "path": ".evidence/RS-G13/github-30171123965-1/manifest.json",
-          "sha256": "0002be3fd1672bdeb0e3b9fd648f19fe1454f41f022d9cc366c6317cc1a93878"
+          "path": ".evidence/RS-G13/github-30172192165-1/manifest.json",
+          "sha256": "273d7a792f793a0448937b88a9e8a598c6e1dd18d93a8fad58dc847dc5cd666f"
         }
       ],
-      "notes": "Python 3.11-3.13 package proofs were produced and aggregated by CI run 30171123965.",
+      "notes": "Python 3.11-3.13 reproducible package proofs were produced and aggregated by CI run 30172192165.",
       "blocker_ids": []
     },
     "RS-010": {
@@ -111,8 +111,8 @@
       "status": "passed",
       "evidence": [
         {
-          "path": ".evidence/RS-G12/local-9110228-g12/manifest.json",
-          "sha256": "1f71bff39539e311a972d17d407231eaa1ab0291b87501c393385c675e4b914a"
+          "path": ".evidence/RS-G12/local-04c3d6b-g12/manifest.json",
+          "sha256": "8ad27c9b073d95e5b2fabb0e32b087c39d44d668d955cb75e9b2f20a3e0e98c9"
         }
       ],
       "notes": "The clean-room 0.1 reduction, materialization, predicate reproduction, export, and minimality demo is measured.",
@@ -124,8 +124,8 @@
       "status": "passed",
       "evidence": [
         {
-          "path": ".evidence/RS-G13/github-30171123965-1/manifest.json",
-          "sha256": "0002be3fd1672bdeb0e3b9fd648f19fe1454f41f022d9cc366c6317cc1a93878"
+          "path": ".evidence/RS-G13/github-30172192165-1/manifest.json",
+          "sha256": "273d7a792f793a0448937b88a9e8a598c6e1dd18d93a8fad58dc847dc5cd666f"
         }
       ]
     },
@@ -232,8 +232,8 @@
       "status": "passed",
       "evidence": [
         {
-          "path": ".evidence/RS-G12/local-9110228-g12/manifest.json",
-          "sha256": "1f71bff39539e311a972d17d407231eaa1ab0291b87501c393385c675e4b914a"
+          "path": ".evidence/RS-G12/local-04c3d6b-g12/manifest.json",
+          "sha256": "8ad27c9b073d95e5b2fabb0e32b087c39d44d668d955cb75e9b2f20a3e0e98c9"
         }
       ]
     }
