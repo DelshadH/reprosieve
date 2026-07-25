@@ -240,7 +240,8 @@ def _portable_inputs(
                 raise RuntimeError(f"portable proof input is missing regular file {name}")
             target = destination / name
             shutil.copyfile(source, target)
-            artifacts.append(blob_reference(target, relative_to=directory))
+            if name not in {"command.stdout", "command.stderr"}:
+                artifacts.append(blob_reference(target, relative_to=directory))
         commands.append(
             {
                 "argv": list(measurement.argv),
