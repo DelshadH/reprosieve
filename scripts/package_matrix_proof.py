@@ -8,6 +8,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tarfile
 import tempfile
 import zipfile
 from pathlib import Path, PurePosixPath
@@ -78,6 +79,39 @@ def _extract_git_archive(archive_path: Path, checkout: Path) -> None:
             target.write_bytes(archive.read(info))
 
 
+def _artifact_members(path: Path) -> list[str]:
+    if path.suffix == ".whl":
+        with zipfile.ZipFile(path) as archive:
+            names = archive.namelist()
+    elif path.name.endswith(".tar.gz"):
+        with tarfile.open(path, "r:gz") as archive:
+            names = archive.getnames()
+    else:
+        raise RuntimeError("package proof encountered an unsupported artifact")
+    members: list[str] = []
+    for name in names:
+        member = PurePosixPath(name)
+        if member.is_absolute() or any(part in {"", ".", ".."} for part in member.parts):
+            raise RuntimeError("package artifact contains an unsafe member")
+        members.append(member.as_posix())
+    return sorted(members)
+
+
+def _commit_epoch(commit: str) -> str:
+    completed = subprocess.run(
+        ["git", "show", "-s", "--format=%ct", commit],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=30,
+    )
+    value = completed.stdout.strip()
+    if completed.returncode != 0 or not value.isdigit():
+        raise RuntimeError("package proof could not resolve the commit timestamp")
+    return value
+
+
 def collect_package_proof(output: Path, *, commit: str) -> dict[str, object]:
     if GIT_SHA.fullmatch(commit) is None:
         raise ValueError("package proof requires a full commit SHA")
@@ -88,6 +122,7 @@ def collect_package_proof(output: Path, *, commit: str) -> dict[str, object]:
         **os.environ,
         "PIP_NO_INPUT": "1",
         "PYTHONPATH": "",
+        "SOURCE_DATE_EPOCH": _commit_epoch(commit),
     }
     with tempfile.TemporaryDirectory(prefix="runsieve-package-proof-") as temporary:
         temporary_root = Path(temporary)
@@ -101,31 +136,41 @@ def collect_package_proof(output: Path, *, commit: str) -> dict[str, object]:
         )
         if archived.returncode != 0 or not archive_path.is_file():
             raise RuntimeError("package proof could not create a clean Git archive")
-        checkout = temporary_root / "checkout"
-        checkout.mkdir()
-        _extract_git_archive(archive_path, checkout)
-
+        checkouts = (temporary_root / "checkout-a", temporary_root / "checkout-b")
         commands: list[dict[str, object]] = []
-        commands.append(
-            _run(
-                [sys.executable, "-m", "build"],
-                proof_argv=["python", "-m", "build"],
-                cwd=checkout,
-                output=output,
-                index=0,
-                environment=environment,
+        built: list[tuple[Path, Path]] = []
+        for index, checkout in enumerate(checkouts):
+            checkout.mkdir()
+            _extract_git_archive(archive_path, checkout)
+            commands.append(
+                _run(
+                    [sys.executable, "-m", "build"],
+                    proof_argv=["python", "-m", "build"],
+                    cwd=checkout,
+                    output=output,
+                    index=index,
+                    environment=environment,
+                )
             )
-        )
-        wheels = tuple((checkout / "dist").glob("*.whl"))
-        sdists = tuple((checkout / "dist").glob("*.tar.gz"))
-        if len(wheels) != 1 or len(sdists) != 1:
-            raise RuntimeError("package proof requires exactly one wheel and one sdist")
-        wheel = wheels[0]
-        sdist = sdists[0]
+            wheels = tuple((checkout / "dist").glob("*.whl"))
+            sdists = tuple((checkout / "dist").glob("*.tar.gz"))
+            if len(wheels) != 1 or len(sdists) != 1:
+                raise RuntimeError("package proof requires exactly one wheel and one sdist")
+            built.append((wheels[0], sdists[0]))
+        (wheel, sdist), (rebuilt_wheel, rebuilt_sdist) = built
+        if (
+            wheel.read_bytes() != rebuilt_wheel.read_bytes()
+            or sdist.read_bytes() != rebuilt_sdist.read_bytes()
+        ):
+            raise RuntimeError("package artifacts are not reproducible from the same commit")
         copied_wheel = output / wheel.name
         copied_sdist = output / sdist.name
+        copied_rebuilt_wheel = output / f"rebuild-{rebuilt_wheel.name}"
+        copied_rebuilt_sdist = output / f"rebuild-{rebuilt_sdist.name}"
         shutil.copyfile(wheel, copied_wheel)
         shutil.copyfile(sdist, copied_sdist)
+        shutil.copyfile(rebuilt_wheel, copied_rebuilt_wheel)
+        shutil.copyfile(rebuilt_sdist, copied_rebuilt_sdist)
 
         install_root = temporary_root / "install"
         install_root.mkdir()
@@ -137,7 +182,7 @@ def collect_package_proof(output: Path, *, commit: str) -> dict[str, object]:
                 proof_argv=["python", "-m", "venv", "venv"],
                 cwd=install_root,
                 output=output,
-                index=1,
+                index=2,
                 environment=environment,
             )
         )
@@ -166,7 +211,7 @@ def collect_package_proof(output: Path, *, commit: str) -> dict[str, object]:
                 ],
                 cwd=install_root,
                 output=output,
-                index=2,
+                index=3,
                 environment=environment,
             )
         )
@@ -176,7 +221,7 @@ def collect_package_proof(output: Path, *, commit: str) -> dict[str, object]:
                 proof_argv=["runsieve", "--help"],
                 cwd=install_root,
                 output=output,
-                index=3,
+                index=4,
                 environment=environment,
             )
         )
@@ -187,6 +232,16 @@ def collect_package_proof(output: Path, *, commit: str) -> dict[str, object]:
 
     proof = {
         "artifacts": {
+            "rebuild_sdist": {
+                "bytes": copied_rebuilt_sdist.stat().st_size,
+                "name": copied_rebuilt_sdist.name,
+                "sha256": _sha256(copied_rebuilt_sdist),
+            },
+            "rebuild_wheel": {
+                "bytes": copied_rebuilt_wheel.stat().st_size,
+                "name": copied_rebuilt_wheel.name,
+                "sha256": _sha256(copied_rebuilt_wheel),
+            },
             "sdist": {
                 "bytes": copied_sdist.stat().st_size,
                 "name": copied_sdist.name,
@@ -207,12 +262,18 @@ def collect_package_proof(output: Path, *, commit: str) -> dict[str, object]:
         "commit": commit,
         "fresh_checkout": True,
         "gate": "RS-G13",
+        "members": {
+            "sdist": _artifact_members(copied_sdist),
+            "wheel": _artifact_members(copied_wheel),
+        },
+        "reproducible_artifacts": True,
         "runner": {
             "arch": platform.machine().lower(),
             "os": platform.system().lower(),
             "python": platform.python_version(),
         },
         "schema_version": 1,
+        "source_date_epoch": environment["SOURCE_DATE_EPOCH"],
         "source_tree_present": source_tree_present,
     }
     write_canonical_json(output / "proof.json", proof)
