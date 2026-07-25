@@ -1,0 +1,21 @@
+{
+  "$id": "https://github.com/DelshadH/runsieve/schemas/materialization-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "events_replayed": {"minimum": 1, "type": "integer"},
+    "mode": {"const": "recorded-output-materialization"},
+    "model_outputs": {"items": {"type": "object"}, "type": "array"},
+    "tool_outputs": {"items": {"type": "object"}, "type": "array"},
+    "trace_id": {"type": "string"}
+  },
+  "required": [
+    "events_replayed",
+    "mode",
+    "model_outputs",
+    "tool_outputs",
+    "trace_id"
+  ],
+  "title": "RunSieve recorded-output materialization version 1",
+  "type": "object"
+}

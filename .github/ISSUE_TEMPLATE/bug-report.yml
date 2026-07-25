@@ -1,0 +1,49 @@
+name: Bug report
+description: Report a reproducible RunSieve defect using synthetic inputs.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include credentials, private source, personal data, or raw production traces.
+        Security reports belong in the private channel documented in SECURITY.md.
+  - type: input
+    id: version
+    attributes:
+      label: RunSieve version or commit
+      placeholder: 0.0.1 or full commit SHA
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Platform and Python version
+      placeholder: macOS arm64, Python 3.13.2
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Exact command and exit code
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Data-safety confirmation
+      options:
+        - label: I used only synthetic or disposable data and removed secrets.
+          required: true

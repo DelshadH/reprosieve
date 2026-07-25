@@ -6,4 +6,4 @@ Use official OpenAI documentation for the first adapter and re-check the support
 - OpenAI Agents SDK tracing API reference: https://openai.github.io/openai-agents-python/ref/tracing/
 - Existing Tracecase name/category collision: https://github.com/royalpinto007/Tracecase
 
-Do not claim record/replay is novel. The narrow 0.1 claim is dependency-aware reduction of a recorded trajectory while preserving offline predicate reproduction over deterministically materialized retained values, with independently checked final-granularity 1-minimality.
+Do not claim record/replay is novel. The narrow claim is automatic dependency-aware reduction to a redacted, deterministic, offline, 1-minimal failure capsule.
