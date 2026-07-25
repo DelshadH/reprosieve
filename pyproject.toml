@@ -58,7 +58,7 @@ ignore = ["FURB162", "TRY004", "UP017"]
 
 [tool.ruff.lint.per-file-ignores]
 "scripts/gates/RS_G*.py" = ["N999"]
-".evidence/**/reproduce.py" = ["BLE001"]
+".evidence/**/reproduce.py" = ["BLE001", "RUF100"]
 
 [tool.mypy]
 python_version = "3.11"

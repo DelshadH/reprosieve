@@ -70,3 +70,18 @@ def test_public_fixture_replays_declared_application_logic_before_its_predicate(
     assert "next_tool_output" in application
     assert "RUNSIEVE_APPLICATION_RESULT" in predicate
     assert "RUNSIEVE_REPLAY" not in predicate
+
+
+def test_repository_contains_the_required_release_support_surface() -> None:
+    required = (
+        "LICENSE",
+        "SECURITY.md",
+        "SUPPORT.md",
+        "CONTRIBUTING.md",
+        "CODE_OF_CONDUCT.md",
+        "CHANGELOG.md",
+        ".github/ISSUE_TEMPLATE/bug-report.yml",
+        ".github/ISSUE_TEMPLATE/reproduction-failure.yml",
+    )
+
+    assert [path for path in required if not (ROOT / path).is_file()] == []

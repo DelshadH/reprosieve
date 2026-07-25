@@ -26,6 +26,15 @@ hash-addressed capsule with an independent 1-minimality proof.
   before checking the failure. Neither path imports the Agents SDK, calls a
   provider, or executes an original tool.
 
+## Support matrix
+
+| Surface | Supported |
+|---|---|
+| Python | 3.11, 3.12, 3.13 |
+| Capture SDK | `openai-agents>=0.18.3,<0.19` |
+| Standalone reproduction | Linux and macOS |
+| Input safety claim | Synthetic or disposable data only |
+
 Install the core:
 
 ```bash
@@ -95,6 +104,25 @@ The release gate requires this command to finish within 20 seconds. “1-minimal
 means deleting any remaining declared unit makes the failure absent or the
 candidate structurally invalid. It does not mean globally smallest.
 
+Two additional copy-paste checks:
+
+```bash
+python -m scripts.verify
+python -m scripts.release_gate
+```
+
+The first runs tests, lint, typing, and contract self-tests. The second verifies
+the clean Git state and every registered evidence manifest.
+
+## Scope and comparison
+
+RunSieve is not a trace viewer, observability backend, VM sandbox, or general
+record/replay system. Existing record/replay tools preserve executions; RunSieve
+adds dependency-aware reduction, redaction before its own persistence, strict
+tri-state predicates, and an independently checked 1-minimality claim for one
+recorded agent trajectory. It does not diagnose root cause or replay live model
+semantics.
+
 ## Privacy boundary
 
 RunSieve redacts SDK payloads in memory before its own first write. Capture
@@ -120,3 +148,6 @@ python scripts/killer_demo.py
 ```
 
 Apache-2.0 licensed.
+
+See [SUPPORT.md](SUPPORT.md) for supported combinations and
+[CONTRIBUTING.md](CONTRIBUTING.md) before opening a change.

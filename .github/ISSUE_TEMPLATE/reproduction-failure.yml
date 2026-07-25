@@ -1,0 +1,53 @@
+name: Portable reproduction failure
+description: Report an exported reproduction that does not run cleanly offline.
+title: "[Reproduction]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Attach only redacted synthetic artifacts. Never upload API keys, private source,
+        personal data, or an unreviewed production capsule.
+  - type: input
+    id: version
+    attributes:
+      label: RunSieve version or commit
+      placeholder: 0.0.1 or full commit SHA
+    validations:
+      required: true
+  - type: input
+    id: runner
+    attributes:
+      label: Runner OS, architecture, and Python
+      placeholder: Linux x64, Python 3.12.8
+    validations:
+      required: true
+  - type: textarea
+    id: export
+    attributes:
+      label: Export command
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction command, exit code, and bounded output
+      render: shell
+    validations:
+      required: true
+  - type: dropdown
+    id: source_tree
+    attributes:
+      label: Was the command run outside the source checkout?
+      options:
+        - "Yes"
+        - "No"
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Data-safety confirmation
+      options:
+        - label: The attached material is synthetic, redacted, and contains no credentials.
+          required: true

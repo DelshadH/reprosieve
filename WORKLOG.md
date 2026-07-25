@@ -103,3 +103,15 @@ Observed facts: 74 tests and 2 contract subtests pass; the package collector bui
 Decision: commit verifier repairs before producing evidence tied to a clean commit.
 Ending commit: pending verifier-repair commit
 Manual item: none
+
+## 2026-07-25T13:07:56Z - RS-080 - attempt 8
+Objective: Close external package proof and the documented release-support surface without prematurely passing tasks.
+Starting commit: 8b08fe24482f1bf33e07bd49619d87d7312fb4bb
+Deadline state: contract closure; final status transition remains gated on fresh RS-G12 evidence
+Approach: Revalidate CI-produced RS-G10/RS-G13 bundles, add the missing support policy and issue forms, and align stale public replay/status documentation.
+Commands: GitHub Actions run 30158952013; gate-specific RS-G10 and RS-G13 verifiers; targeted release-contract test
+Result: in_progress
+Observed facts: Every CI job passes; Python 3.11-3.13 produce identical wheel/sdist hashes and successful source-free CLI smoke output.
+Decision: commit external evidence and release surfaces, then regenerate RS-G12 against the expanded test suite.
+Ending commit: pending release-surface commit
+Manual item: none

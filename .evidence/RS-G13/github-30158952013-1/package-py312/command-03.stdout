@@ -1,0 +1,15 @@
+usage: runsieve [-h] {capture,minimize,replay,verify-minimal,export} ...
+
+Capture and reduce a failed agent run into an offline reproduction.
+
+positional arguments:
+  {capture,minimize,replay,verify-minimal,export}
+    capture             capture one OpenAI Agents SDK trace
+    minimize            reduce a capsule with a predicate
+    replay              materialize recorded outputs without executing
+                        application code
+    verify-minimal      independently verify 1-minimality
+    export              write a one-command issue reproduction
+
+options:
+  -h, --help            show this help message and exit
