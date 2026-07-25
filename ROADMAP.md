@@ -35,3 +35,7 @@ do not substitute for cases, permissions, or sustained external use.
 
 The exact evidence and blocker split is recorded in the canonical
 [`docs/maturity-status.json`](docs/maturity-status.json) ledger.
+The broader objective-by-objective proof and blocker audit is
+[`docs/completion-audit.json`](docs/completion-audit.json).
+The current-tree review of every non-negotiable evidence principle is
+[`docs/principles-audit.json`](docs/principles-audit.json).
