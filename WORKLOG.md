@@ -110,8 +110,20 @@ Starting commit: 8b08fe24482f1bf33e07bd49619d87d7312fb4bb
 Deadline state: contract closure; final status transition remains gated on fresh RS-G12 evidence
 Approach: Revalidate CI-produced RS-G10/RS-G13 bundles, add the missing support policy and issue forms, and align stale public replay/status documentation.
 Commands: GitHub Actions run 30158952013; gate-specific RS-G10 and RS-G13 verifiers; targeted release-contract test
-Result: in_progress
+Result: passed
 Observed facts: Every CI job passes; Python 3.11-3.13 produce identical wheel/sdist hashes and successful source-free CLI smoke output.
-Decision: commit external evidence and release surfaces, then regenerate RS-G12 against the expanded test suite.
-Ending commit: pending release-surface commit
+Decision: register every dependency-ordered task and gate as passed, then require the clean release gate and final CI to succeed.
+Ending commit: pending final status/evidence commit
 Manual item: none
+
+## 2026-07-25T13:18:39Z - RS-000 - attempt 9
+Objective: Validate the simultaneous final task/gate transition against the immutable control plane.
+Starting commit: c0a8fc81591a3232f7fc3a7845c4542afb12f9cf
+Deadline state: implementation and evidence complete; contract authority is the remaining constraint
+Approach: Register every task and gate as passed together, then run the root-anchored full verifier before committing.
+Commands: `python -m scripts.generate_gate_evidence RS-G12 closure-c0a8fc8`; `python -m scripts.verify`
+Result: blocked
+Observed facts: The completed state passes `validate_state_shape`, but immutable `contract_self_test.py` then mutates already-passed RS-000 to `passed` and incorrectly accepts the no-op, making its negative test fail. Keeping RS-000 pending makes the self-test pass but keeps the release gate red.
+Decision: do not weaken or edit the anchored control plane; retain all measured evidence in a valid pending state and request authority for a reviewed skeleton revision.
+Ending commit: pending blocker-state commit
+Manual item: none; this is a contract-version decision, not a fabricated human-only operational blocker.

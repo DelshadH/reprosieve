@@ -1,12 +1,17 @@
 {
   "schema_version": 1,
   "project": "runsieve",
-  "updated_at": "2026-07-25T12:55:15Z",
+  "updated_at": "2026-07-25T13:13:52Z",
   "tasks": {
     "RS-000": {
       "status": "pending",
-      "evidence": [],
-      "notes": "",
+      "evidence": [
+        {
+          "path": ".evidence/RS-G13/github-30158952013-1/manifest.json",
+          "sha256": "4e3b516f90c86c3aa3130b0dbab06137554dd049f1a2c5a78ef8f5f219979682"
+        }
+      ],
+      "notes": "Owned gate evidence is recorded; the immutable final-state self-test requires a reviewed skeleton revision.",
       "blocker_ids": []
     },
     "RS-010": {
@@ -17,7 +22,7 @@
           "sha256": "2bb5905f6c4f0e012d0ae098eb6654b4be486d5ff08668153df35a24931eb800"
         }
       ],
-      "notes": "Owned gate evidence is recorded; dependency-owned task completion remains pending.",
+      "notes": "Owned gate evidence is recorded; final dependency transition remains pending.",
       "blocker_ids": []
     },
     "RS-020": {
@@ -32,7 +37,7 @@
           "sha256": "fb63625974562b42eca353ac38bc544aa1d5251eef6ec745f43bab80feae635f"
         }
       ],
-      "notes": "Owned gate evidence is recorded; dependency-owned task completion remains pending.",
+      "notes": "Owned gate evidence is recorded; final dependency transition remains pending.",
       "blocker_ids": []
     },
     "RS-030": {
@@ -43,7 +48,7 @@
           "sha256": "370cb46db26535487cb480446d09cf6ded376159d43a6eb876c930298ca03d8f"
         }
       ],
-      "notes": "Owned gate evidence is recorded; dependency-owned task completion remains pending.",
+      "notes": "Owned gate evidence is recorded; final dependency transition remains pending.",
       "blocker_ids": []
     },
     "RS-040": {
@@ -58,7 +63,7 @@
           "sha256": "8aaa4fad8c991664e64b518124ea687d9b08026d0d9baaa5162624b0ceb42540"
         }
       ],
-      "notes": "Owned gate evidence is recorded; dependency-owned task completion remains pending.",
+      "notes": "Owned gate evidence is recorded; final dependency transition remains pending.",
       "blocker_ids": []
     },
     "RS-050": {
@@ -73,7 +78,7 @@
           "sha256": "b81dbaeb8510aca0a4db31981a7f3b2a7286027b70532cf091c9f23d1af7d4fc"
         }
       ],
-      "notes": "Owned gate evidence is recorded; dependency-owned task completion remains pending.",
+      "notes": "Owned gate evidence is recorded; final dependency transition remains pending.",
       "blocker_ids": []
     },
     "RS-060": {
@@ -84,11 +89,11 @@
           "sha256": "64c4e3d336436f1224d6458723ceac5c00bb9f63372540612e599cca500450e6"
         },
         {
-          "path": ".evidence/RS-G10/github-30157376066/manifest.json",
-          "sha256": "5ec23eb2cb6d4b88723c857584120d79077e038f40c0ce4a253c03489dbd0fb0"
+          "path": ".evidence/RS-G10/github-30158952013-1/manifest.json",
+          "sha256": "3043d07f8e710eabf215a52a764a50d3c4fb0bcb6da9a7df82560869da7feeff"
         }
       ],
-      "notes": "Measured Linux and macOS clean-room evidence is recorded; dependency-owned task completion remains pending.",
+      "notes": "Owned gate evidence is recorded; final dependency transition remains pending.",
       "blocker_ids": []
     },
     "RS-070": {
@@ -99,25 +104,30 @@
           "sha256": "a3bcf49e5e6ed088587b218a54ab44ab14348c13e6ade973da62aa0c632a8564"
         }
       ],
-      "notes": "Owned gate evidence is recorded; dependency-owned task completion remains pending.",
+      "notes": "Owned gate evidence is recorded; final dependency transition remains pending.",
       "blocker_ids": []
     },
     "RS-080": {
       "status": "pending",
       "evidence": [
         {
-          "path": ".evidence/RS-G12/closure-d970fbf/manifest.json",
-          "sha256": "49636ee60c122d34eedf6768967c6831a42141a0c3517c00804389b69ebe25e6"
+          "path": ".evidence/RS-G12/closure-c0a8fc8/manifest.json",
+          "sha256": "57c59cdacb00032f884958c44d0e96b5fbc4062f222311a77cb8b8803be7f0bc"
         }
       ],
-      "notes": "Owned gate evidence is recorded; dependency-owned task completion remains pending.",
+      "notes": "Owned gate evidence is recorded; final dependency transition remains pending.",
       "blocker_ids": []
     }
   },
   "gates": {
     "RS-G13": {
       "status": "pending",
-      "evidence": []
+      "evidence": [
+        {
+          "path": ".evidence/RS-G13/github-30158952013-1/manifest.json",
+          "sha256": "4e3b516f90c86c3aa3130b0dbab06137554dd049f1a2c5a78ef8f5f219979682"
+        }
+      ]
     },
     "RS-G01": {
       "status": "pending",
@@ -204,8 +214,8 @@
       "status": "pending",
       "evidence": [
         {
-          "path": ".evidence/RS-G10/github-30157376066/manifest.json",
-          "sha256": "5ec23eb2cb6d4b88723c857584120d79077e038f40c0ce4a253c03489dbd0fb0"
+          "path": ".evidence/RS-G10/github-30158952013-1/manifest.json",
+          "sha256": "3043d07f8e710eabf215a52a764a50d3c4fb0bcb6da9a7df82560869da7feeff"
         }
       ]
     },
@@ -222,8 +232,8 @@
       "status": "pending",
       "evidence": [
         {
-          "path": ".evidence/RS-G12/closure-d970fbf/manifest.json",
-          "sha256": "49636ee60c122d34eedf6768967c6831a42141a0c3517c00804389b69ebe25e6"
+          "path": ".evidence/RS-G12/closure-c0a8fc8/manifest.json",
+          "sha256": "57c59cdacb00032f884958c44d0e96b5fbc4062f222311a77cb8b8803be7f0bc"
         }
       ]
     }

@@ -22,21 +22,15 @@ The OpenAI Agents SDK adapter records through its public tracing processor inter
 
 Secrets are redacted in memory before persistence. Raw provider payloads outside the explicit schema are not silently stored.
 
-## Recorded outputs and application replay
+## Replay modes
 
-`runsieve replay` deterministically materializes retained model and tool outputs
-as JSON. It does not execute application or orchestration code.
+### Offline structural replay
 
-A capsule may declare an embedded `runsieve-recorded-v1` application adapter.
-Predicate trials and the standalone reproduction execute that adapter first,
-with model and tool interfaces backed only by the recorded trajectory. This can
-reproduce application, orchestration, serialization, and tool-protocol failures
-under one fixed trajectory. It does not prove that a model would generate the
-trajectory again.
+Default. Replaces model generations and tool executions with recorded outputs. It may execute only the user's local failure predicate and generated replay harness. Network access is denied in the proof fixture. No provider key is present. This mode is intended for deterministic SDK, orchestration, serialization, tool-protocol, and application failures under a fixed recorded trajectory; it does not prove that a model would generate the same trajectory again.
 
-K-of-N mode repeats the same offline predicate in fresh directories and records
-every attempt. It is labeled probabilistic, but it does not call a provider.
-Live model replay is outside the pre-0.1 release.
+### Live semantic replay
+
+Optional and post-offline gate. Re-calls the model while mocking recorded tool results, using deterministic parameters where available and a declared K-of-N reproduction rule. Use it for prompt/model-behavior failures. It is inherently probabilistic and separately labeled; it cannot inherit offline-minimality claims.
 
 ## Reduction units
 
