@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import subprocess
 import sys
@@ -63,7 +64,7 @@ def test_minimize_verify_replay_and_one_command_export(tmp_path: Path, capfd: ob
     assert (
         main(
             [
-                "minimize",
+                "reduce",
                 str(source),
                 "--output-dir",
                 str(output_directory),
@@ -80,6 +81,14 @@ def test_minimize_verify_replay_and_one_command_export(tmp_path: Path, capfd: ob
     outputs = list(output_directory.glob("*.runsieve"))
     assert len(outputs) == 1
     reduced_path = outputs[0]
+    report_paths = list(output_directory.glob("*.report.json"))
+    assert len(report_paths) == 1
+    reduction_report = json.loads(report_paths[0].read_text(encoding="utf-8"))
+    assert reduction_report["artifact_sha256"] == reduced_path.stem
+    assert reduction_report["predicate"]["trials"] == 1
+    assert reduction_report["final_predicate"]["trials"] == 1
+    assert len(reduction_report["final_predicate"]["attempts"]) == 1
+    assert reduction_report["minimality"]["is_one_minimal"] is True
     assert reduced_path.stem == hashlib.sha256(reduced_path.read_bytes()).hexdigest()
     reduced = load_capsule(reduced_path)
     assert len(reduced.events) <= 10
@@ -87,12 +96,13 @@ def test_minimize_verify_replay_and_one_command_export(tmp_path: Path, capfd: ob
         source_before
     ).hexdigest()
     assert reduced.metadata["minimality"]["is_one_minimal"] is True
+    assert "offline_proof" not in reduced.metadata
 
-    replay_path = tmp_path / "replay.json"
-    assert main(["replay", str(reduced_path), "--output", str(replay_path)]) == 0
+    replay_path = tmp_path / "materialized.json"
+    assert main(["materialize", str(reduced_path), "--output", str(replay_path)]) == 0
     assert "recorded-output materialization" in capfd.readouterr().out  # type: ignore[attr-defined]
-    assert b'"provider_calls":0' in replay_path.read_bytes()
-    assert b'"original_tool_calls":0' in replay_path.read_bytes()
+    assert b'"provider_calls"' not in replay_path.read_bytes()
+    assert b'"original_tool_calls"' not in replay_path.read_bytes()
 
     assert (
         main(
@@ -142,6 +152,84 @@ def test_minimize_verify_replay_and_one_command_export(tmp_path: Path, capfd: ob
     capfd.readouterr()  # type: ignore[attr-defined]
 
 
+def test_reproduce_predicate_runs_the_declared_offline_predicate(tmp_path: Path) -> None:
+    source = tmp_path / "source.runsieve"
+    write_capsule(killer_capsule(), source)
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "runsieve.cli",
+            "reproduce-predicate",
+            str(source),
+            "--predicate",
+            "python",
+            "verify_failure.py",
+        ],
+        capture_output=True,
+        check=False,
+        text=True,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert '"result":"reproduces"' in result.stdout
+    assert '"reason":"exit_0"' in result.stdout
+
+
+def test_replay_alias_is_explicitly_deprecated(tmp_path: Path) -> None:
+    source = tmp_path / "source.runsieve"
+    output = tmp_path / "materialized.json"
+    write_capsule(killer_capsule(), source)
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "runsieve.cli",
+            "replay",
+            str(source),
+            "--output",
+            str(output),
+        ],
+        capture_output=True,
+        check=False,
+        text=True,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "deprecated" in result.stderr.casefold()
+    assert output.is_file()
+
+
+def test_minimize_alias_is_explicitly_deprecated(tmp_path: Path) -> None:
+    source = tmp_path / "source.runsieve"
+    output_directory = tmp_path / "reduced"
+    write_capsule(killer_capsule(), source)
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "runsieve.cli",
+            "minimize",
+            str(source),
+            "--output-dir",
+            str(output_directory),
+            "--predicate",
+            "python",
+            "verify_failure.py",
+        ],
+        capture_output=True,
+        check=False,
+        text=True,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "deprecated" in result.stderr.casefold()
+    assert list(output_directory.glob("*.runsieve"))
+
+
 def test_cli_rejects_shell_strings_and_does_not_overwrite_outputs(tmp_path: Path) -> None:
     source = tmp_path / "source.runsieve"
     write_capsule(killer_capsule(), source)
@@ -150,7 +238,7 @@ def test_cli_rejects_shell_strings_and_does_not_overwrite_outputs(tmp_path: Path
     assert (
         main(
             [
-                "minimize",
+                "reduce",
                 str(source),
                 "--output-dir",
                 str(output_directory),

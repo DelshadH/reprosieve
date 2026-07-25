@@ -143,7 +143,7 @@ def collect(output: Path) -> dict[str, Any]:
         write_capsule(killer_capsule(), source)
         if runsieve_main(
             [
-                "minimize",
+                "reduce",
                 str(source),
                 "--output-dir",
                 str(reduced),

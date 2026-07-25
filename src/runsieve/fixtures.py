@@ -87,25 +87,16 @@ def killer_capsule() -> Capsule:
         events=tuple(events),
         metadata={
             "fixture": "killer-247",
+            "fixture_kind": "synthetic",
             "expected_max_events": 10,
-            "application_replay": {
-                "protocol": "runsieve-recorded-v1",
-                "argv": ["python", "replay_application.py"],
-            },
         },
         workspace={
-            "replay_application.py": (
-                "import json, os, pathlib\n"
-                "from runsieve_replay_adapter import next_tool_output\n"
-                "result={'failure':next_tool_output('probe').get('failure')}\n"
-                "pathlib.Path(os.environ['RUNSIEVE_APPLICATION_RESULT']).write_text("
-                "json.dumps(result),encoding='utf-8')\n"
-            ),
             "verify_failure.py": (
                 "import json, os, pathlib\n"
                 "data=json.loads(pathlib.Path("
-                "os.environ['RUNSIEVE_APPLICATION_RESULT']).read_text())\n"
-                "ok=data.get('failure')=='needle'\n"
+                "os.environ['RUNSIEVE_REPLAY']).read_text())\n"
+                "ok=any(item.get('output',{}).get('failure')=='needle' "
+                "for item in data['tool_outputs'])\n"
                 "raise SystemExit(0 if ok else 1)\n"
             )
         },

@@ -105,7 +105,7 @@ def test_standalone_reproducer_restores_declared_environment(tmp_path: Path) -> 
     assert result.stdout.strip() == "target failure reproduced offline"
 
 
-def test_standalone_reproducer_executes_declared_application_adapter(
+def test_export_rejects_deferred_application_replay_declarations(
     tmp_path: Path,
 ) -> None:
     capsule = replace(
@@ -145,17 +145,5 @@ def test_standalone_reproducer_executes_declared_application_adapter(
         predicate=PredicateSpec(("python", "predicate.py")).to_json(),
     )
     output = tmp_path / "application-repro"
-    export_reproduction(source, output)
-
-    result = subprocess.run(
-        [sys.executable, "reproduce.py"],
-        cwd=output,
-        env={"PATH": os.environ.get("PATH", ""), "SYSTEMROOT": os.environ.get("SYSTEMROOT", "")},
-        capture_output=True,
-        text=True,
-        timeout=10,
-        check=False,
-    )
-
-    assert result.returncode == 0, result.stdout + result.stderr
-    assert result.stdout.strip() == "target failure reproduced offline"
+    with pytest.raises(ValueError, match="application replay is not supported"):
+        export_reproduction(source, output)

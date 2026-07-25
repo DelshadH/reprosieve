@@ -127,3 +127,15 @@ Observed facts: The completed state passes `validate_state_shape`, but immutable
 Decision: do not weaken or edit the anchored control plane; retain all measured evidence in a valid pending state and request authority for a reviewed skeleton revision.
 Ending commit: pending blocker-state commit
 Manual item: none; this is a contract-version decision, not a fabricated human-only operational blocker.
+
+## 2026-07-25T15:19:46Z - RS-000 - attempt 10
+Objective: Repair product vocabulary, semantic gate derivation, reducer evidence, and release durability without weakening the immutable contract.
+Starting commit: c0b0b249295bdaf2299fb02ee0e8c487289cdb06
+Deadline state: migration pull request remains draft and not releasable
+Approach: Preserve both histories, defer unsupported application replay, add explicit reduce/materialize/reproduce-predicate commands, strengthen reports and differential tests, split configured assertions into gate-specific probes, and exercise installed wheel flows.
+Commands: focused red/green pytest runs; `python -m pytest -q`; `python -m ruff check .`; `python -m mypy`; `python -m build`; installed wheel smoke with and without the OpenAI capture extra
+Result: in_progress
+Observed facts: 84 tests plus 2 contract subtests pass; 60 generated graph cases exposed and then verified model-pair reduction; wheel-installed help, capture, reduce, materialize, reproduce-predicate, verify-minimal, export, and exported reproduction run outside the source tree.
+Decision: commit the repair before generating new evidence; keep all task and gate statuses pending until exact-commit evidence and the immutable skeleton contradiction are resolved.
+Ending commit: pending contract-repair commit
+Manual item: canonical default-branch/protection changes remain owner actions after a green reviewed replacement; no item is marked resolved.

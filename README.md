@@ -20,11 +20,9 @@ hash-addressed capsule with an independent 1-minimality proof.
   a clean temporary directory, provider keys removed, bounded time/output/process
   resources, and Python audit hooks that deny outbound network, child processes,
   native loading, and host-file access.
-- Deterministic recorded-output materialization. When a capsule declares an
-  embedded `runsieve-recorded-v1` application adapter, predicate evaluation and
-  exported reproduction run that adapter against recorded model/tool interfaces
-  before checking the failure. Neither path imports the Agents SDK, calls a
-  provider, or executes an original tool.
+- Deterministic recorded-output materialization and offline predicate
+  reproduction. These paths reconstruct retained values and execute only the
+  declared predicate; they do not rerun application or orchestration code.
 
 ## Support matrix
 
@@ -59,12 +57,15 @@ runsieve capture \
   --include verify_failure.py \
   -- python app.py
 
-runsieve minimize failed.runsieve \
+runsieve reduce failed.runsieve \
   --output-dir reduced \
   --predicate python verify_failure.py
 
-runsieve replay reduced/<sha256>.runsieve \
-  --output replay.json
+runsieve materialize reduced/<sha256>.runsieve \
+  --output materialized.json
+
+runsieve reproduce-predicate reduced/<sha256>.runsieve \
+  --predicate python verify_failure.py
 
 runsieve verify-minimal reduced/<sha256>.runsieve \
   --predicate python verify_failure.py
@@ -76,9 +77,17 @@ cd issue-repro
 python reproduce.py
 ```
 
-The `replay` command writes recorded outputs as JSON; by itself it does not
-execute application code. Application replay is explicit and adapter-backed
-during predicate evaluation and `reproduce.py`.
+`materialize` writes recorded values as deterministic JSON.
+`reproduce-predicate` evaluates the embedded predicate in a fresh constrained
+directory and reports every trial. Neither command is application replay.
+
+The pre-0.1 `minimize` and `replay` names remain warning aliases for `reduce`
+and `materialize`. They may be removed before 0.2.
+
+Application replay is deferred to maturity level 0.5. Capsules that declare the
+experimental `application_replay` field fail closed in predicate and export
+paths until an adapter can enforce strict order and argument matching, report
+divergence, and measure intercepted interactions.
 
 Predicate exit codes are strict:
 
@@ -92,7 +101,7 @@ Invalid is never treated as absent and is never accepted as a reduction.
 
 ## Reproducible proof
 
-The repository includes a real 247-event fixture. This command builds it,
+The repository includes a synthetic 247-event mechanical fixture. This command builds it,
 reduces it to at most 10 events, verifies 1-minimality independently, exports a
 standalone reproduction, and runs it without an API key:
 
@@ -120,8 +129,8 @@ RunSieve is not a trace viewer, observability backend, VM sandbox, or general
 record/replay system. Existing record/replay tools preserve executions; RunSieve
 adds dependency-aware reduction, redaction before its own persistence, strict
 tri-state predicates, and an independently checked 1-minimality claim for one
-recorded agent trajectory. It does not diagnose root cause or replay live model
-semantics.
+recorded agent trajectory. It does not diagnose root cause, rerun application
+logic, or replay live model semantics.
 
 ## Privacy boundary
 
@@ -150,4 +159,6 @@ python scripts/killer_demo.py
 Apache-2.0 licensed.
 
 See [SUPPORT.md](SUPPORT.md) for supported combinations and
-[CONTRIBUTING.md](CONTRIBUTING.md) before opening a change.
+[CONTRIBUTING.md](CONTRIBUTING.md) before opening a change. Maturity levels are
+defined in [ROADMAP.md](ROADMAP.md); real-case evidence status is tracked in
+[docs/case-studies](docs/case-studies/README.md).

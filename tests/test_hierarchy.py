@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from runsieve.capsule import capsule_bytes
 from runsieve.ddmin import PredicateResult
 from runsieve.fixtures import killer_capsule, killer_predicate
 from runsieve.hierarchy import minimize_capsule
@@ -146,6 +147,39 @@ def test_each_hierarchy_level_accepts_a_real_reduction() -> None:
     assert result.capsule.environment == {"KEEP": "yes"}
 
 
+def test_reduction_and_minimality_reports_define_their_measured_scope() -> None:
+    source = _hierarchy_fixture()
+    result = minimize_capsule(source, _hierarchy_predicate)
+    report = result.report.to_json()
+
+    assert report.get("source_bytes") == len(capsule_bytes(source))
+    assert report.get("result_bytes") == len(capsule_bytes(result.capsule))
+    assert isinstance(report.get("cache_key"), str)
+    assert len(str(report["cache_key"])) == 64
+    assert report.get("cache_key_complete") is False
+    assert report.get("not_minimized") == [
+        "archive_container",
+        "capsule_metadata",
+        "predicate_definition",
+        "redaction_report",
+    ]
+    for level in report["levels"]:
+        assert level["attempted"] >= level["accepted"]
+        assert level["attempted"] == (
+            level["accepted_candidates"]
+            + level["rejected_candidates"]
+            + level["invalid_candidates"]
+            + level["cache_hits"]
+        )
+
+    proof = verify_one_minimal(result.capsule, _hierarchy_predicate).to_json()
+    assert proof.get("definition") == (
+        "Deleting any one remaining declared final-granularity unit makes the "
+        "failure absent or the candidate invalid."
+    )
+    assert proof.get("not_minimized") == report["not_minimized"]
+
+
 def test_invalid_candidates_are_never_accepted() -> None:
     capsule = Capsule(
         schema_version="1",
@@ -162,11 +196,12 @@ def test_invalid_candidates_are_never_accepted() -> None:
         ids = {event.id for event in candidate.events}
         if "failure" in ids and "required-parent" not in ids:
             return PredicateResult.INVALID
-        return (
-            PredicateResult.REPRODUCES
-            if {"required-parent", "failure"} <= ids
-            else PredicateResult.ABSENT
-        )
+        if not {"required-parent", "failure"} <= ids:
+            return PredicateResult.ABSENT
+        failure = next(event for event in candidate.events if event.id == "failure")
+        if failure.payload != {"needle": True}:
+            return PredicateResult.INVALID
+        return PredicateResult.REPRODUCES
 
     result = minimize_capsule(capsule, predicate)
     assert {event.id for event in result.capsule.events} == {
@@ -174,3 +209,8 @@ def test_invalid_candidates_are_never_accepted() -> None:
         "required-parent",
         "failure",
     }
+    invalids = sum(
+        int(level.to_json().get("invalid_candidates", 0))
+        for level in result.report.levels
+    )
+    assert invalids > 0

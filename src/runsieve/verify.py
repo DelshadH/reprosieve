@@ -5,6 +5,8 @@ from dataclasses import dataclass, replace
 
 from .ddmin import PredicateResult
 from .hierarchy import (
+    NOT_MINIMIZED_SURFACES,
+    ONE_MINIMAL_DEFINITION,
     delete_json_path,
     json_field_paths,
     json_item_paths,
@@ -38,7 +40,9 @@ class MinimalityProof:
     def to_json(self) -> dict[str, JsonValue]:
         return {
             "attempts": [attempt.to_json() for attempt in self.attempts],
+            "definition": ONE_MINIMAL_DEFINITION,
             "is_one_minimal": self.is_one_minimal,
+            "not_minimized": list(NOT_MINIMIZED_SURFACES),
             "reproducing_deletions": list(self.reproducing_deletions),
         }
 

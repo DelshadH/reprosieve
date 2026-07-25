@@ -121,42 +121,11 @@ def replay(members: dict[str, bytes], trace_id: str) -> dict[str, object]:
             tools.append(item)
     return {
         "events_replayed": len(events),
-        "mode": "offline",
+        "mode": "recorded-output-materialization",
         "model_outputs": models,
-        "original_tool_calls": 0,
-        "provider_calls": 0,
         "tool_outputs": tools,
         "trace_id": trace_id,
     }
-
-
-def adapter_source() -> str:
-    return (
-        "import json, os, pathlib\n"
-        "_data=json.loads(pathlib.Path(os.environ['RUNSIEVE_REPLAY']).read_text("
-        "encoding='utf-8'))\n"
-        "_models=list(_data['model_outputs'])\n"
-        "_tools=list(_data['tool_outputs'])\n"
-        "_model_index=0\n"
-        "_tool_index=0\n"
-        "def next_model_output():\n"
-        " global _model_index\n"
-        " if _model_index >= len(_models): raise RuntimeError('recorded model outputs exhausted')\n"
-        " item=_models[_model_index]\n"
-        " _model_index+=1\n"
-        " return item.get('output')\n"
-        "def next_tool_output(expected_name=None):\n"
-        " global _tool_index\n"
-        " if _tool_index >= len(_tools): raise RuntimeError('recorded tool outputs exhausted')\n"
-        " item=_tools[_tool_index]\n"
-        " if expected_name is not None and item.get('name') != expected_name:\n"
-        "  raise RuntimeError('recorded tool trajectory mismatch')\n"
-        " _tool_index+=1\n"
-        " if 'error' in item: raise RuntimeError('recorded tool error')\n"
-        " return item.get('output')\n"
-        "def consumption():\n"
-        " return {'model_outputs':_model_index,'tool_outputs':_tool_index}\n"
-    )
 
 
 def guard_source(timeout: float, output_limit: int, process_limit: int) -> str:
@@ -364,58 +333,10 @@ def trial(
         metadata = json.loads(members["metadata.json"])
         if not isinstance(metadata, dict):
             return None
-        application = metadata.get("application_replay")
+        if "application_replay" in metadata:
+            return None
         consumed_output = 0
-        if application is not None:
-            if (
-                not isinstance(application, dict)
-                or set(application) != {"argv", "protocol"}
-                or application.get("protocol") != "runsieve-recorded-v1"
-            ):
-                return None
-            application_argv = application.get("argv")
-            if (
-                not isinstance(application_argv, list)
-                or len(application_argv) < 2
-                or not all(isinstance(item, str) and item for item in application_argv)
-                or Path(application_argv[0]).name.lower()
-                not in {"python", "python3", "python.exe", "py"}
-            ):
-                return None
-            application_script = safe_path(application_argv[1])
-            if application_script not in workspace_index:
-                return None
-            (guard / "runsieve_replay_adapter.py").write_text(
-                adapter_source(),
-                encoding="utf-8",
-            )
-            application_result = root / "application-result.json"
-            environment["RUNSIEVE_APPLICATION_RESULT"] = str(application_result)
-            application_command = [
-                sys.executable,
-                application_script,
-                *application_argv[2:],
-            ]
-            application_exit, consumed_output = run_command(
-                application_command,
-                root=root,
-                environment=environment,
-                deadline=deadline,
-                output_limit=output_limit,
-                label="application",
-            )
-            if (
-                application_exit != 0
-                or application_result.is_symlink()
-                or not application_result.is_file()
-                or application_result.stat().st_size > output_limit
-            ):
-                return None
-            try:
-                json.loads(application_result.read_text(encoding="utf-8"))
-            except (OSError, UnicodeDecodeError, json.JSONDecodeError):
-                return None
-        remaining_output = output_limit - consumed_output
+        remaining_output = output_limit
         if remaining_output < 1:
             return None
         predicate_exit, predicate_output = run_command(
@@ -458,6 +379,8 @@ if __name__ == "__main__":
 def export_reproduction(source: str | Path, output: str | Path) -> Path:
     source_path = ensure_regular_file(source, label="export source")
     capsule = load_capsule(source_path)
+    if "application_replay" in capsule.metadata:
+        raise ValueError("application replay is not supported in the seed release")
     predicate_document = read_capsule_document(source_path, "predicate.json")
     spec = predicate_spec_from_json(predicate_document)
     if len(spec.argv) < 2 or Path(spec.argv[0]).name.casefold() not in {

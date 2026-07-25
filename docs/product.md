@@ -29,27 +29,29 @@ SDK objects are converted to bounded primitives and redacted in memory. Unknown
 span types remain explicit. Missing parents, incomplete spans, excess events,
 unsupported SDK versions, or more than one completed trace fail closed.
 
-## Recorded outputs and application replay
+## Recorded values and predicate reproduction
 
-`runsieve replay` walks the retained event graph and materializes recorded model
+`runsieve materialize` walks the retained event graph and materializes recorded model
 and tool outputs as deterministic JSON. That command does not execute
 application or orchestration code.
 
-A capsule may additionally declare an embedded `runsieve-recorded-v1`
-application adapter. Predicate trials and the standalone reproduction execute
-that entry point first, with `next_model_output()` and `next_tool_output()`
-backed only by the recorded trajectory. The application writes a bounded JSON
-result for the embedded failure predicate. This adapter-backed path reproduces
-application, orchestration, serialization, and tool-protocol failures under one
-fixed trajectory. It does not prove a model would generate that trajectory
-again, and undeclared applications are not executed.
+`runsieve reproduce-predicate` executes only the declared predicate against
+those values in a fresh constrained directory. The exported `reproduce.py`
+performs the same predicate reproduction without requiring RunSieve or a source
+checkout.
+
+Application replay is not supported in the seed release. An
+`application_replay` declaration is rejected. Maturity level 0.5 requires one
+framework-specific adapter that reruns a user entry point, intercepts provider
+and tool interfaces, enforces exact order and arguments, measures interactions,
+and reports unused, extra, or divergent calls.
 
 Predicates run in fresh directories with copied declared files, provider keys
 removed, proxy variables emptied, direct argument vectors, time/output/process
 limits, and Python audit hooks for network, process, native-loading, and
 host-filesystem denial. K-of-N runs use a fresh directory for every trial and are
 reported as probabilistic predicate evidence. They still use recorded outputs;
-live model replay is outside this seed release.
+live model or application replay is outside this seed release.
 
 ## Reduction units
 
@@ -85,7 +87,8 @@ timestamps/order/permissions, canonical JSON, a complete SHA-256 manifest, and:
 
 Source capsules are never overwritten. Reduced artifacts are named by the
 SHA-256 of their complete bytes and record the source hash, predicate hash,
-reduction evidence, offline call counts, and independent minimality proof.
+reduction evidence and an independent minimality proof. Construction-only mode
+properties are not represented as measured call counters.
 
 Export copies the exact capsule plus a standard-library `reproduce.py` and a
 short README. `python reproduce.py` validates all hashes and safety limits,

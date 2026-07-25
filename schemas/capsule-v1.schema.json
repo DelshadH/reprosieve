@@ -1,0 +1,62 @@
+{
+  "$id": "https://github.com/DelshadH/runsieve/schemas/capsule-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "environment": {
+      "additionalProperties": {"type": "string"},
+      "type": "object"
+    },
+    "events": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "dependencies": {
+            "items": {"type": "string"},
+            "type": "array",
+            "uniqueItems": true
+          },
+          "id": {"maxLength": 160, "minLength": 1, "type": "string"},
+          "kind": {
+            "enum": [
+              "run",
+              "message",
+              "model_request",
+              "model_response",
+              "tool_call",
+              "tool_result",
+              "handoff",
+              "guardrail",
+              "error",
+              "unknown"
+            ]
+          },
+          "parent_id": {"type": ["string", "null"]},
+          "payload": {},
+          "sequence": {"minimum": 0, "type": "integer"}
+        },
+        "required": ["dependencies", "id", "kind", "parent_id", "payload", "sequence"],
+        "type": "object"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "metadata": {"type": "object"},
+    "schema_version": {"const": "1"},
+    "trace_id": {"maxLength": 160, "minLength": 1, "type": "string"},
+    "workspace": {
+      "additionalProperties": {"type": "string"},
+      "type": "object"
+    }
+  },
+  "required": [
+    "environment",
+    "events",
+    "metadata",
+    "schema_version",
+    "trace_id",
+    "workspace"
+  ],
+  "title": "RunSieve logical capsule version 1",
+  "type": "object"
+}

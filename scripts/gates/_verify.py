@@ -148,6 +148,31 @@ def _measurement_record(
         raise ValueError(f"measured evidence record {index} does not match its command")
 
 
+def require_pytest_pass(
+    manifest: dict[str, Any],
+    base: Path,
+    index: int,
+) -> None:
+    command = manifest["commands"][index]
+    _stdout_path, stdout = _safe_blob(
+        base,
+        command["stdout"],
+        label=f"pytest measurement {index} stdout",
+    )
+    _stderr_path, stderr = _safe_blob(
+        base,
+        command["stderr"],
+        label=f"pytest measurement {index} stderr",
+    )
+    text = (stdout + b"\n" + stderr).decode("utf-8", errors="replace")
+    if re.search(r"\b[1-9][0-9]* passed\b", text) is None or re.search(
+        r"\b(?:failed|error|errors)\b",
+        text,
+        flags=re.IGNORECASE,
+    ):
+        raise ValueError(f"pytest measurement {index} has no clean passing result")
+
+
 def verify_manifest(spec: GateSpec, manifest_path: Path) -> dict[str, Any]:
     if support_sha256() != spec.expected_support_sha256:
         raise ValueError("verifier support implementation changed")
@@ -239,9 +264,9 @@ def verify_manifest(spec: GateSpec, manifest_path: Path) -> dict[str, Any]:
             index=index,
         )
 
-    measured = set(spec.assertions)
-    if spec.extra_validator is not None:
-        measured = spec.extra_validator(manifest, proof_document, base)
+    if spec.extra_validator is None:
+        raise ValueError(f"{spec.gate}: gate-specific assertion derivation is missing")
+    measured = spec.extra_validator(manifest, proof_document, base)
     if measured != set(spec.assertions):
         raise ValueError(f"{spec.gate}: not every assertion has measured evidence")
     return {

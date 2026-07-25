@@ -1,0 +1,1 @@
+{"events_replayed":5,"mode":"recorded-output-materialization","model_outputs":[{"event_id":"response","output":[{"name":"probe","type":"function_call"}],"request_id":"request"}],"tool_outputs":[{"call_id":"call","event_id":"result","name":"probe","output":{"failure":"needle"}}],"trace_id":"trace_demo"}

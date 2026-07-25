@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import math
 import os
 import signal
@@ -15,12 +14,7 @@ from pathlib import Path
 
 from .capsule import canonical_json, capsule_bytes, write_capsule
 from .ddmin import PredicateResult
-from .replay import (
-    application_replay_spec,
-    offline_replay,
-    replay_adapter_source,
-    write_replay,
-)
+from .replay import offline_replay, write_replay
 from .safeio import ensure_regular_file
 from .schema import Capsule, JsonValue, safe_relative_path, validate_capsule
 
@@ -104,8 +98,6 @@ class PredicateAttempt:
     network_guard: str
     application_replay: bool = False
     application_exit_code: int | None = None
-    provider_calls: int = 0
-    original_tool_calls: int = 0
 
     def to_json(self) -> dict[str, JsonValue]:
         return {
@@ -114,9 +106,7 @@ class PredicateAttempt:
             "duration_seconds": round(self.duration_seconds, 6),
             "exit_code": self.exit_code,
             "network_guard": self.network_guard,
-            "original_tool_calls": self.original_tool_calls,
             "output_bytes": self.output_bytes,
-            "provider_calls": self.provider_calls,
             "reason": self.reason,
             "result": self.result.value,
             "signal": self.signal,
@@ -459,10 +449,11 @@ def _execute_attempt(
             application_exit_code=application_exit_code,
         )
 
-    try:
-        replay_application = application_replay_spec(capsule)
-    except ValueError:
-        return invalid_attempt("application_replay_invalid", application_replay=True)
+    if "application_replay" in capsule.metadata:
+        return invalid_attempt(
+            "application_replay_unsupported",
+            application_replay=True,
+        )
 
     with tempfile.TemporaryDirectory(prefix="runsieve-predicate-") as temporary:
         workspace = Path(temporary)
@@ -492,127 +483,25 @@ def _execute_attempt(
                 encoding="utf-8",
                 newline="\n",
             )
-            if replay_application is not None:
-                (guard_directory / "runsieve_replay_adapter.py").write_text(
-                    replay_adapter_source(),
-                    encoding="utf-8",
-                    newline="\n",
-                )
             network_guard = "python-sitecustomize"
-        application_result_path = (
-            workspace / "application-result.json"
-            if replay_application is not None
-            else None
-        )
         environment = _minimal_environment(
             capsule,
             workspace=workspace,
             replay_path=replay_path,
             capsule_path=capsule_path,
             guard_directory=guard_directory,
-            application_result_path=application_result_path,
+            application_result_path=None,
             trial=trial,
         )
         deadline = started + spec.timeout_seconds
-        application_outcome: _ProcessOutcome | None = None
+        application_output_bytes = 0
         application_exit_code: int | None = None
-        if replay_application is not None:
-            try:
-                application_argv, application_is_python = _resolve_executable(
-                    replay_application.argv,
-                    workspace,
-                )
-            except ValueError:
-                return invalid_attempt(
-                    "application_replay_invalid",
-                    network_guard=network_guard,
-                    application_replay=True,
-                )
-            if not application_is_python or application_result_path is None:
-                return invalid_attempt(
-                    "application_replay_invalid",
-                    network_guard=network_guard,
-                    application_replay=True,
-                )
-            application_outcome = _run_bounded_process(
-                application_argv,
-                workspace=workspace,
-                environment=environment,
-                deadline=deadline,
-                output_limit_bytes=spec.output_limit_bytes,
-                cancel_event=cancel_event,
-            )
-            application_return_code = application_outcome.return_code
-            application_exit_code = (
-                application_return_code if application_return_code >= 0 else None
-            )
-            if application_outcome.reason is not None:
-                return invalid_attempt(
-                    f"application_{application_outcome.reason}",
-                    network_guard=network_guard,
-                    application_replay=True,
-                    application_exit_code=application_exit_code,
-                    outcome=application_outcome,
-                )
-            if application_return_code < 0:
-                return invalid_attempt(
-                    "application_signal",
-                    network_guard=network_guard,
-                    application_replay=True,
-                    outcome=application_outcome,
-                )
-            if application_return_code != 0:
-                return invalid_attempt(
-                    "application_unexpected_exit",
-                    network_guard=network_guard,
-                    application_replay=True,
-                    application_exit_code=application_exit_code,
-                    outcome=application_outcome,
-                )
-            if (
-                application_result_path.is_symlink()
-                or not application_result_path.is_file()
-                or application_result_path.stat().st_size > spec.output_limit_bytes
-            ):
-                return invalid_attempt(
-                    "application_result_invalid",
-                    network_guard=network_guard,
-                    application_replay=True,
-                    application_exit_code=application_exit_code,
-                    outcome=application_outcome,
-                )
-            try:
-                application_result = json.loads(
-                    application_result_path.read_text(encoding="utf-8")
-                )
-                canonical_json(application_result)
-            except (
-                OSError,
-                UnicodeDecodeError,
-                json.JSONDecodeError,
-                TypeError,
-                ValueError,
-                RecursionError,
-            ):
-                return invalid_attempt(
-                    "application_result_invalid",
-                    network_guard=network_guard,
-                    application_replay=True,
-                    application_exit_code=application_exit_code,
-                    outcome=application_outcome,
-                )
-
-        application_output_bytes = (
-            application_outcome.output_bytes if application_outcome is not None else 0
-        )
-        remaining_output = spec.output_limit_bytes - application_output_bytes
+        remaining_output = spec.output_limit_bytes
         if remaining_output < 1:
             return invalid_attempt(
                 "output_limit",
                 network_guard=network_guard,
-                application_replay=replay_application is not None,
                 application_exit_code=application_exit_code,
-                outcome=application_outcome,
             )
         predicate_outcome = _run_bounded_process(
             argv,
@@ -649,9 +538,6 @@ def _execute_attempt(
 
         stdout_digest = hashlib.sha256()
         stderr_digest = hashlib.sha256()
-        if application_outcome is not None:
-            stdout_digest.update(bytes.fromhex(application_outcome.stdout_sha256))
-            stderr_digest.update(bytes.fromhex(application_outcome.stderr_sha256))
         stdout_digest.update(bytes.fromhex(predicate_outcome.stdout_sha256))
         stderr_digest.update(bytes.fromhex(predicate_outcome.stderr_sha256))
         return PredicateAttempt(
@@ -666,7 +552,6 @@ def _execute_attempt(
             stderr_sha256=stderr_digest.hexdigest(),
             workspace_id=f"trial-{trial:03d}",
             network_guard=network_guard,
-            application_replay=replay_application is not None,
             application_exit_code=application_exit_code,
         )
 

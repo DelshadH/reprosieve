@@ -214,7 +214,7 @@ SPEC = GateSpec(
             assertions=("macos-one-command",),
         ),
     ),
-    expected_support_sha256="0487c43e903dbd2621b94e982dd02c2ad77b319311ad6401c4fcfee9b7a7fc90",
+    expected_support_sha256="c61b33ff9852dcde50c1204e083426b3b52e17fb922a4b7b8317c0f16a7c698d",
     extra_validator=_validate_rs_g10,
 )
 

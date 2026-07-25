@@ -54,18 +54,36 @@ def build_parser() -> argparse.ArgumentParser:
     capture.add_argument("--retain-sdk-exporter", action="store_true")
     capture.add_argument("target", nargs=argparse.REMAINDER)
 
-    minimize = subparsers.add_parser("minimize", help="reduce a capsule with a predicate")
+    reduce = subparsers.add_parser("reduce", help="reduce a capsule with a predicate")
+    reduce.add_argument("source")
+    reduce.add_argument("--output-dir", required=True)
+    _predicate_arguments(reduce)
+
+    minimize = subparsers.add_parser("minimize", help="deprecated alias for reduce")
     minimize.add_argument("source")
     minimize.add_argument("--output-dir", required=True)
     _predicate_arguments(minimize)
 
+    materialize = subparsers.add_parser(
+        "materialize",
+        help="write deterministic recorded model and tool values",
+    )
+    materialize.add_argument("source")
+    materialize.add_argument("--output")
+
     replay = subparsers.add_parser(
         "replay",
-        help="materialize recorded outputs without executing application code",
+        help="deprecated alias for materialize",
     )
     replay.add_argument("source")
-    replay.add_argument("--offline", action="store_true", default=True)
     replay.add_argument("--output")
+
+    reproduce = subparsers.add_parser(
+        "reproduce-predicate",
+        help="run an offline predicate against recorded values",
+    )
+    reproduce.add_argument("source")
+    _predicate_arguments(reproduce)
 
     verify = subparsers.add_parser(
         "verify-minimal",
@@ -204,7 +222,7 @@ def _capture(args: argparse.Namespace) -> int:
     return 0
 
 
-def _minimize(args: argparse.Namespace) -> int:
+def _reduce(args: argparse.Namespace) -> int:
     source_path = Path(args.source)
     source = load_capsule(source_path)
     source_sha256 = capsule_file_sha256(source_path)
@@ -228,7 +246,11 @@ def _minimize(args: argparse.Namespace) -> int:
     def evaluate(candidate: object) -> PredicateResult:
         return run_predicate(candidate, spec).result  # type: ignore[arg-type]
 
-    result = minimize_capsule(working, evaluate)
+    result = minimize_capsule(
+        working,
+        evaluate,
+        predicate_identity=predicate_hash,
+    )
     proof = verify_one_minimal(result.capsule, evaluate)
     if not proof.is_one_minimal:
         raise RuntimeError("independent 1-minimality verification failed")
@@ -239,11 +261,11 @@ def _minimize(args: argparse.Namespace) -> int:
         metadata={
             **result.capsule.metadata,
             "minimality": proof.to_json(),
-            "offline_proof": {"original_tool_calls": 0, "provider_calls": 0},
             "reduction": reduction,
         },
     )
-    if run_predicate(final, spec).result is not PredicateResult.REPRODUCES:
+    final_predicate = run_predicate(final, spec)
+    if final_predicate.result is not PredicateResult.REPRODUCES:
         raise RuntimeError("decorated reduced capsule no longer reproduces")
     output_directory = Path(os.path.abspath(args.output_dir))
     if output_directory.exists():
@@ -270,6 +292,26 @@ def _minimize(args: argparse.Namespace) -> int:
         )
         if info.sha256 != digest:
             raise RuntimeError("hash-addressed output verification failed")
+    report_data = canonical_json(
+        {
+            "artifact_bytes": len(data),
+            "artifact_sha256": digest,
+            "final_predicate": final_predicate.to_json(),
+            "format": "runsieve-reduction-report",
+            "format_version": 1,
+            "minimality": proof.to_json(),
+            "predicate": spec.to_json(),
+            "reduction": reduction,
+            "source_sha256": source_sha256,
+        }
+    )
+    report_destination = output_directory / f"{digest}.report.json"
+    if report_destination.exists():
+        if report_destination.read_bytes() != report_data:
+            raise RuntimeError("hash-addressed report collision")
+    else:
+        with report_destination.open("xb") as stream:
+            stream.write(report_data)
     print(
         f"reduced {len(source.events)} events to {len(final.events)}; "
         f"1-minimal; {result.report.predicate_calls} predicate calls; "
@@ -278,7 +320,12 @@ def _minimize(args: argparse.Namespace) -> int:
     return 0
 
 
-def _replay(args: argparse.Namespace) -> int:
+def _minimize(args: argparse.Namespace) -> int:
+    print("runsieve: minimize is deprecated; use reduce", file=sys.stderr)
+    return _reduce(args)
+
+
+def _materialize(args: argparse.Namespace) -> int:
     report = offline_replay(load_capsule(args.source))
     if args.output:
         write_replay(report, args.output)
@@ -286,6 +333,21 @@ def _replay(args: argparse.Namespace) -> int:
     else:
         sys.stdout.buffer.write(canonical_json(report.to_json()))
     return 0
+
+
+def _replay(args: argparse.Namespace) -> int:
+    print("runsieve: replay is deprecated; use materialize", file=sys.stderr)
+    return _materialize(args)
+
+
+def _reproduce_predicate(args: argparse.Namespace) -> int:
+    report = run_predicate(load_capsule(args.source), _spec(args))
+    sys.stdout.buffer.write(canonical_json(report.to_json()))
+    if report.result is PredicateResult.REPRODUCES:
+        return 0
+    if report.result is PredicateResult.ABSENT:
+        return 1
+    return 2
 
 
 def _verify(args: argparse.Namespace) -> int:
@@ -319,8 +381,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         args = parser.parse_args(argv)
         handlers = {
             "capture": _capture,
+            "reduce": _reduce,
             "minimize": _minimize,
+            "materialize": _materialize,
             "replay": _replay,
+            "reproduce-predicate": _reproduce_predicate,
             "verify-minimal": _verify,
             "export": _export,
         }

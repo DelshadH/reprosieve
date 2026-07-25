@@ -8,7 +8,7 @@
 - `adapters/openai_agents.py`: public SDK processor and trace conversion.
 - `_capture_bootstrap.py`: validated child-process processor installation.
 - `capsule.py`: deterministic archive writing, hostile archive reading, and hash verification.
-- `replay.py`: recorded-output materialization and the declared application-adapter protocol.
+- `replay.py`: deterministic recorded-output materialization.
 - `predicate.py`: isolated tri-state and K-of-N execution.
 - `ddmin.py`: generic tri-state delta debugging.
 - `hierarchy.py`: dependency-aware hierarchical reduction and memoization.
@@ -52,7 +52,7 @@ Only `REPRODUCES` accepts a candidate. Invalid results remain invalid.
 
 The cache key used by executable predicates includes the complete capsule bytes,
 argument vector, timeout, output limit, process limit, K-of-N policy, environment,
-and offline mode. Runtime call counts and wall time are printed; wall time is not
+and offline mode. Predicate calls and wall time are printed; wall time is not
 stored in deterministic capsule bytes.
 
 The verifier is separate code and does not share the reducer's cache. It attempts
@@ -72,10 +72,8 @@ operations outside the trial directory. This is meaningful defense in depth,
 not an operating-system or virtual-machine sandbox; see the residual risks in
 `docs/security-review.md`.
 
-When `metadata.application_replay` declares `runsieve-recorded-v1`, the isolated
-trial first runs the embedded application entry point. A generated standard-
-library adapter supplies recorded model and tool outputs in trajectory order.
-The entry point writes bounded JSON to `RUNSIEVE_APPLICATION_RESULT`; only then
-does the predicate run. Without that declaration, `runsieve replay` and
-predicate setup only materialize recorded outputs and make no application-replay
-claim.
+The isolated trial writes deterministic recorded values to `RUNSIEVE_REPLAY`
+and runs only the embedded predicate. `application_replay` declarations are
+rejected in the seed release. The future adapter boundary is specified in
+`docs/adr/0002-defer-application-replay.md`; no current path makes an
+application-replay claim.

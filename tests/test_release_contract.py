@@ -56,20 +56,18 @@ def test_cli_help_starts_without_the_optional_sdk_imported() -> None:
     )
     assert completed.returncode == 0, completed.stderr
     assert "capture" in completed.stdout
-    assert "minimize" in completed.stdout
+    assert "reduce" in completed.stdout
+    assert "materialize" in completed.stdout
+    assert "reproduce-predicate" in completed.stdout
 
 
-def test_public_fixture_replays_declared_application_logic_before_its_predicate() -> None:
+def test_public_fixture_is_explicitly_synthetic_and_uses_recorded_values() -> None:
     capsule = killer_capsule()
-    assert capsule.metadata["application_replay"] == {
-        "protocol": "runsieve-recorded-v1",
-        "argv": ["python", "replay_application.py"],
-    }
-    application = capsule.workspace["replay_application.py"]
+    assert capsule.metadata["fixture_kind"] == "synthetic"
+    assert "application_replay" not in capsule.metadata
     predicate = capsule.workspace["verify_failure.py"]
-    assert "next_tool_output" in application
-    assert "RUNSIEVE_APPLICATION_RESULT" in predicate
-    assert "RUNSIEVE_REPLAY" not in predicate
+    assert "RUNSIEVE_REPLAY" in predicate
+    assert "RUNSIEVE_APPLICATION_RESULT" not in predicate
 
 
 def test_repository_contains_the_required_release_support_surface() -> None:

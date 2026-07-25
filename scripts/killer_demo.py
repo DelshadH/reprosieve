@@ -21,7 +21,7 @@ def run() -> int:
         write_capsule(killer_capsule(), source)
         if main(
             [
-                "minimize",
+                "reduce",
                 str(source),
                 "--output-dir",
                 str(reduced),

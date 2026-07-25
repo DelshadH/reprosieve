@@ -16,6 +16,16 @@ JsonPath = tuple[PathPart, ...]
 T = TypeVar("T")
 _TEXT_CHUNK = 32
 _FILE_CHUNK = 32
+ONE_MINIMAL_DEFINITION = (
+    "Deleting any one remaining declared final-granularity unit makes the "
+    "failure absent or the candidate invalid."
+)
+NOT_MINIMIZED_SURFACES = (
+    "archive_container",
+    "capsule_metadata",
+    "predicate_definition",
+    "redaction_report",
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -25,14 +35,27 @@ class LevelReport:
     after_units: int
     accepted: int
     predicate_calls: int
+    attempted: int
+    accepted_candidates: int
+    rejected_candidates: int
+    invalid_candidates: int
+    cache_hits: int
+    invalid_reasons: dict[str, int]
 
     def to_json(self) -> dict[str, JsonValue]:
+        invalid_reasons: dict[str, JsonValue] = dict(self.invalid_reasons)
         return {
             "accepted": self.accepted,
+            "accepted_candidates": self.accepted_candidates,
             "after_units": self.after_units,
+            "attempted": self.attempted,
             "before_units": self.before_units,
+            "cache_hits": self.cache_hits,
+            "invalid_candidates": self.invalid_candidates,
+            "invalid_reasons": invalid_reasons,
             "name": self.name,
             "predicate_calls": self.predicate_calls,
+            "rejected_candidates": self.rejected_candidates,
         }
 
 
@@ -44,13 +67,22 @@ class MinimizationReport:
     cache_hits: int
     wall_seconds: float
     levels: tuple[LevelReport, ...]
+    source_bytes: int
+    result_bytes: int
+    cache_key: str
+    cache_key_complete: bool
 
     def to_json(self) -> dict[str, JsonValue]:
         return {
             "cache_hits": self.cache_hits,
+            "cache_key": self.cache_key,
+            "cache_key_complete": self.cache_key_complete,
             "levels": [level.to_json() for level in self.levels],
+            "not_minimized": list(NOT_MINIMIZED_SURFACES),
             "predicate_calls": self.predicate_calls,
+            "result_bytes": self.result_bytes,
             "result_events": self.result_events,
+            "source_bytes": self.source_bytes,
             "source_events": self.source_events,
             "wall_seconds": round(self.wall_seconds, 6),
         }
@@ -63,17 +95,28 @@ class MinimizationResult:
 
 
 class _MemoizedPredicate:
-    def __init__(self, predicate: Predicate) -> None:
+    def __init__(self, predicate: Predicate, *, cache_key: str) -> None:
         self.predicate = predicate
+        self.cache_key = cache_key
         self.cache: dict[str, PredicateResult] = {}
         self.calls = 0
         self.cache_hits = 0
+        self.requests = 0
+        self.result_counts = {result: 0 for result in PredicateResult}
+        self.invalid_reasons: dict[str, int] = {}
 
     def __call__(self, capsule: Capsule) -> PredicateResult:
+        self.requests += 1
         try:
             validate_capsule(capsule)
-            digest = hashlib.sha256(capsule_bytes(capsule)).hexdigest()
+            digest = hashlib.sha256(
+                self.cache_key.encode("ascii") + capsule_bytes(capsule)
+            ).hexdigest()
         except ValueError:
+            self.result_counts[PredicateResult.INVALID] += 1
+            self.invalid_reasons["structural_invalid"] = (
+                self.invalid_reasons.get("structural_invalid", 0) + 1
+            )
             return PredicateResult.INVALID
         cached = self.cache.get(digest)
         if cached is not None:
@@ -84,7 +127,68 @@ class _MemoizedPredicate:
         if not isinstance(result, PredicateResult):
             raise TypeError("predicate must return PredicateResult")
         self.cache[digest] = result
+        self.result_counts[result] += 1
+        if result is PredicateResult.INVALID:
+            self.invalid_reasons["predicate_invalid"] = (
+                self.invalid_reasons.get("predicate_invalid", 0) + 1
+            )
         return result
+
+
+@dataclass(frozen=True, slots=True)
+class _EvaluationSnapshot:
+    requests: int
+    calls: int
+    cache_hits: int
+    accepted: int
+    rejected: int
+    invalid: int
+    invalid_reasons: dict[str, int]
+
+
+def _snapshot(evaluate: _MemoizedPredicate) -> _EvaluationSnapshot:
+    return _EvaluationSnapshot(
+        requests=evaluate.requests,
+        calls=evaluate.calls,
+        cache_hits=evaluate.cache_hits,
+        accepted=evaluate.result_counts[PredicateResult.REPRODUCES],
+        rejected=evaluate.result_counts[PredicateResult.ABSENT],
+        invalid=evaluate.result_counts[PredicateResult.INVALID],
+        invalid_reasons=dict(evaluate.invalid_reasons),
+    )
+
+
+def _level_report(
+    *,
+    name: str,
+    before_units: int,
+    after_units: int,
+    accepted: int,
+    before: _EvaluationSnapshot,
+    evaluate: _MemoizedPredicate,
+) -> LevelReport:
+    after = _snapshot(evaluate)
+    reason_names = set(before.invalid_reasons) | set(after.invalid_reasons)
+    invalid_reasons = {
+        reason: after.invalid_reasons.get(reason, 0)
+        - before.invalid_reasons.get(reason, 0)
+        for reason in sorted(reason_names)
+        if after.invalid_reasons.get(reason, 0)
+        != before.invalid_reasons.get(reason, 0)
+    }
+    return LevelReport(
+        name=name,
+        before_units=before_units,
+        after_units=after_units,
+        accepted=accepted,
+        predicate_calls=after.calls - before.calls,
+        attempted=after.requests - before.requests,
+        accepted_candidates=after.accepted - before.accepted,
+        rejected_candidates=after.rejected - before.rejected,
+        invalid_candidates=after.invalid - before.invalid,
+        cache_hits=after.cache_hits - before.cache_hits,
+        invalid_reasons=invalid_reasons,
+    )
 
 
 def _resequence(events: Iterable[Event]) -> tuple[Event, ...]:
@@ -130,7 +234,7 @@ def _event_level(
     event_ids: Sequence[str],
     evaluate: _MemoizedPredicate,
 ) -> tuple[Capsule, LevelReport]:
-    before_calls = evaluate.calls
+    before = _snapshot(evaluate)
     all_units = tuple(event_ids)
 
     def build(kept: tuple[str, ...]) -> Capsule:
@@ -138,12 +242,13 @@ def _event_level(
 
     result, accepted = _reduce_units(current, all_units, build, evaluate)
     remaining = len([event_id for event_id in all_units if event_id in {e.id for e in result.events}])
-    return result, LevelReport(
+    return result, _level_report(
         name=name,
         before_units=len(all_units),
         after_units=remaining,
         accepted=accepted,
-        predicate_calls=evaluate.calls - before_calls,
+        before=before,
+        evaluate=evaluate,
     )
 
 
@@ -244,7 +349,7 @@ def _greedy_json_level(
     target: type[str | int],
     evaluate: _MemoizedPredicate,
 ) -> tuple[Capsule, LevelReport]:
-    before_calls = evaluate.calls
+    before = _snapshot(evaluate)
     initial_units = sum(len(_json_paths(event.payload, target=target)) for event in current.events)
     accepted = 0
     while True:
@@ -266,12 +371,13 @@ def _greedy_json_level(
         if not changed:
             break
     remaining = sum(len(_json_paths(event.payload, target=target)) for event in current.events)
-    return current, LevelReport(
+    return current, _level_report(
         name=name,
         before_units=initial_units,
         after_units=remaining,
         accepted=accepted,
-        predicate_calls=evaluate.calls - before_calls,
+        before=before,
+        evaluate=evaluate,
     )
 
 
@@ -283,7 +389,7 @@ def _text_level(
     current: Capsule,
     evaluate: _MemoizedPredicate,
 ) -> tuple[Capsule, LevelReport]:
-    before_calls = evaluate.calls
+    before = _snapshot(evaluate)
     before_units = sum(
         len(_chunks(value, _TEXT_CHUNK))
         for event in current.events
@@ -329,12 +435,13 @@ def _text_level(
         for path in _text_paths(event.payload)
         if isinstance((value := _value_at(event.payload, path)), str)
     )
-    return current, LevelReport(
+    return current, _level_report(
         name="text_chunks",
         before_units=before_units,
         after_units=after_units,
         accepted=accepted,
-        predicate_calls=evaluate.calls - before_calls,
+        before=before,
+        evaluate=evaluate,
     )
 
 
@@ -342,19 +449,20 @@ def _file_level(
     current: Capsule,
     evaluate: _MemoizedPredicate,
 ) -> tuple[Capsule, LevelReport]:
-    before_calls = evaluate.calls
+    before = _snapshot(evaluate)
     units = tuple(sorted(current.workspace))
 
     def build(kept: tuple[str, ...]) -> Capsule:
         return replace(current, workspace={name: current.workspace[name] for name in kept})
 
     result, accepted = _reduce_units(current, units, build, evaluate)
-    return result, LevelReport(
+    return result, _level_report(
         name="files",
         before_units=len(units),
         after_units=len(result.workspace),
         accepted=accepted,
-        predicate_calls=evaluate.calls - before_calls,
+        before=before,
+        evaluate=evaluate,
     )
 
 
@@ -362,7 +470,7 @@ def _file_chunk_level(
     current: Capsule,
     evaluate: _MemoizedPredicate,
 ) -> tuple[Capsule, LevelReport]:
-    before_calls = evaluate.calls
+    before = _snapshot(evaluate)
     before_units = sum(len(_chunks(content, _FILE_CHUNK)) for content in current.workspace.values())
     accepted = 0
     for name in tuple(sorted(current.workspace)):
@@ -388,12 +496,13 @@ def _file_chunk_level(
             accepted += len(units) - len(result.items)
             current = build(result.items)
     after_units = sum(len(_chunks(content, _FILE_CHUNK)) for content in current.workspace.values())
-    return current, LevelReport(
+    return current, _level_report(
         name="file_chunks",
         before_units=before_units,
         after_units=after_units,
         accepted=accepted,
-        predicate_calls=evaluate.calls - before_calls,
+        before=before,
+        evaluate=evaluate,
     )
 
 
@@ -401,26 +510,43 @@ def _environment_level(
     current: Capsule,
     evaluate: _MemoizedPredicate,
 ) -> tuple[Capsule, LevelReport]:
-    before_calls = evaluate.calls
+    before = _snapshot(evaluate)
     units = tuple(sorted(current.environment))
 
     def build(kept: tuple[str, ...]) -> Capsule:
         return replace(current, environment={name: current.environment[name] for name in kept})
 
     result, accepted = _reduce_units(current, units, build, evaluate)
-    return result, LevelReport(
+    return result, _level_report(
         name="environment",
         before_units=len(units),
         after_units=len(result.environment),
         accepted=accepted,
-        predicate_calls=evaluate.calls - before_calls,
+        before=before,
+        evaluate=evaluate,
     )
 
 
-def minimize_capsule(capsule: Capsule, predicate: Predicate) -> MinimizationResult:
+def minimize_capsule(
+    capsule: Capsule,
+    predicate: Predicate,
+    *,
+    predicate_identity: str | None = None,
+) -> MinimizationResult:
     validate_capsule(capsule)
     started = time.monotonic()
-    evaluate = _MemoizedPredicate(predicate)
+    source_data = capsule_bytes(capsule)
+    identity = predicate_identity or (
+        f"{getattr(predicate, '__module__', '<unknown>')}:"
+        f"{getattr(predicate, '__qualname__', type(predicate).__qualname__)}"
+    )
+    cache_key = hashlib.sha256(
+        b"runsieve-reduction-cache-v1\0"
+        + source_data
+        + b"\0"
+        + identity.encode("utf-8")
+    ).hexdigest()
+    evaluate = _MemoizedPredicate(predicate, cache_key=cache_key)
     if evaluate(capsule) is not PredicateResult.REPRODUCES:
         raise ValueError("initial capsule does not reproduce the target failure")
     current = capsule
@@ -463,6 +589,14 @@ def minimize_capsule(capsule: Capsule, predicate: Predicate) -> MinimizationResu
     )
     levels.append(report)
 
+    current, report = _event_level(
+        current,
+        name="model_pairs",
+        event_ids=[event.id for event in current.events if event.kind == "model_request"],
+        evaluate=evaluate,
+    )
+    levels.append(report)
+
     current, report = _greedy_json_level(
         current,
         name="json_fields",
@@ -498,6 +632,10 @@ def minimize_capsule(capsule: Capsule, predicate: Predicate) -> MinimizationResu
             cache_hits=evaluate.cache_hits,
             wall_seconds=time.monotonic() - started,
             levels=tuple(levels),
+            source_bytes=len(source_data),
+            result_bytes=len(capsule_bytes(current)),
+            cache_key=cache_key,
+            cache_key_complete=predicate_identity is not None,
         ),
     )
 

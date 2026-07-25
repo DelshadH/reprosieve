@@ -31,6 +31,29 @@ def test_gate_verifier_rejects_an_identity_only_manifest(
     assert "measured evidence" in completed.stderr
 
 
+def test_pytest_evidence_rejects_plausible_workflow_text_without_execution(
+    tmp_path: Path,
+) -> None:
+    support = importlib.import_module("scripts.gates._verify")
+    require_pytest_pass = getattr(support, "require_pytest_pass", None)
+    assert callable(require_pytest_pass)
+    stdout = tmp_path / "command-00.stdout"
+    stderr = tmp_path / "command-00.stderr"
+    stdout.write_bytes(b"macos-latest\nall configured assertions: true\n")
+    stderr.write_bytes(b"")
+    manifest = {
+        "commands": [
+            {
+                "stdout": evidence.blob_reference(stdout, relative_to=tmp_path),
+                "stderr": evidence.blob_reference(stderr, relative_to=tmp_path),
+            }
+        ]
+    }
+
+    with pytest.raises(ValueError, match="no clean passing result"):
+        require_pytest_pass(manifest, tmp_path, 0)
+
+
 def test_every_gate_maps_each_registered_assertion_to_a_specific_measurement() -> None:
     registry = json.loads(Path("GATE_REGISTRY.json").read_text(encoding="utf-8"))
     for registered in registry["gates"]:
@@ -39,6 +62,7 @@ def test_every_gate_maps_each_registered_assertion_to_a_specific_measurement() -
         )
         spec = getattr(module, "SPEC", None)
         assert spec is not None, registered["id"]
+        assert spec.extra_validator is not None, registered["id"]
         measured = [
             assertion
             for measurement in spec.measurements
@@ -384,13 +408,22 @@ def test_evidence_generator_derives_proof_records_from_gate_measurements() -> No
     build_measurement_proof = getattr(module, "build_measurement_proof", None)
     assert callable(build_measurement_proof)
     gate = importlib.import_module("scripts.gates.RS_G07").SPEC
-    commands = (
+    commands = tuple(
         {
-            "argv": list(gate.measurements[0].argv),
+            "argv": list(measurement.argv),
             "exit_code": 0,
-            "stdout": {"bytes": 4, "path": "command-00.stdout", "sha256": "a" * 64},
-            "stderr": {"bytes": 0, "path": "command-00.stderr", "sha256": "b" * 64},
-        },
+            "stdout": {
+                "bytes": 4,
+                "path": f"command-{index:02d}.stdout",
+                "sha256": "a" * 64,
+            },
+            "stderr": {
+                "bytes": 0,
+                "path": f"command-{index:02d}.stderr",
+                "sha256": "b" * 64,
+            },
+        }
+        for index, measurement in enumerate(gate.measurements)
     )
 
     proof = build_measurement_proof(
@@ -399,19 +432,21 @@ def test_evidence_generator_derives_proof_records_from_gate_measurements() -> No
         commands=commands,
     )
 
-    assert proof == {
-        "schema_version": 1,
-        "gate": "RS-G07",
-        "commit": "c" * 40,
-        "measurements": [
-            {
-                "argv": list(gate.measurements[0].argv),
-                "assertions": list(gate.measurements[0].assertions),
-                "exit_code": 0,
-                "kind": "pytest",
-                "platform": None,
-                "stderr_sha256": "b" * 64,
-                "stdout_sha256": "a" * 64,
-            }
-        ],
-    }
+    assert proof["schema_version"] == 1
+    assert proof["gate"] == "RS-G07"
+    assert proof["commit"] == "c" * 40
+    assert len(proof["measurements"]) == len(gate.measurements)
+    for record, measurement in zip(
+        proof["measurements"],
+        gate.measurements,
+        strict=True,
+    ):
+        assert record == {
+            "argv": list(measurement.argv),
+            "assertions": list(measurement.assertions),
+            "exit_code": 0,
+            "kind": "pytest",
+            "platform": None,
+            "stderr_sha256": "b" * 64,
+            "stdout_sha256": "a" * 64,
+        }

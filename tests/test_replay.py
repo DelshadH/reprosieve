@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
 import sys
 from dataclasses import replace
 from pathlib import Path
@@ -18,9 +17,7 @@ def test_offline_replay_substitutes_recorded_model_and_tool_outputs(
 ) -> None:
     before = set(sys.modules)
     report = offline_replay(sample_capsule())
-    assert report.mode == "offline"
-    assert report.provider_calls == 0
-    assert report.original_tool_calls == 0
+    assert report.mode == "recorded-output-materialization"
     assert report.model_outputs == (
         {
             "event_id": "response",
@@ -41,8 +38,8 @@ def test_offline_replay_substitutes_recorded_model_and_tool_outputs(
     target = tmp_path / "replay.json"
     write_replay(report, target)
     decoded = json.loads(target.read_text(encoding="utf-8"))
-    assert decoded["provider_calls"] == 0
-    assert decoded["original_tool_calls"] == 0
+    assert "provider_calls" not in decoded
+    assert "original_tool_calls" not in decoded
     assert decoded["events_replayed"] == 5
 
 
@@ -55,7 +52,7 @@ def test_replay_output_is_deterministic(tmp_path: Path) -> None:
     assert first.read_bytes() == second.read_bytes()
 
 
-def test_declared_application_adapter_executes_with_recorded_interfaces() -> None:
+def test_seed_release_rejects_application_replay_declarations() -> None:
     capsule = sample_capsule()
     application = (
         "import json, os, pathlib\n"
@@ -94,7 +91,5 @@ def test_declared_application_adapter_executes_with_recorded_interfaces() -> Non
         PredicateSpec(("python", "verify_application.py"), timeout_seconds=3),
     )
 
-    assert report.result is PredicateResult.REPRODUCES
-    assert report.attempts[0].application_replay is True
-    assert report.attempts[0].application_exit_code == 0
-    assert "OPENAI_API_KEY" not in os.environ or report.attempts[0].provider_calls == 0
+    assert report.result is PredicateResult.INVALID
+    assert report.attempts[0].reason == "application_replay_unsupported"
