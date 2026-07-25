@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_machine_readable_schema_catalog_is_well_formed() -> None:
     names = {
         "capsule-v1.schema.json",
+        "case-study-v1.schema.json",
         "materialization-v1.schema.json",
         "predicate-report-v1.schema.json",
         "reduction-report-v1.schema.json",

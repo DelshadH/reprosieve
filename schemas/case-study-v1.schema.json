@@ -1,0 +1,306 @@
+{
+  "$id": "https://github.com/DelshadH/runsieve/schemas/case-study-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "properties": {
+        "artifacts": {
+          "contains": {
+            "properties": {"role": {"const": "dependency-inventory"}},
+            "required": ["role"]
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "artifacts": {
+          "contains": {
+            "properties": {"role": {"const": "export"}},
+            "required": ["role"]
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "artifacts": {
+          "contains": {
+            "properties": {"role": {"const": "minimality-report"}},
+            "required": ["role"]
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "artifacts": {
+          "contains": {
+            "properties": {"role": {"const": "original-capsule"}},
+            "required": ["role"]
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "artifacts": {
+          "contains": {
+            "properties": {"role": {"const": "permission-record"}},
+            "required": ["role"]
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "artifacts": {
+          "contains": {
+            "properties": {"role": {"const": "predicate"}},
+            "required": ["role"]
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "artifacts": {
+          "contains": {
+            "properties": {"role": {"const": "reduced-capsule"}},
+            "required": ["role"]
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "artifacts": {
+          "contains": {
+            "properties": {"role": {"const": "reduction-report"}},
+            "required": ["role"]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "execution": {
+            "properties": {"mode": {"const": "application-replay"}},
+            "required": ["mode"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "artifacts": {
+            "allOf": [
+              {
+                "contains": {
+                  "properties": {"role": {"const": "application-entrypoint"}},
+                  "required": ["role"]
+                }
+              },
+              {
+                "contains": {
+                  "properties": {"role": {"const": "application-replay-report"}},
+                  "required": ["role"]
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "properties": {
+    "artifacts": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "bytes": {
+            "maximum": 33554432,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "path": {
+            "maxLength": 512,
+            "minLength": 1,
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "application-entrypoint",
+              "application-replay-report",
+              "dependency-inventory",
+              "export",
+              "minimality-report",
+              "original-capsule",
+              "permission-record",
+              "predicate",
+              "reduced-capsule",
+              "reduction-report"
+            ]
+          },
+          "sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "type": "string"
+          }
+        },
+        "required": ["bytes", "path", "role", "sha256"],
+        "type": "object"
+      },
+      "maxItems": 32,
+      "minItems": 8,
+      "type": "array"
+    },
+    "case_id": {
+      "maxLength": 80,
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "type": "string"
+    },
+    "category": {
+      "enum": [
+        "application-model-trajectory",
+        "serialization-structured-output",
+        "unexpected-tool-result"
+      ]
+    },
+    "environment": {
+      "additionalProperties": false,
+      "properties": {
+        "architecture": {"maxLength": 256, "minLength": 1, "type": "string"},
+        "framework": {"maxLength": 256, "minLength": 1, "type": "string"},
+        "framework_version": {
+          "maxLength": 256,
+          "minLength": 1,
+          "type": "string"
+        },
+        "operating_system": {
+          "maxLength": 256,
+          "minLength": 1,
+          "type": "string"
+        },
+        "python": {"maxLength": 256, "minLength": 1, "type": "string"}
+      },
+      "required": [
+        "architecture",
+        "framework",
+        "framework_version",
+        "operating_system",
+        "python"
+      ],
+      "type": "object"
+    },
+    "execution": {
+      "additionalProperties": false,
+      "properties": {
+        "command": {
+          "items": {"maxLength": 512, "minLength": 1, "type": "string"},
+          "maxItems": 32,
+          "minItems": 1,
+          "type": "array"
+        },
+        "expected_exit_code": {
+          "maximum": 255,
+          "minimum": -255,
+          "type": "integer"
+        },
+        "mode": {
+          "enum": [
+            "application-replay",
+            "offline-predicate-reproduction"
+          ]
+        },
+        "what_materialized": {
+          "items": {"maxLength": 512, "minLength": 1, "type": "string"},
+          "maxItems": 32,
+          "minItems": 1,
+          "type": "array"
+        },
+        "what_reexecuted": {
+          "items": {"maxLength": 512, "minLength": 1, "type": "string"},
+          "maxItems": 32,
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": [
+        "command",
+        "expected_exit_code",
+        "mode",
+        "what_materialized",
+        "what_reexecuted"
+      ],
+      "type": "object"
+    },
+    "explanation": {
+      "additionalProperties": false,
+      "properties": {
+        "failure": {"maxLength": 4096, "minLength": 1, "type": "string"},
+        "limitations": {"maxLength": 4096, "minLength": 1, "type": "string"},
+        "removed": {"maxLength": 4096, "minLength": 1, "type": "string"},
+        "retained": {"maxLength": 4096, "minLength": 1, "type": "string"}
+      },
+      "required": ["failure", "limitations", "removed", "retained"],
+      "type": "object"
+    },
+    "permission": {
+      "additionalProperties": false,
+      "properties": {
+        "data_owner_reference": {
+          "maxLength": 512,
+          "minLength": 1,
+          "type": "string"
+        },
+        "disclosure_review_date": {
+          "format": "date",
+          "maxLength": 10,
+          "minLength": 10,
+          "type": "string"
+        },
+        "permission_record": {
+          "maxLength": 512,
+          "minLength": 1,
+          "type": "string"
+        },
+        "publication_scope": {
+          "maxLength": 512,
+          "minLength": 1,
+          "type": "string"
+        },
+        "reviewer_reference": {
+          "maxLength": 512,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "data_owner_reference",
+        "disclosure_review_date",
+        "permission_record",
+        "publication_scope",
+        "reviewer_reference"
+      ],
+      "type": "object"
+    },
+    "schema_version": {"const": 1},
+    "synthetic": {"const": false},
+    "title": {"maxLength": 256, "minLength": 1, "type": "string"}
+  },
+  "required": [
+    "artifacts",
+    "case_id",
+    "category",
+    "environment",
+    "execution",
+    "explanation",
+    "permission",
+    "schema_version",
+    "synthetic",
+    "title"
+  ],
+  "title": "RunSieve permissioned case-study package version 1",
+  "type": "object"
+}
