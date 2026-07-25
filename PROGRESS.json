@@ -1,0 +1,115 @@
+{
+  "schema_version": 1,
+  "project": "runsieve",
+  "updated_at": "2026-07-25T07:32:31.323467Z",
+  "tasks": {
+    "RS-000": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "",
+      "blocker_ids": []
+    },
+    "RS-010": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "",
+      "blocker_ids": []
+    },
+    "RS-020": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "",
+      "blocker_ids": []
+    },
+    "RS-030": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "",
+      "blocker_ids": []
+    },
+    "RS-040": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "",
+      "blocker_ids": []
+    },
+    "RS-050": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "",
+      "blocker_ids": []
+    },
+    "RS-060": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "",
+      "blocker_ids": []
+    },
+    "RS-070": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "",
+      "blocker_ids": []
+    },
+    "RS-080": {
+      "status": "pending",
+      "evidence": [],
+      "notes": "",
+      "blocker_ids": []
+    }
+  },
+  "gates": {
+    "RS-G13": {
+      "status": "pending",
+      "evidence": []
+    },
+    "RS-G01": {
+      "status": "pending",
+      "evidence": []
+    },
+    "RS-G02": {
+      "status": "pending",
+      "evidence": []
+    },
+    "RS-G03": {
+      "status": "pending",
+      "evidence": []
+    },
+    "RS-G04": {
+      "status": "pending",
+      "evidence": []
+    },
+    "RS-G05": {
+      "status": "pending",
+      "evidence": []
+    },
+    "RS-G06": {
+      "status": "pending",
+      "evidence": []
+    },
+    "RS-G07": {
+      "status": "pending",
+      "evidence": []
+    },
+    "RS-G08": {
+      "status": "pending",
+      "evidence": []
+    },
+    "RS-G09": {
+      "status": "pending",
+      "evidence": []
+    },
+    "RS-G10": {
+      "status": "pending",
+      "evidence": []
+    },
+    "RS-G11": {
+      "status": "pending",
+      "evidence": []
+    },
+    "RS-G12": {
+      "status": "pending",
+      "evidence": []
+    }
+  }
+}
