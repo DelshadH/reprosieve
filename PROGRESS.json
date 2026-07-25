@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
   "project": "runsieve",
-  "updated_at": "2026-07-25T13:13:52Z",
+  "updated_at": "2026-07-25T15:29:27Z",
   "tasks": {
     "RS-000": {
       "status": "pending",
       "evidence": [
         {
-          "path": ".evidence/RS-G13/github-30158952013-1/manifest.json",
-          "sha256": "4e3b516f90c86c3aa3130b0dbab06137554dd049f1a2c5a78ef8f5f219979682"
+          "path": ".evidence/RS-G13/github-30163725994-1/manifest.json",
+          "sha256": "9c2a76d017c4ff43654ac4631be149cf46c4aaa1314acd286214014c29ac0973"
         }
       ],
       "notes": "Owned gate evidence is recorded; the immutable final-state self-test requires a reviewed skeleton revision.",
@@ -18,8 +18,8 @@
       "status": "pending",
       "evidence": [
         {
-          "path": ".evidence/RS-G01/closure-d970fbf/manifest.json",
-          "sha256": "2bb5905f6c4f0e012d0ae098eb6654b4be486d5ff08668153df35a24931eb800"
+          "path": ".evidence/RS-G01/repair-e19407b/manifest.json",
+          "sha256": "7944d6cd0a5d9311034ba7095409fd70daa2ecb32a8915b596f184e757d4ec62"
         }
       ],
       "notes": "Owned gate evidence is recorded; final dependency transition remains pending.",
@@ -29,12 +29,12 @@
       "status": "pending",
       "evidence": [
         {
-          "path": ".evidence/RS-G02/closure-d970fbf/manifest.json",
-          "sha256": "5c3b925649e9432e4680a193ff3bb7c7b4a8a1190729f9b6092d042eb3076486"
+          "path": ".evidence/RS-G02/repair-e19407b/manifest.json",
+          "sha256": "bc6dc1dda7f4a3c6fc1e74c638676e04570fdd139b7ef06aa3eaae57417d5143"
         },
         {
-          "path": ".evidence/RS-G03/closure-d970fbf/manifest.json",
-          "sha256": "fb63625974562b42eca353ac38bc544aa1d5251eef6ec745f43bab80feae635f"
+          "path": ".evidence/RS-G03/repair-e19407b/manifest.json",
+          "sha256": "cac5ba3eb211549cc406c82b37a934fd19f8d9babe0dc92d63ab47204e9192f6"
         }
       ],
       "notes": "Owned gate evidence is recorded; final dependency transition remains pending.",
@@ -44,8 +44,8 @@
       "status": "pending",
       "evidence": [
         {
-          "path": ".evidence/RS-G04/closure-d970fbf/manifest.json",
-          "sha256": "370cb46db26535487cb480446d09cf6ded376159d43a6eb876c930298ca03d8f"
+          "path": ".evidence/RS-G04/repair-e19407b/manifest.json",
+          "sha256": "fd6e76ea6720eebed052556d02b8192ee2d7ae6127a766d1fd95cc2c6cfe9dd1"
         }
       ],
       "notes": "Owned gate evidence is recorded; final dependency transition remains pending.",
@@ -55,12 +55,12 @@
       "status": "pending",
       "evidence": [
         {
-          "path": ".evidence/RS-G06/closure-d970fbf/manifest.json",
-          "sha256": "211f9bc5edf1c51630ffe1154edb171bc2fceeeb2418bb6dfa0464442e8f74b6"
+          "path": ".evidence/RS-G06/repair-e19407b/manifest.json",
+          "sha256": "46f1784c4a13dcda905e84fd0149464287271ed97d8972bb5135076cba175fce"
         },
         {
-          "path": ".evidence/RS-G07/closure-d970fbf/manifest.json",
-          "sha256": "8aaa4fad8c991664e64b518124ea687d9b08026d0d9baaa5162624b0ceb42540"
+          "path": ".evidence/RS-G07/repair-e19407b/manifest.json",
+          "sha256": "f549df341f5349a9fa499667edcad93df191b420a79bfe42b5aef0e7b2d4ea4a"
         }
       ],
       "notes": "Owned gate evidence is recorded; final dependency transition remains pending.",
@@ -70,12 +70,12 @@
       "status": "pending",
       "evidence": [
         {
-          "path": ".evidence/RS-G05/closure-d970fbf/manifest.json",
-          "sha256": "2d4b1b7b90d6582527bf195e1dfc07795418458eec58de695298f6c4a620145f"
+          "path": ".evidence/RS-G05/repair-e19407b/manifest.json",
+          "sha256": "a34023b0c032ae31434ce96afd8ec50c4d9b00db7840fbce9b99082a676e2528"
         },
         {
-          "path": ".evidence/RS-G08/closure-d970fbf/manifest.json",
-          "sha256": "b81dbaeb8510aca0a4db31981a7f3b2a7286027b70532cf091c9f23d1af7d4fc"
+          "path": ".evidence/RS-G08/repair-e19407b/manifest.json",
+          "sha256": "6a8dbc2c79234c30a1c040a32723915df9a5700dba3d2e559be7d9c0aab7d9a5"
         }
       ],
       "notes": "Owned gate evidence is recorded; final dependency transition remains pending.",
@@ -85,12 +85,12 @@
       "status": "pending",
       "evidence": [
         {
-          "path": ".evidence/RS-G09/closure-d970fbf/manifest.json",
-          "sha256": "64c4e3d336436f1224d6458723ceac5c00bb9f63372540612e599cca500450e6"
+          "path": ".evidence/RS-G09/repair-e19407b/manifest.json",
+          "sha256": "6e8284481f35423aaf85e224e9e269b4684454ca4b87a64b2d9159b4dd554ad7"
         },
         {
-          "path": ".evidence/RS-G10/github-30158952013-1/manifest.json",
-          "sha256": "3043d07f8e710eabf215a52a764a50d3c4fb0bcb6da9a7df82560869da7feeff"
+          "path": ".evidence/RS-G10/github-30163725994-1/manifest.json",
+          "sha256": "6a02df6b41bd89d4ce6e204b2c50dece04718083cc77dbd7763093fe87f34410"
         }
       ],
       "notes": "Owned gate evidence is recorded; final dependency transition remains pending.",
@@ -100,8 +100,8 @@
       "status": "pending",
       "evidence": [
         {
-          "path": ".evidence/RS-G11/closure-d970fbf/manifest.json",
-          "sha256": "a3bcf49e5e6ed088587b218a54ab44ab14348c13e6ade973da62aa0c632a8564"
+          "path": ".evidence/RS-G11/repair-e19407b/manifest.json",
+          "sha256": "d8bb8cbc7715d93942f5c33360ee5e7eaf0f6f40667fb6b879219d7bb0ad8ac5"
         }
       ],
       "notes": "Owned gate evidence is recorded; final dependency transition remains pending.",
@@ -111,8 +111,8 @@
       "status": "pending",
       "evidence": [
         {
-          "path": ".evidence/RS-G12/closure-c0a8fc8/manifest.json",
-          "sha256": "57c59cdacb00032f884958c44d0e96b5fbc4062f222311a77cb8b8803be7f0bc"
+          "path": ".evidence/RS-G12/repair-e19407b/manifest.json",
+          "sha256": "fbd85cc041c749923ba8e39475de92b4d698958aa8c4423ae93a1f39d164ee22"
         }
       ],
       "notes": "Owned gate evidence is recorded; final dependency transition remains pending.",
@@ -124,8 +124,8 @@
       "status": "pending",
       "evidence": [
         {
-          "path": ".evidence/RS-G13/github-30158952013-1/manifest.json",
-          "sha256": "4e3b516f90c86c3aa3130b0dbab06137554dd049f1a2c5a78ef8f5f219979682"
+          "path": ".evidence/RS-G13/github-30163725994-1/manifest.json",
+          "sha256": "9c2a76d017c4ff43654ac4631be149cf46c4aaa1314acd286214014c29ac0973"
         }
       ]
     },
@@ -133,8 +133,8 @@
       "status": "pending",
       "evidence": [
         {
-          "path": ".evidence/RS-G01/closure-d970fbf/manifest.json",
-          "sha256": "2bb5905f6c4f0e012d0ae098eb6654b4be486d5ff08668153df35a24931eb800"
+          "path": ".evidence/RS-G01/repair-e19407b/manifest.json",
+          "sha256": "7944d6cd0a5d9311034ba7095409fd70daa2ecb32a8915b596f184e757d4ec62"
         }
       ]
     },
@@ -142,8 +142,8 @@
       "status": "pending",
       "evidence": [
         {
-          "path": ".evidence/RS-G02/closure-d970fbf/manifest.json",
-          "sha256": "5c3b925649e9432e4680a193ff3bb7c7b4a8a1190729f9b6092d042eb3076486"
+          "path": ".evidence/RS-G02/repair-e19407b/manifest.json",
+          "sha256": "bc6dc1dda7f4a3c6fc1e74c638676e04570fdd139b7ef06aa3eaae57417d5143"
         }
       ]
     },
@@ -151,8 +151,8 @@
       "status": "pending",
       "evidence": [
         {
-          "path": ".evidence/RS-G03/closure-d970fbf/manifest.json",
-          "sha256": "fb63625974562b42eca353ac38bc544aa1d5251eef6ec745f43bab80feae635f"
+          "path": ".evidence/RS-G03/repair-e19407b/manifest.json",
+          "sha256": "cac5ba3eb211549cc406c82b37a934fd19f8d9babe0dc92d63ab47204e9192f6"
         }
       ]
     },
@@ -160,8 +160,8 @@
       "status": "pending",
       "evidence": [
         {
-          "path": ".evidence/RS-G04/closure-d970fbf/manifest.json",
-          "sha256": "370cb46db26535487cb480446d09cf6ded376159d43a6eb876c930298ca03d8f"
+          "path": ".evidence/RS-G04/repair-e19407b/manifest.json",
+          "sha256": "fd6e76ea6720eebed052556d02b8192ee2d7ae6127a766d1fd95cc2c6cfe9dd1"
         }
       ]
     },
@@ -169,8 +169,8 @@
       "status": "pending",
       "evidence": [
         {
-          "path": ".evidence/RS-G05/closure-d970fbf/manifest.json",
-          "sha256": "2d4b1b7b90d6582527bf195e1dfc07795418458eec58de695298f6c4a620145f"
+          "path": ".evidence/RS-G05/repair-e19407b/manifest.json",
+          "sha256": "a34023b0c032ae31434ce96afd8ec50c4d9b00db7840fbce9b99082a676e2528"
         }
       ]
     },
@@ -178,8 +178,8 @@
       "status": "pending",
       "evidence": [
         {
-          "path": ".evidence/RS-G06/closure-d970fbf/manifest.json",
-          "sha256": "211f9bc5edf1c51630ffe1154edb171bc2fceeeb2418bb6dfa0464442e8f74b6"
+          "path": ".evidence/RS-G06/repair-e19407b/manifest.json",
+          "sha256": "46f1784c4a13dcda905e84fd0149464287271ed97d8972bb5135076cba175fce"
         }
       ]
     },
@@ -187,8 +187,8 @@
       "status": "pending",
       "evidence": [
         {
-          "path": ".evidence/RS-G07/closure-d970fbf/manifest.json",
-          "sha256": "8aaa4fad8c991664e64b518124ea687d9b08026d0d9baaa5162624b0ceb42540"
+          "path": ".evidence/RS-G07/repair-e19407b/manifest.json",
+          "sha256": "f549df341f5349a9fa499667edcad93df191b420a79bfe42b5aef0e7b2d4ea4a"
         }
       ]
     },
@@ -196,8 +196,8 @@
       "status": "pending",
       "evidence": [
         {
-          "path": ".evidence/RS-G08/closure-d970fbf/manifest.json",
-          "sha256": "b81dbaeb8510aca0a4db31981a7f3b2a7286027b70532cf091c9f23d1af7d4fc"
+          "path": ".evidence/RS-G08/repair-e19407b/manifest.json",
+          "sha256": "6a8dbc2c79234c30a1c040a32723915df9a5700dba3d2e559be7d9c0aab7d9a5"
         }
       ]
     },
@@ -205,8 +205,8 @@
       "status": "pending",
       "evidence": [
         {
-          "path": ".evidence/RS-G09/closure-d970fbf/manifest.json",
-          "sha256": "64c4e3d336436f1224d6458723ceac5c00bb9f63372540612e599cca500450e6"
+          "path": ".evidence/RS-G09/repair-e19407b/manifest.json",
+          "sha256": "6e8284481f35423aaf85e224e9e269b4684454ca4b87a64b2d9159b4dd554ad7"
         }
       ]
     },
@@ -214,8 +214,8 @@
       "status": "pending",
       "evidence": [
         {
-          "path": ".evidence/RS-G10/github-30158952013-1/manifest.json",
-          "sha256": "3043d07f8e710eabf215a52a764a50d3c4fb0bcb6da9a7df82560869da7feeff"
+          "path": ".evidence/RS-G10/github-30163725994-1/manifest.json",
+          "sha256": "6a02df6b41bd89d4ce6e204b2c50dece04718083cc77dbd7763093fe87f34410"
         }
       ]
     },
@@ -223,8 +223,8 @@
       "status": "pending",
       "evidence": [
         {
-          "path": ".evidence/RS-G11/closure-d970fbf/manifest.json",
-          "sha256": "a3bcf49e5e6ed088587b218a54ab44ab14348c13e6ade973da62aa0c632a8564"
+          "path": ".evidence/RS-G11/repair-e19407b/manifest.json",
+          "sha256": "d8bb8cbc7715d93942f5c33360ee5e7eaf0f6f40667fb6b879219d7bb0ad8ac5"
         }
       ]
     },
@@ -232,8 +232,8 @@
       "status": "pending",
       "evidence": [
         {
-          "path": ".evidence/RS-G12/closure-c0a8fc8/manifest.json",
-          "sha256": "57c59cdacb00032f884958c44d0e96b5fbc4062f222311a77cb8b8803be7f0bc"
+          "path": ".evidence/RS-G12/repair-e19407b/manifest.json",
+          "sha256": "fbd85cc041c749923ba8e39475de92b4d698958aa8c4423ae93a1f39d164ee22"
         }
       ]
     }

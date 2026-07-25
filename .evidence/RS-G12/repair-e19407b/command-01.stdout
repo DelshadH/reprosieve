@@ -1,0 +1,3 @@
+reduced 247 events to 5; 1-minimal; 38 predicate calls; 4.109s; artifact b8b26fd23118d376173983b8e8d35b0d3e4c396b7dffec92beeaf52c2bb56844.runsieve
+exported one-command offline issue reproduction
+killer demo passed in 6.266s

@@ -139,3 +139,15 @@ Observed facts: 84 tests plus 2 contract subtests pass; 60 generated graph cases
 Decision: commit the repair before generating new evidence; keep all task and gate statuses pending until exact-commit evidence and the immutable skeleton contradiction are resolved.
 Ending commit: pending contract-repair commit
 Manual item: canonical default-branch/protection changes remain owner actions after a green reviewed replacement; no item is marked resolved.
+
+## 2026-07-25T15:40:24Z - RS-000 - attempt 11
+Objective: Register exact-implementation evidence and confirm the remaining release decision without overstating control-plane status.
+Starting commit: e19407b6c4b51b93fcc2f227528acf95399df984
+Deadline state: migration pull request remains draft and the release gate remains intentionally red
+Approach: Reverify each gate-specific manifest, retain the successful Linux/macOS and package-matrix CI bundles, and bind their hashes in PROGRESS.json while leaving every status pending.
+Commands: `python -m scripts.verify`; GitHub Actions run 30163725994; gate-specific RS-G01 through RS-G13 verifiers; installed wheel smoke
+Result: passed_with_contract_blocker
+Observed facts: All CI jobs pass at the implementation commit; all 13 manifests pass their gate-specific validators; Python 3.11-3.13, Linux x64, and macOS arm64 evidence is hash-bound and retained.
+Decision: record the evidence without changing status. A reviewed skeleton revision is required because the immutable final-state self-test rejects the legitimate simultaneous passed state, while the immutable product contract also retains broader replay wording that the implementation no longer claims.
+Ending commit: pending evidence-registration commit
+Manual item: repository owner review is required before any canonical default-branch, protection, release-tag, or merge action.

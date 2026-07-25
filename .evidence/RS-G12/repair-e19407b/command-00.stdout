@@ -1,0 +1,7 @@
+RunSieve contract self-tests passed: set deletion, verifier substitution, assertion removal, ungated task completion, blocker, and unsafe-path bypasses are rejected.
+...................................................................... [ 83%]
+..............                                                           [100%]
+84 passed, 2 subtests passed in 50.95s
+All checks passed!
+Success: no issues found in 16 source files
+RunSieve autonomous-build contract and reference kernel are structurally valid. Product release remains governed by python -m scripts.release_gate.
