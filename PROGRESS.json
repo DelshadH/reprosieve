@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "project": "runsieve",
-  "updated_at": "2026-07-25T07:32:31.323467Z",
+  "updated_at": "2026-07-25T07:48:17.429378Z",
   "tasks": {
     "RS-000": {
       "status": "pending",
@@ -29,8 +29,13 @@
     },
     "RS-040": {
       "status": "pending",
-      "evidence": [],
-      "notes": "",
+      "evidence": [
+        {
+          "path": ".evidence/RS-G07/local-py313/manifest.json",
+          "sha256": "8cc61e6c028b991adc653a7fff1f3df57873b3906d25bb1a75fecde042d8e900"
+        }
+      ],
+      "notes": "Local Python 3.13 proof for RS-G07 is recorded; dependency-owned task completion remains pending.",
       "blocker_ids": []
     },
     "RS-050": {
@@ -89,7 +94,12 @@
     },
     "RS-G07": {
       "status": "pending",
-      "evidence": []
+      "evidence": [
+        {
+          "path": ".evidence/RS-G07/local-py313/manifest.json",
+          "sha256": "8cc61e6c028b991adc653a7fff1f3df57873b3906d25bb1a75fecde042d8e900"
+        }
+      ]
     },
     "RS-G08": {
       "status": "pending",

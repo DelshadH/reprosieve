@@ -32,6 +32,18 @@ Decision: continue
 Ending commit: pending coherent gate-verifier commit
 Manual item: none
 
+## 2026-07-25T07:48:17Z — RS-000 — attempt 3
+Objective: The committed evidence generator produces one release-contract-valid manifest and the recorded verifier passes again against that final manifest.
+Starting commit: 8132a0b0a089d0b5e19500e951c6b050d4324883
+Deadline state: 0.27/4 hours; within budget
+Approach: Generate and independently validate the RS-G07 tri-state proof as a representative end-to-end evidence run.
+Commands: `python -m scripts.generate_gate_evidence RS-G07 local-py313`
+Result: passed
+Observed facts: The canonical manifest hash is `8cc61e6c028b991adc653a7fff1f3df57873b3906d25bb1a75fecde042d8e900`; its verifier rerun passed all registered assertions.
+Decision: continue
+Ending commit: pending evidence/progress commit
+Manual item: none
+
 ## 2026-07-25T07:47:05Z — RS-000 — attempt 2
 Objective: A clean committed gate verifier can produce a canonical, hashed evidence manifest that the independent release contract accepts and reruns.
 Starting commit: 2a89891dbe77c1e93f942d6190101306541b2697
