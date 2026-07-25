@@ -1,5 +1,0 @@
-{"attempts":[{"application_exit_code":null,"application_replay":false,"duration_seconds":0.188,"exit_code":0,"network_guard":"python-sitecustomize","output_bytes":0,"reason":"exit_0","result":"reproduces","signal":null,"stderr_sha256":"5df6e0e2761359d30a8275058e299fcc0381534545f55cf43e41983f5d4c9456","stdout_sha256":"5df6e0e2761359d30a8275058e299fcc0381534545f55cf43e41983f5d4c9456","trial":0,"workspace_id":"trial-000"}],"cache_key":"741ffba86b5cc4c9d3998ae6b73c0ced318db3bc1b363cab5db8ff1d25017694","mode":"deterministic","required_reproductions":1,"result":"reproduces","trials":1}
-reduced 247 events to 5; 1-minimal; 38 predicate calls; 6.579s; artifact b8b26fd23118d376173983b8e8d35b0d3e4c396b7dffec92beeaf52c2bb56844.runsieve
-wrote deterministic recorded-output materialization
-exported one-command offline issue reproduction
-killer demo passed in 10.188s

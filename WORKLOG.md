@@ -163,3 +163,15 @@ Observed facts: The all-passed contract self-test, 99 tests plus 2 subtests, Ruf
 Decision: replace the superseded clean-room evidence.
 Ending commit: pending release-evidence registration commit
 Manual item: none
+
+## 2026-07-25T20:10:12Z — RS-080 — attempt 3
+Objective: Re-prove the complete 0.1 release after making Git-tracked evidence a release-gate invariant.
+Starting commit: 91f5bb5e6d7d0719795927dbf16c83f8cfde02e7
+Deadline state: 1.55/96 hours; within budget
+Approach: Run the full verifier and killer demo from the clean implementation commit after committing the missing G10 capsule artifacts.
+Commands: `.evidence/RS-G12/release-tracking-fix-91f5bb5/manifest.json`
+Result: passed
+Observed facts: Contract self-tests, 100 tests plus 2 subtests, Ruff, strict mypy, reduction, materialization, predicate reproduction, export, and 1-minimality passed.
+Decision: replace superseded G12 evidence; require every release-evidence blob to exist in Git and in HEAD.
+Ending commit: pending release-evidence registration commit
+Manual item: none
