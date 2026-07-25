@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "project": "runsieve",
+  "repository": "DelshadH/runsieve",
+  "observed_at": "2026-07-25T20:22:14Z",
+  "current_default": {
+    "branch": "main",
+    "commit": "a5576618444b470f6d552e163ed6ee91c5014eb3",
+    "protected": false
+  },
+  "preserved_refs": [
+    {
+      "branch": "archive/pre-contract-migration-main-20260725",
+      "commit": "a5576618444b470f6d552e163ed6ee91c5014eb3",
+      "role": "former-main-archive"
+    },
+    {
+      "branch": "contract-main",
+      "commit": "d8585c707dcc6413e9fb5bb33212342918837163",
+      "role": "contract-v1-root"
+    },
+    {
+      "branch": "codex/contract-migration",
+      "commit": "c866277d061130d8942ed37fe855bd708110b1f8",
+      "role": "contract-v1-audit-pr-head"
+    },
+    {
+      "branch": "codex/safety-contract-migration-20260725",
+      "commit": "c0b0b249295bdaf2299fb02ee0e8c487289cdb06",
+      "role": "migration-safety-point"
+    }
+  ],
+  "replacement_chain": [
+    {
+      "branch": "contract-v2-main",
+      "commit": "8686965f35a6521400e404891a72fb5d8dc3471d",
+      "pull_request": null,
+      "ci_run": null,
+      "role": "contract-v2-root",
+      "review_status": "immutable-root"
+    },
+    {
+      "branch": "codex/contract-v2-migration",
+      "commit": "1aaf298ee5927fc644ecad07df436fc9a6f4399d",
+      "pull_request": 4,
+      "ci_run": 30171448917,
+      "role": "accepted-implementation",
+      "review_status": "draft-unreviewed"
+    },
+    {
+      "branch": "codex/contract-v2-release-engineering",
+      "commit": "1324d3c1cf1b452100a42c263e1cf88f1cff4b69",
+      "pull_request": 5,
+      "ci_run": 30173363931,
+      "role": "reproducible-alpha-candidate",
+      "review_status": "draft-unreviewed"
+    }
+  ],
+  "required_merge_method": "merge_commit",
+  "technical_preconditions": {
+    "exact_head_ci_green": true,
+    "fresh_clone_before_default_switch": true,
+    "release_gate_green": true,
+    "immutable_control_plane_equal_to_root": true,
+    "independent_human_review": false,
+    "post_switch_fresh_clone": false
+  },
+  "owner_actions": [
+    {
+      "id": "review-pr-4",
+      "status": "pending"
+    },
+    {
+      "id": "protect-contract-v2-main",
+      "status": "pending"
+    },
+    {
+      "id": "merge-pr-4-with-merge-commit",
+      "status": "pending"
+    },
+    {
+      "id": "retarget-review-and-merge-pr-5-with-merge-commit",
+      "status": "pending"
+    },
+    {
+      "id": "rename-legacy-and-replacement-branches",
+      "status": "pending"
+    },
+    {
+      "id": "select-new-default-main",
+      "status": "pending"
+    },
+    {
+      "id": "post-switch-public-fresh-clone",
+      "status": "pending"
+    },
+    {
+      "id": "close-pr-3-as-superseded",
+      "status": "pending"
+    }
+  ]
+}
