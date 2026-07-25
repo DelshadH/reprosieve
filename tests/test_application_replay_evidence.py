@@ -1,0 +1,75 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import pytest
+
+pytest.importorskip("agents", reason="openai extra is required for application replay")
+
+from scripts.generate_application_replay_evidence import generate_evidence
+from scripts.verify_application_replay_evidence import (
+    verify_evidence,
+    write_verification_attestation,
+)
+
+
+def test_independent_application_replay_evidence_verifier(tmp_path: Path) -> None:
+    commit = "a" * 40
+    evidence = tmp_path / "application-replay-evidence"
+    reference = generate_evidence(evidence, commit=commit)
+
+    report = verify_evidence(evidence, expected_commit=commit)
+
+    assert reference["path"] == "evidence.json"
+    assert report == {
+        "assertions": [
+            {"id": "application-executed", "passed": True},
+            {"id": "all-interactions-consumed", "passed": True},
+            {"id": "provider-canary-zero", "passed": True},
+            {"id": "original-tool-canary-zero", "passed": True},
+            {"id": "instruction-divergence", "passed": True},
+            {"id": "argument-divergence", "passed": True},
+            {"id": "caught-original-tool-attempt-rejected", "passed": True},
+            {"id": "real-unit-reduced", "passed": True},
+            {"id": "independent-one-minimal", "passed": True},
+        ],
+        "commit": commit,
+        "gate": "RS-05-AR1",
+        "passed": True,
+        "schema_version": 1,
+    }
+    attestation_path = evidence / "verification.json"
+    attestation = write_verification_attestation(
+        evidence,
+        expected_commit=commit,
+        output=attestation_path,
+    )
+    assert attestation["evidence_manifest"]["path"] == "evidence.json"
+    assert attestation["verifier"]["path"] == "scripts/verify_application_replay_evidence.py"
+    assert attestation_path.is_file()
+
+
+def test_application_replay_evidence_rejects_corrupted_artifact(tmp_path: Path) -> None:
+    commit = "b" * 40
+    evidence = tmp_path / "application-replay-evidence"
+    generate_evidence(evidence, commit=commit)
+    manifest = json.loads((evidence / "evidence.json").read_text(encoding="utf-8"))
+    reduced = next(
+        item["path"]
+        for item in manifest["artifacts"]
+        if item["role"] == "reduced-capsule"
+    )
+    with (evidence / reduced).open("ab") as stream:
+        stream.write(b"corruption")
+
+    with pytest.raises(ValueError, match="hash/size mismatch"):
+        verify_evidence(evidence, expected_commit=commit)
+
+
+def test_application_replay_evidence_rejects_wrong_commit(tmp_path: Path) -> None:
+    evidence = tmp_path / "application-replay-evidence"
+    generate_evidence(evidence, commit="c" * 40)
+
+    with pytest.raises(ValueError, match="commit"):
+        verify_evidence(evidence, expected_commit="d" * 40)
