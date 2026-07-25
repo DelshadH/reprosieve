@@ -28,5 +28,7 @@ Application replay and real-world impact are not 0.1 claims.
 The 0.1 candidate has green exact-head and fresh-clone evidence and is ready
 for independent alpha review. Canonical-history owner actions in
 `docs/migration-plan.md` remain pending. Experimental 0.5 application replay
-has synthetic implementation tests but still needs an independent gate and a
-permissioned real case.
+has a green independent synthetic gate at PR #7, but still needs permissioned
+real-case evidence and independent human review. All three real-case categories
+remain explicit external blockers; their package schema and structural verifier
+do not substitute for cases, permissions, or sustained external use.
