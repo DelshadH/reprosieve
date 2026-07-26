@@ -84,10 +84,12 @@ directory and reports every trial. Neither command is application replay.
 The pre-0.1 `minimize` and `replay` names remain warning aliases for `reduce`
 and `materialize`. They may be removed before 0.2.
 
-Application replay is deferred to maturity level 0.5. Capsules that declare the
-experimental `application_replay` field fail closed in predicate and export
-paths until an adapter can enforce strict order and argument matching, report
-divergence, and measure intercepted interactions.
+Application replay is not part of the 0.1 CLI or promise. Experimental 0.5
+library work now has one OpenAI Agents SDK adapter that re-executes an explicit
+application callback through injected public `Model` and `FunctionTool`
+interfaces. It enforces ordered exact matching and measured canaries, but
+remains synthetic-only and is not a 0.5 readiness claim. See
+`docs/application-replay.md`.
 
 Predicate exit codes are strict:
 

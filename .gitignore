@@ -8,6 +8,7 @@ build/
 .ruff_cache/
 .mypy_cache/
 *.runsieve
+!.evidence/RS-05-AR1/**/*.runsieve
 .DS_Store
 *.egg-info/
 .hypothesis/

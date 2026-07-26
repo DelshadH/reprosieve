@@ -40,18 +40,20 @@ those values in a fresh constrained directory. The exported `reproduce.py`
 performs the same predicate reproduction without requiring RunSieve or a source
 checkout.
 
-Application replay is not supported in the seed release. An
-`application_replay` declaration is rejected. Maturity level 0.5 requires one
-framework-specific adapter that reruns a user entry point, intercepts provider
-and tool interfaces, enforces exact order and arguments, measures interactions,
-and reports unused, extra, or divergent calls.
+Application replay is not supported by the 0.1 CLI. An `application_replay`
+declaration remains rejected by predicate and export paths. Experimental 0.5
+library work has one OpenAI Agents adapter that reruns an explicit callback,
+intercepts public provider and tool interfaces, enforces exact order and
+arguments, measures canaries, and reports unused, extra, or divergent calls.
+It remains synthetic-only and outside the 0.1 release claim; see
+`application-replay.md`.
 
 Predicates run in fresh directories with copied declared files, provider keys
 removed, proxy variables emptied, direct argument vectors, time/output/process
 limits, and Python audit hooks for network, process, native-loading, and
 host-filesystem denial. K-of-N runs use a fresh directory for every trial and are
 reported as probabilistic predicate evidence. They still use recorded outputs;
-live model or application replay is outside this seed release.
+live model or application replay is outside the 0.1 seed release.
 
 ## Reduction units
 

@@ -72,8 +72,11 @@ operations outside the trial directory. This is meaningful defense in depth,
 not an operating-system or virtual-machine sandbox; see the residual risks in
 `docs/security-review.md`.
 
-The isolated trial writes deterministic recorded values to `RUNSIEVE_REPLAY`
-and runs only the embedded predicate. `application_replay` declarations are
-rejected in the seed release. The future adapter boundary is specified in
-`docs/adr/0002-defer-application-replay.md`; no current path makes an
-application-replay claim.
+The isolated 0.1 trial writes deterministic recorded values to
+`RUNSIEVE_REPLAY` and runs only the embedded predicate. `application_replay`
+declarations remain rejected in that path.
+
+Experimental 0.5 work adds a separate public-API adapter described in
+`docs/application-replay.md` and ADR 0003. It re-executes an explicit trusted
+callback and SDK Runner with injected model/tool substitutes. It does not
+change 0.1 semantics and is not yet a release-readiness claim.
