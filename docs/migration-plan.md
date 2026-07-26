@@ -39,12 +39,14 @@ into the 0.1 migration decision:
 | PR 7: `codex/openai-agents-application-replay` | `ab0d27cfa190afad7dd8e77410b0dec2f2d9ef60` | Green independent synthetic application-replay evidence; not 0.5-ready |
 | PR 8: `codex/permissioned-case-study-infrastructure` | `5aadfe1240daa85893e6f7c2f9101a03befd9884` | Green case-package infrastructure; zero real cases |
 | PR 9: `codex/one-zero-readiness` | `c6b5982327346f98537494846680e18063e0b933` | Green external-validation and maturity governance |
-| PR 10: `codex/case-study-junction-hardening` | current draft head | Junction/reparse-point hardening; exact-head CI required |
+| PR 10: `codex/case-study-junction-hardening` | `9f6039dadd3e01d8fb580f253e458ebbebf96a4a` | Green junction/reparse-point hardening |
+| PR 11: `codex/completion-audit` | current draft head | Full objective and evidence-principle audit; exact-head CI required |
 
 After the canonical default switch, retarget and independently review these
 PRs in numerical order. Preserve merge commits so measured ancestor identities
 remain reachable. PR 7 cannot support a 0.5 readiness decision without
 permissioned real-case evidence; PRs 8 through 10 do not create that evidence.
+PR 11 records that distinction but does not satisfy any external blocker.
 
 ## Invariants
 
@@ -99,7 +101,7 @@ permissioned real-case evidence; PRs 8 through 10 do not create that evidence.
 10. Only after step 9, close PR 3 as superseded—never merged—with links to the
    archived refs, contract-v2 root, accepted PRs, and post-switch evidence.
    Keep the legacy and safety branches.
-11. Retarget PRs 7 through 10 onto the new `main` in order. Review and merge
+11. Retarget PRs 7 through 11 onto the new `main` in order. Review and merge
     each independently only if its own maturity boundary and exact-head CI are
     accepted. Do not present their presence as real-case or adoption evidence.
 
@@ -122,7 +124,7 @@ compromised artifact or account.
 - Public branch renames and default-branch selection.
 - Post-switch external fresh-clone validation.
 - Closing PR 3 with a human-reviewed supersession notice.
-- Separate review and disposition of later PRs 7 through 10.
+- Separate review and disposition of later PRs 7 through 11.
 
 GitHub documents that default-branch changes require admin access, branch
 renames require elevated permissions for a default/protected branch, merge
