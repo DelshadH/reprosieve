@@ -3,8 +3,10 @@ from __future__ import annotations
 import subprocess
 import sys
 import time
+import tomllib
 from pathlib import Path
 
+import runsieve
 from runsieve.fixtures import killer_capsule
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -35,6 +37,28 @@ def test_every_ci_checkout_uses_the_exact_evidence_commit() -> None:
 
     assert workflow.count(checkout) > 0
     assert workflow.count(exact_ref) == workflow.count(checkout)
+
+
+def test_package_identifies_as_the_first_0_1_alpha_without_broad_replay_claims() -> None:
+    metadata = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8").lower()
+
+    assert metadata["project"]["version"] == "0.1.0a1"
+    assert runsieve.__version__ == "0.1.0a1"
+    assert "hermetic" not in changelog
+    assert "recorded-output replay" not in changelog
+
+
+def test_release_workflow_attests_the_reproducibility_checked_artifacts() -> None:
+    workflow = (ROOT / ".github" / "workflows" / "release.yml").read_text(
+        encoding="utf-8"
+    )
+
+    assert "RUNSIEVE_EVIDENCE_COMMIT: ${{ github.sha }}" in workflow
+    assert "ref: ${{ env.RUNSIEVE_EVIDENCE_COMMIT }}" in workflow
+    assert "python -m scripts.package_matrix_proof" in workflow
+    assert 'subject-path: "release-proof/runsieve-*"' in workflow
+    assert "release-proof/*" in workflow
 
 
 def test_killer_demo_completes_the_full_claim_within_twenty_seconds() -> None:

@@ -45,6 +45,25 @@ def _artifact_reference(value: object, *, suffix: str, label: str) -> None:
         raise ValueError(f"{label} is invalid")
 
 
+def _package_members(value: object, *, label: str) -> list[str]:
+    if (
+        not isinstance(value, list)
+        or not 1 <= len(value) <= 5_000
+        or any(
+            not isinstance(member, str)
+            or not member
+            or len(member) > 1_000
+            or Path(member).is_absolute()
+            or any(part in {"", ".", ".."} for part in member.split("/"))
+            for member in value
+        )
+        or value != sorted(value)
+        or len(value) != len(set(value))
+    ):
+        raise ValueError(f"{label} member inventory is invalid")
+    return value
+
+
 def validate_package_proof(
     proof: object,
     *,
@@ -62,8 +81,11 @@ def validate_package_proof(
         "commit",
         "fresh_checkout",
         "gate",
+        "members",
+        "reproducible_artifacts",
         "runner",
         "schema_version",
+        "source_date_epoch",
         "source_tree_present",
     }:
         raise ValueError("RS-G13 package proof fields are incomplete")
@@ -71,6 +93,7 @@ def validate_package_proof(
     runner = proof.get("runner")
     artifacts = proof.get("artifacts")
     commands = proof.get("commands")
+    members = proof.get("members")
     if (
         proof.get("schema_version") != 1
         or proof.get("gate") != "RS-G13"
@@ -90,9 +113,14 @@ def validate_package_proof(
         or not isinstance(runner.get("python"), str)
         or not runner["python"].startswith(expected_python + ".")
         or not isinstance(artifacts, dict)
-        or set(artifacts) != {"sdist", "wheel"}
+        or set(artifacts) != {"rebuild_sdist", "rebuild_wheel", "sdist", "wheel"}
         or not isinstance(commands, list)
-        or len(commands) != 4
+        or len(commands) != 5
+        or proof.get("reproducible_artifacts") is not True
+        or not isinstance(proof.get("source_date_epoch"), str)
+        or not proof["source_date_epoch"].isdigit()
+        or not isinstance(members, dict)
+        or set(members) != {"sdist", "wheel"}
     ):
         raise ValueError("RS-G13 package proof did not use a clean supported runner")
     _artifact_reference(
@@ -105,8 +133,41 @@ def validate_package_proof(
         suffix=".tar.gz",
         label="RS-G13 sdist",
     )
+    _artifact_reference(
+        artifacts["rebuild_wheel"],
+        suffix=".whl",
+        label="RS-G13 rebuilt wheel",
+    )
+    _artifact_reference(
+        artifacts["rebuild_sdist"],
+        suffix=".tar.gz",
+        label="RS-G13 rebuilt sdist",
+    )
+    if (
+        artifacts["wheel"]["bytes"] != artifacts["rebuild_wheel"]["bytes"]
+        or artifacts["wheel"]["sha256"] != artifacts["rebuild_wheel"]["sha256"]
+        or artifacts["sdist"]["bytes"] != artifacts["rebuild_sdist"]["bytes"]
+        or artifacts["sdist"]["sha256"] != artifacts["rebuild_sdist"]["sha256"]
+    ):
+        raise ValueError("RS-G13 repeated builds are not byte-identical")
+    sdist_members = _package_members(members["sdist"], label="RS-G13 sdist")
+    _package_members(members["wheel"], label="RS-G13 wheel")
+    forbidden = {
+        ".agent-state.json",
+        ".evidence",
+        "CODEX_START.txt",
+        "CODEX_TASKS.json",
+        "CONTRACT_VERSION.json",
+        "GATE_REGISTRY.json",
+        "MANUAL_REQUIRED.json",
+        "PROGRESS.json",
+        "WORKLOG.md",
+    }
+    if any(forbidden.intersection(member.split("/")) for member in sdist_members):
+        raise ValueError("RS-G13 sdist contains internal control or evidence files")
     wheel_name = artifacts["wheel"]["name"]
     expected_argv = (
+        ["python", "-m", "build"],
         ["python", "-m", "build"],
         ["python", "-m", "venv", "venv"],
         ["python", "-m", "pip", "install", "--no-deps", wheel_name],
@@ -122,7 +183,7 @@ def validate_package_proof(
             raise ValueError(f"RS-G13 package command {index} did not pass")
         _output_reference(command.get("stdout"), label=f"RS-G13 command {index} stdout")
         _output_reference(command.get("stderr"), label=f"RS-G13 command {index} stderr")
-    if commands[3]["stdout"]["bytes"] < 1:
+    if commands[4]["stdout"]["bytes"] < 1:
         raise ValueError("RS-G13 CLI smoke output is empty")
     suffix = expected_python.replace(".", "")
     assertions = {f"clean-install-py{suffix}"}

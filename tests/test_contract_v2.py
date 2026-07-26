@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import subprocess
 import tempfile
 import unittest
 from datetime import datetime, timedelta, timezone
@@ -24,6 +25,7 @@ from scripts.contract_self_test import (
     must_reject,
     run_contract_self_tests,
 )
+from scripts.gates.RS_G12 import assert_evidence_files_tracked
 
 
 class ContractV2Tests(unittest.TestCase):
@@ -155,6 +157,91 @@ class ContractV2Tests(unittest.TestCase):
         state["progress"]["gates"]["RS-G01"]["evidence"].append(duplicate)
         with self.assertRaisesRegex(ValueError, "duplicate evidence"):
             validate_state_shape(**state)
+
+    def test_release_evidence_rejects_ignored_untracked_artifacts(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="runsieve-tracked-evidence-") as raw:
+            root = Path(raw)
+            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+            evidence = root / ".evidence" / "RS-G10" / "run"
+            evidence.mkdir(parents=True)
+            manifest_path = evidence / "manifest.json"
+            stream = evidence / "command.stdout"
+            capsule = evidence / "capsule.runsieve"
+            verifier = root / "scripts" / "gates" / "RS_G10.py"
+            verifier.parent.mkdir(parents=True)
+            for path in (manifest_path, stream, capsule, verifier):
+                path.write_bytes(b"evidence\n")
+            (root / ".gitignore").write_text("*.runsieve\n", encoding="utf-8")
+            subprocess.run(
+                [
+                    "git",
+                    "add",
+                    ".gitignore",
+                    manifest_path.relative_to(root),
+                    stream.relative_to(root),
+                    verifier.relative_to(root),
+                ],
+                cwd=root,
+                check=True,
+            )
+            subprocess.run(
+                [
+                    "git",
+                    "-c",
+                    "user.name=RunSieve Test",
+                    "-c",
+                    "user.email=runsieve@example.invalid",
+                    "commit",
+                    "-qm",
+                    "tracked evidence fixture",
+                ],
+                cwd=root,
+                check=True,
+            )
+            manifest = {
+                "artifacts": [{"path": "capsule.runsieve"}],
+                "commands": [
+                    {
+                        "stderr": {"path": "command.stdout"},
+                        "stdout": {"path": "command.stdout"},
+                    }
+                ],
+                "verifier": {"path": "scripts/gates/RS_G10.py"},
+            }
+
+            with self.assertRaisesRegex(ValueError, "not Git-tracked"):
+                assert_evidence_files_tracked(
+                    root=root,
+                    gate="RS-G10",
+                    manifest_path=manifest_path,
+                    manifest=manifest,
+                )
+
+            subprocess.run(
+                ["git", "add", "-f", capsule.relative_to(root)],
+                cwd=root,
+                check=True,
+            )
+            subprocess.run(
+                [
+                    "git",
+                    "-c",
+                    "user.name=RunSieve Test",
+                    "-c",
+                    "user.email=runsieve@example.invalid",
+                    "commit",
+                    "-qm",
+                    "track capsule",
+                ],
+                cwd=root,
+                check=True,
+            )
+            assert_evidence_files_tracked(
+                root=root,
+                gate="RS-G10",
+                manifest_path=manifest_path,
+                manifest=manifest,
+            )
 
 
 if __name__ == "__main__":

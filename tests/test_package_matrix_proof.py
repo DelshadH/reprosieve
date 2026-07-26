@@ -36,4 +36,11 @@ def test_package_collector_builds_and_clean_installs_real_artifacts(
     )
     assert (output / proof["artifacts"]["wheel"]["name"]).is_file()
     assert (output / proof["artifacts"]["sdist"]["name"]).is_file()
-    assert proof["commands"][3]["stdout"]["bytes"] > 0
+    assert proof["commands"][4]["stdout"]["bytes"] > 0
+    assert proof["reproducible_artifacts"] is True
+    assert proof["source_date_epoch"].isdigit()
+    assert not any("/.evidence/" in member for member in proof["members"]["sdist"])
+    assert not any(
+        member.endswith(("/PROGRESS.json", "/WORKLOG.md", "/.agent-state.json"))
+        for member in proof["members"]["sdist"]
+    )

@@ -11,13 +11,19 @@ or failing release gate.
    bind to the same commit.
 4. Run `python -m scripts.release_gate` from a fresh clone.
 5. Create an annotated release-candidate tag without moving an existing tag.
-6. Let the protected release workflow build wheel and sdist, attest their
-   provenance, and upload the immutable candidate bundle.
+6. Let the protected release workflow export the tagged commit twice, set
+   `SOURCE_DATE_EPOCH` to that commit's timestamp, require byte-identical wheel
+   and sdist pairs, attest the canonical pair, and upload the complete proof
+   bundle.
 7. Download the bundle into an empty directory, verify attestations and hashes,
    install each distribution without the source tree, and run all public CLI
    flows.
 8. Publish only after a human owner compares the reviewed commit, tag, workflow
    run, artifact hashes, and changelog.
+
+The sdist is an explicit allowlist of package source, schemas, license, readme,
+security policy, changelog, and build metadata. Contract state, work logs, and
+`.evidence` are intentionally absent from public distributions.
 
 Registry credentials must use a project-scoped trusted publisher or a
 hardware-backed account with 2FA. They must never be stored in the repository

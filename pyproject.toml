@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "runsieve"
-version = "0.0.1"
+version = "0.1.0a1"
 description = "Reduce failed agent traces into redacted offline predicate reproductions"
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
@@ -12,7 +12,7 @@ license = "Apache-2.0"
 authors = [{ name = "RunSieve contributors" }]
 dependencies = []
 classifiers = [
-  "Development Status :: 2 - Pre-Alpha",
+  "Development Status :: 3 - Alpha",
   "Environment :: Console",
   "License :: OSI Approved :: Apache Software License",
   "Programming Language :: Python :: 3 :: Only",
@@ -51,6 +51,17 @@ packages = ["src/runsieve"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "schemas" = "runsieve/schemas"
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/src",
+  "/schemas",
+  "/CHANGELOG.md",
+  "/LICENSE",
+  "/README.md",
+  "/SECURITY.md",
+  "/pyproject.toml"
+]
 
 [tool.ruff]
 line-length = 100

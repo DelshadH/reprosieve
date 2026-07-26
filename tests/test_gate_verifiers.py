@@ -138,7 +138,7 @@ def test_rs_g13_requires_real_clean_install_proof_for_each_python() -> None:
     validate = getattr(module, "validate_package_proof", None)
     assert callable(validate)
     commit = "c" * 40
-    wheel = "runsieve-0.0.1-py3-none-any.whl"
+    wheel = "runsieve-0.1.0a1-py3-none-any.whl"
     proof = {
         "schema_version": 1,
         "gate": "RS-G13",
@@ -152,6 +152,12 @@ def test_rs_g13_requires_real_clean_install_proof_for_each_python() -> None:
         "clean_install_directory": True,
         "source_tree_present": False,
         "commands": [
+            {
+                "argv": ["python", "-m", "build"],
+                "exit_code": 0,
+                "stdout": {"bytes": 10, "sha256": "1" * 64},
+                "stderr": {"bytes": 0, "sha256": "2" * 64},
+            },
             {
                 "argv": ["python", "-m", "build"],
                 "exit_code": 0,
@@ -178,13 +184,36 @@ def test_rs_g13_requires_real_clean_install_proof_for_each_python() -> None:
             },
         ],
         "artifacts": {
+            "rebuild_wheel": {
+                "bytes": 1000,
+                "name": f"rebuild-{wheel}",
+                "sha256": "9" * 64,
+            },
+            "rebuild_sdist": {
+                "bytes": 1100,
+                "name": "rebuild-runsieve-0.1.0a1.tar.gz",
+                "sha256": "a" * 64,
+            },
             "wheel": {"bytes": 1000, "name": wheel, "sha256": "9" * 64},
             "sdist": {
                 "bytes": 1100,
-                "name": "runsieve-0.0.1.tar.gz",
+                "name": "runsieve-0.1.0a1.tar.gz",
                 "sha256": "a" * 64,
             },
         },
+        "members": {
+            "sdist": [
+                "runsieve-0.1.0a1/README.md",
+                "runsieve-0.1.0a1/pyproject.toml",
+                "runsieve-0.1.0a1/src/runsieve/__init__.py",
+            ],
+            "wheel": [
+                "runsieve-0.1.0a1.dist-info/METADATA",
+                "runsieve/__init__.py",
+            ],
+        },
+        "reproducible_artifacts": True,
+        "source_date_epoch": "1753460000",
     }
 
     assert validate(
@@ -210,12 +239,42 @@ def test_rs_g13_requires_real_clean_install_proof_for_each_python() -> None:
     failed = {
         **proof,
         "commands": [
-            *proof["commands"][:3],
-            {**proof["commands"][3], "exit_code": 1},
+            *proof["commands"][:4],
+            {**proof["commands"][4], "exit_code": 1},
         ],
     }
     with pytest.raises(ValueError):
         validate(failed, expected_python="3.11", expected_commit=commit)
+    with pytest.raises(ValueError):
+        validate(
+            {**proof, "reproducible_artifacts": False},
+            expected_python="3.11",
+            expected_commit=commit,
+        )
+    divergent = {
+        **proof,
+        "artifacts": {
+            **proof["artifacts"],
+            "rebuild_wheel": {
+                **proof["artifacts"]["rebuild_wheel"],
+                "sha256": "b" * 64,
+            },
+        },
+    }
+    with pytest.raises(ValueError):
+        validate(divergent, expected_python="3.11", expected_commit=commit)
+    leaking = {
+        **proof,
+        "members": {
+            **proof["members"],
+            "sdist": [
+                *proof["members"]["sdist"],
+                "runsieve-0.1.0a1/.evidence/RS-G13/proof.json",
+            ],
+        },
+    }
+    with pytest.raises(ValueError):
+        validate(leaking, expected_python="3.11", expected_commit=commit)
 
 
 def test_rs_g12_requires_full_verification_and_structured_demo_output() -> None:
@@ -264,17 +323,20 @@ def test_evidence_generator_consumes_three_distinct_package_proofs(
     for minor in ("3.11", "3.12", "3.13"):
         source = tmp_path / f"input-{minor}"
         source.mkdir()
-        wheel = "runsieve-0.0.1-py3-none-any.whl"
-        sdist = "runsieve-0.0.1.tar.gz"
+        wheel = "runsieve-0.1.0a1-py3-none-any.whl"
+        sdist = "runsieve-0.1.0a1.tar.gz"
+        rebuilt_wheel = f"rebuild-{wheel}"
+        rebuilt_sdist = f"rebuild-{sdist}"
         commands = []
         argvs = (
+            ["python", "-m", "build"],
             ["python", "-m", "build"],
             ["python", "-m", "venv", "venv"],
             ["python", "-m", "pip", "install", "--no-deps", wheel],
             ["runsieve", "--help"],
         )
         for index, argv in enumerate(argvs):
-            stdout = b"usage: runsieve\n" if index == 3 else b"passed\n"
+            stdout = b"usage: runsieve\n" if index == 4 else b"passed\n"
             stderr = b""
             (source / f"command-{index:02d}.stdout").write_bytes(stdout)
             (source / f"command-{index:02d}.stderr").write_bytes(stderr)
@@ -294,6 +356,8 @@ def test_evidence_generator_consumes_three_distinct_package_proofs(
             )
         (source / wheel).write_bytes(b"wheel")
         (source / sdist).write_bytes(b"sdist")
+        (source / rebuilt_wheel).write_bytes(b"wheel")
+        (source / rebuilt_sdist).write_bytes(b"sdist")
         proof = {
             "schema_version": 1,
             "gate": "RS-G13",
@@ -308,6 +372,16 @@ def test_evidence_generator_consumes_three_distinct_package_proofs(
             "source_tree_present": False,
             "commands": commands,
             "artifacts": {
+                "rebuild_wheel": {
+                    "bytes": 5,
+                    "name": rebuilt_wheel,
+                    "sha256": hashlib.sha256(b"wheel").hexdigest(),
+                },
+                "rebuild_sdist": {
+                    "bytes": 5,
+                    "name": rebuilt_sdist,
+                    "sha256": hashlib.sha256(b"sdist").hexdigest(),
+                },
                 "wheel": {
                     "bytes": 5,
                     "name": wheel,
@@ -319,6 +393,18 @@ def test_evidence_generator_consumes_three_distinct_package_proofs(
                     "sha256": hashlib.sha256(b"sdist").hexdigest(),
                 },
             },
+            "members": {
+                "sdist": [
+                    "runsieve-0.1.0a1/README.md",
+                    "runsieve-0.1.0a1/pyproject.toml",
+                ],
+                "wheel": [
+                    "runsieve-0.1.0a1.dist-info/METADATA",
+                    "runsieve/__init__.py",
+                ],
+            },
+            "reproducible_artifacts": True,
+            "source_date_epoch": "1753460000",
         }
         (source / "proof.json").write_text(json.dumps(proof), encoding="utf-8")
         inputs.append(source)
@@ -333,7 +419,7 @@ def test_evidence_generator_consumes_three_distinct_package_proofs(
     )
 
     assert len(commands) == 3
-    assert len(artifacts) == 27
+    assert len(artifacts) == 39
     assert {
         path.name for path in destination.iterdir()
     } == {"package-py311", "package-py312", "package-py313"}
