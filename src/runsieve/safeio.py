@@ -85,7 +85,7 @@ def read_regular_file_bounded(
                 metadata.st_mode,
                 getattr(metadata, "st_file_attributes", 0),
             )
-        if after != before or any(is_link_like(candidate) for candidate in before):
+        if after != before:
             raise ValueError(f"{label} changed while it was opened")
         current = os.stat(absolute, follow_symlinks=False)
         if (
