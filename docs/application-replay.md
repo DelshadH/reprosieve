@@ -29,6 +29,51 @@ provider is replaced with a fail-closed canary. Original handlers are
 temporarily replaced with measured canaries for the duration of the callback
 and restored in `finally`.
 
+## Library outline
+
+The caller owns the application callback and supplies the live capture model,
+declared tools, and redaction policy. Capture and replay receive the same
+callback:
+
+```python
+from agents import Agent
+
+from runsieve.adapters.openai_agents_replay import (
+    OpenAIAgentsCaptureSession,
+    OpenAIAgentsReplaySession,
+)
+
+
+async def application(session):
+    agent = Agent(
+        name="my application",
+        instructions="Call the declared tool when needed.",
+        model=session.model,
+        tools=list(session.tools),
+    )
+    return await session.run(agent, "the recorded input")
+
+
+capture = OpenAIAgentsCaptureSession(
+    live_model=my_public_model,
+    original_tools=(my_function_tool,),
+    redaction_policy=my_redaction_policy,
+    trace_id="my-reviewed-trace-id",
+)
+captured = await capture.execute(application)
+
+replay = OpenAIAgentsReplaySession(
+    captured.capsule,
+    original_tools=(my_function_tool,),
+)
+report = await replay.execute(application)
+```
+
+`my_public_model`, `my_function_tool`, and `my_redaction_policy` are explicit
+caller-owned objects; capsule metadata cannot construct them. Check
+`report.provider_resolution_attempts`, `report.original_tool_calls`, and
+`report.all_interactions_consumed` before accepting the result.
+
 ## Matching protocol
 
 The capsule declares `openai-agents-public-v1` and `ordered-exact-v1`.
@@ -80,8 +125,9 @@ The measured no-live-call claim is limited to the injected SDK model-provider
 and supplied original-tool boundaries. Capsule metadata never supplies an
 entry point or command to execute.
 
-Use synthetic or disposable inputs. A permissioned real case and an
-independent 0.5 verifier remain required before a 0.5 readiness claim.
+Use synthetic or disposable inputs. RS-05-AR1 now provides independent
+synthetic gate evidence for the adapter mechanics. A permissioned real case
+and independent human review remain required before a 0.5 readiness claim.
 
 ## Reduction
 

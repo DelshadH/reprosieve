@@ -89,7 +89,7 @@ library work now has one OpenAI Agents SDK adapter that re-executes an explicit
 application callback through injected public `Model` and `FunctionTool`
 interfaces. It enforces ordered exact matching and measured canaries, but
 remains synthetic-only and is not a 0.5 readiness claim. See
-`docs/application-replay.md`.
+[the application-replay boundary](docs/application-replay.md).
 
 Predicate exit codes are strict:
 
@@ -143,7 +143,7 @@ secrets. Exact canaries, bounded regexes, allow paths, deny paths, declared
 workspace files, and environment allowlists are available on `capture`.
 
 Arbitrary personal data cannot be detected reliably. Inspect every capsule
-before publishing it. See [the privacy contract](docs/privacy.md) and
+before publishing it. See [the privacy contract](docs/PRIVACY.md) and
 [security review](docs/security-review.md).
 
 ## Development
