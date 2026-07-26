@@ -9,8 +9,10 @@ or failing release gate.
 2. Run the documented local checks and inspect every security finding.
 3. Confirm attested Python 3.11–3.13 package proofs and Linux/macOS
    reproduction proofs bind to the same exact commit.
-4. Run `python -m scripts.release_gate` from a fresh clone and require the
-   exact-head final-evidence workflow to pass.
+4. Run `python -m scripts.final_release_gate` from a fresh clone and require
+   the attestation-bound exact-head final-evidence workflow to pass. The
+   immutable contract-v2 `scripts.release_gate` remains historical evidence;
+   it is not rewritten to bless descendant implementation changes.
 5. After the owner answers `PUBLISH? YES`, create the one annotated tag
    `v0.1.0a1` on the exact canonical `main` head. Never move an existing tag.
 6. Let the release workflow export the tagged commit twice, set

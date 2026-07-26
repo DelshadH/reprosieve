@@ -16,6 +16,7 @@
   the owner answers the final `PUBLISH? YES / NO` decision.
 - PR #3: preserved unchanged as the contract-v1 audit history.
 
-Run `python -m scripts.verify`; after the candidate is committed, use the
-exact-head final-evidence workflow and `python -m scripts.release_gate` as the
-technical truth tests.
+Run `python -m scripts.verify`; after the candidate is committed, use
+`python -m scripts.final_release_gate` and the exact-head final-evidence
+workflow as the current technical truth tests. `scripts.release_gate` remains
+the immutable historical contract-v2 evidence verifier.

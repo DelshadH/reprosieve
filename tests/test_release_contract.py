@@ -85,13 +85,24 @@ def test_final_evidence_workflow_is_exact_head_and_attestation_bound() -> None:
     assert "workflow_dispatch:" in workflow
     assert "RUNSIEVE_EVIDENCE_COMMIT: ${{ inputs.commit }}" in workflow
     assert workflow.count("ref: ${{ env.RUNSIEVE_EVIDENCE_COMMIT }}") >= 5
-    assert "python -m scripts.verify" in workflow
-    assert "python -m scripts.release_gate" in workflow
+    assert "python -m scripts.final_release_gate" in workflow
     assert "scripts.package_matrix_proof" in workflow
     assert "scripts.portable_reproduction_proof" in workflow
     assert "scripts.verify_application_replay_evidence" in workflow
     assert "gh attestation verify" in workflow
     assert "final-decision-receipt" in workflow
+
+
+def test_final_release_gate_declares_current_exact_head_checks() -> None:
+    from scripts.final_release_gate import COMMANDS
+
+    assert [name for name, _argv, _timeout in COMMANDS] == [
+        "verify",
+        "security",
+        "secrets",
+        "killer-demo",
+        "minimality-oracle",
+    ]
 
 
 def test_killer_demo_completes_the_full_claim_within_twenty_seconds() -> None:
