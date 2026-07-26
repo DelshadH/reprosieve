@@ -1,53 +1,51 @@
-# Real case: <short title>
+# Permissioned real-case package template
 
-Status: draft; not accepted as release evidence
+Status: template only; not case evidence
 
-## Permission and disclosure
+Do not create a case entry until a data owner has authorized publication and a
+maintainer can review the exact public bytes. Store only an owner-approved
+public identifier in repository metadata; do not commit private contact
+details or unpublished authorization material.
 
-- Data owner:
-- Publication permission:
-- Permission evidence location:
-- Disclosure review date:
-- Reviewer:
-- Redaction limitations:
+Each case directory contains canonical `case-study.json` conforming to
+`schemas/case-study-v1.schema.json`. Its category is exactly one of:
 
-## Environment
+- `unexpected-tool-result`;
+- `serialization-structured-output`;
+- `application-model-trajectory`.
 
-- Framework and version:
-- Python:
-- Operating system and architecture:
-- Dependency lock or inventory:
-- Source commit or release:
+The manifest distinguishes what application or predicate code was re-executed
+from what recorded values were only materialized. It records exact framework,
+Python, operating-system, architecture, command, expected exit code,
+limitations, retained behavior, and removed behavior.
 
-## Failure contract
+Every package requires these hash-bound artifact roles:
 
-- Failure category:
-- Predicate command:
-- Predicate exit interpretation:
-- What is rerun:
-- What is only materialized:
+- `original-capsule`;
+- `reduced-capsule`;
+- `predicate`;
+- `reduction-report`;
+- `minimality-report`;
+- `export`;
+- `dependency-inventory`;
+- `permission-record`.
 
-## Artifacts
+An `application-replay` case also requires `application-entrypoint` and
+`application-replay-report`. The entry point is reviewed application source,
+not a capsule-supplied command that RunSieve silently executes.
 
-| File | Purpose | SHA-256 |
-|---|---|---|
-| `original.runsieve` | Original redacted capsule | |
-| `reduced.runsieve` | Reduced capsule | |
-| `predicate.py` | Executable failure predicate | |
-| `reduction-report.json` | Reduction measurements | |
-| `minimality-report.json` | Independent deletion attempts | |
-| `export/` | Standalone reproduction | |
+The permission record must state the publication scope for the exact package
+bytes. A disclosure reviewer separately checks credentials, private source,
+personal data, contractual restrictions, and redaction limitations. Passing
+the structural verifier proves neither permission authenticity nor disclosure
+safety.
 
-## Result
+Before proposing publication:
 
-- Original/reduced events:
-- Original/reduced bytes:
-- Predicate invocations and cache hits:
-- Retained behavior:
-- Removed behavior:
-- 1-minimal definition:
-- Unminimized surfaces:
+```bash
+python -m scripts.verify_case_study docs/case-studies/real/<case-id>
+```
 
-## Reproduction
-
-List exact commands from a fresh directory and the bounded expected output.
+Then run the case's declared command from a fresh constrained directory,
+retain its bounded output as independent evidence, and update `registry.json`
+only after human permission and disclosure review.

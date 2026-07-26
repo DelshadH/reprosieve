@@ -12,3 +12,7 @@ data owner, a publishable redacted trace, reproducible dependency versions, and
 disclosure review. Until those inputs exist, the repository may demonstrate
 mechanics with synthetic fixtures but may not claim real-world impact or
 maturity level 0.5.
+
+The same state is recorded without placeholders in
+[`registry.json`](registry.json). The structural schema and verifier are ready,
+but neither can manufacture or authenticate permission.

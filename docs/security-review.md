@@ -34,6 +34,27 @@ OpenAI adapter, predicate runner, reducer, exporter, packaging, and CI.
 No high or critical known dependency vulnerabilities were present when the
 documented audit was run. This is a point-in-time result, not a warranty.
 
+## Experimental application-replay boundary
+
+The 0.5 adapter reruns an explicit trusted in-process callback through the
+OpenAI Agents SDK Runner. It substitutes the public model and declared
+function-tool interfaces, requires ordered exact interaction matching, and
+measures provider-resolution and supplied-original-tool canaries. Capsules
+never supply a command or entry point to execute.
+
+This is not an arbitrary-code sandbox. The callback can use unrelated file,
+network, process, or object references outside the injected interfaces. The
+no-live-call result applies only to the injected provider and supplied original
+tools measured by the adapter and evidence verifier. Redaction of a matching
+field makes a capsule replay-ineligible rather than accepting approximate
+equality.
+
+Permissioned case-study packages are treated as untrusted data. Their
+structural verifier reads bounded regular files, rejects link/path escapes and
+uninventoried files, and checks hashes without executing the declared predicate
+or application. Permission authenticity and disclosure safety cannot be
+established by that verifier.
+
 ## Contract-v2 secret-classification review
 
 On 2026-07-25, a fresh all-files scan was compared against an exact reviewed

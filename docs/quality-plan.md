@@ -38,6 +38,19 @@ review additionally requires a separate gate that independently measures:
 Synthetic tests validate the adapter machinery. They do not satisfy the
 permissioned-case or independent-evidence requirements.
 
+## Permissioned real-case packages
+
+`schemas/case-study-v1.schema.json` defines the bounded public package shape,
+and `python -m scripts.verify_case_study` independently checks canonical
+metadata, required artifact roles, regular-file/path safety, byte sizes, and
+SHA-256 identities. Application-replay cases require an entry-point artifact
+and replay report in addition to the reduction artifacts.
+
+This structural result does not authenticate a data owner's authority,
+permission scope, disclosure review, or the truth of the case narrative. A
+human must review those claims and independently execute the declared case
+before it becomes real-case or maturity evidence.
+
 Run the complete local gate:
 
 ```bash
