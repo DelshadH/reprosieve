@@ -127,7 +127,8 @@ entry point or command to execute.
 
 Use synthetic or disposable inputs. RS-05-AR1 now provides independent
 synthetic gate evidence for the adapter mechanics. A permissioned real case
-and independent human review remain required before a 0.5 readiness claim.
+and independent technical review of the real-case evidence remain required
+before a 0.5 readiness claim.
 
 ## Reduction
 
