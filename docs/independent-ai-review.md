@@ -5,8 +5,10 @@ policy. This is an independent AI technical review, not human approval or a
 professional external audit.
 
 The unpublished public surface was subsequently renamed to ReproSieve after a
-material name collision was found. That mechanical rename requires its own
-exact-head tests and CI; this record does not retroactively claim that review.
+material name collision was found. The rename received its own exact-head
+Python 3.11-3.13, security, portable-reproduction, package, evidence, and
+CodeQL checks. This record does not retroactively describe that mechanical
+rename as part of the earlier independent review.
 
 ## Review sequence
 
