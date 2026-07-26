@@ -2,7 +2,7 @@
 
 All notable changes will be recorded here.
 
-## Unreleased
+## 0.1.0a1 - release candidate
 
 - Added public OpenAI Agents SDK trace capture for version 0.18.3.
 - Added bounded before-disk redaction and deterministic validated capsules.
@@ -37,3 +37,6 @@ All notable changes will be recorded here.
 - Added artifact-bound final evidence, wheel/sdist semantic and installed-flow
   parity, deterministic SPDX and checksum artifacts, exact annotated-tag
   preflight, and a separate OIDC-only PyPI publication job.
+- Completed the non-destructive contract-v2 canonical migration, required CI
+  and tag protections, independent AI technical review, and public-default
+  fresh-clone proof.

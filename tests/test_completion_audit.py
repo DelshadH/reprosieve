@@ -10,15 +10,15 @@ _EXPECTED = {
     "contract-v2-lineage": "verified-technical",
     "independent-0.1-candidate": "verified-technical",
     "canonical-migration-preparation": "verified-technical",
-    "canonical-migration-execution": "blocked-manual",
+    "canonical-migration-execution": "verified-technical",
     "reproducible-release-engineering": "verified-technical",
-    "0.1-publication": "blocked-manual",
+    "0.1-publication": "blocked-owner-decision-and-registry",
     "framework-application-replay": "verified-technical",
-    "0.5-readiness": "blocked-external-and-manual",
+    "0.5-readiness": "blocked-external",
     "permissioned-case-infrastructure": "verified-technical",
     "permissioned-real-cases": "blocked-external",
     "stable-formats-security-governance": "verified-technical",
-    "1.0-readiness": "blocked-external-and-manual",
+    "1.0-readiness": "blocked-external",
 }
 _EXPECTED_PRINCIPLES = {
     "producer-verifier-separation",
@@ -57,7 +57,10 @@ def test_completion_audit_is_canonical_and_preserves_full_scope() -> None:
         "schema_version",
     }
     assert audit["schema_version"] == 1
-    assert audit["recommendation"] == "ready-for-0.1.0-alpha-review"
+    assert (
+        audit["recommendation"]
+        == "ready-for-0.1.0a1-publication-decision"
+    )
     requirements = {item["id"]: item for item in audit["requirements"]}
     assert {
         requirement_id: item["status"]

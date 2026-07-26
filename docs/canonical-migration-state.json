@@ -2,17 +2,23 @@
   "schema_version": 1,
   "project": "runsieve",
   "repository": "DelshadH/runsieve",
-  "observed_at": "2026-07-25T20:22:14Z",
+  "observed_at": "2026-07-26T20:10:00Z",
   "current_default": {
     "branch": "main",
-    "commit": "a5576618444b470f6d552e163ed6ee91c5014eb3",
-    "protected": false
+    "commit": "ffabcab47d3c9fe05d3bbdc1ff8daca9a9485945",
+    "protected": true,
+    "ci_run": 30217885613
   },
   "preserved_refs": [
     {
       "branch": "archive/pre-contract-migration-main-20260725",
       "commit": "a5576618444b470f6d552e163ed6ee91c5014eb3",
       "role": "former-main-archive"
+    },
+    {
+      "branch": "legacy-main-pre-contract-v2-20260725",
+      "commit": "a5576618444b470f6d552e163ed6ee91c5014eb3",
+      "role": "former-main-recovery"
     },
     {
       "branch": "contract-main",
@@ -22,81 +28,124 @@
     {
       "branch": "codex/contract-migration",
       "commit": "c866277d061130d8942ed37fe855bd708110b1f8",
-      "role": "contract-v1-audit-pr-head"
+      "pull_request": 3,
+      "pull_request_state": "closed-unmerged",
+      "role": "contract-v1-audit-head"
     },
     {
       "branch": "codex/safety-contract-migration-20260725",
       "commit": "c0b0b249295bdaf2299fb02ee0e8c487289cdb06",
       "role": "migration-safety-point"
+    },
+    {
+      "branch": "contract-v2-main",
+      "commit": "ffabcab47d3c9fe05d3bbdc1ff8daca9a9485945",
+      "role": "canonical-recovery-alias"
     }
   ],
   "replacement_chain": [
     {
-      "branch": "contract-v2-main",
-      "commit": "8686965f35a6521400e404891a72fb5d8dc3471d",
-      "pull_request": null,
-      "ci_run": null,
-      "role": "contract-v2-root",
-      "review_status": "immutable-root"
+      "head_commit": "1aaf298ee5927fc644ecad07df436fc9a6f4399d",
+      "merge_commit": "2ced5beda2c9755807fed5100e726e440b67a25b",
+      "pull_request": 4
     },
     {
-      "branch": "codex/contract-v2-migration",
-      "commit": "1aaf298ee5927fc644ecad07df436fc9a6f4399d",
-      "pull_request": 4,
-      "ci_run": 30171448917,
-      "role": "accepted-implementation",
-      "review_status": "draft-unreviewed"
+      "head_commit": "1324d3c1cf1b452100a42c263e1cf88f1cff4b69",
+      "merge_commit": "4f9d3fc7a29c0c694f5d3986f2035ebd77313506",
+      "pull_request": 5
     },
     {
-      "branch": "codex/contract-v2-release-engineering",
-      "commit": "1324d3c1cf1b452100a42c263e1cf88f1cff4b69",
-      "pull_request": 5,
-      "ci_run": 30173363931,
-      "role": "reproducible-alpha-candidate",
-      "review_status": "draft-unreviewed"
+      "head_commit": "fb92df6bd287e4e5e9023abf29f8b5b3d88eb5db",
+      "merge_commit": "5eb0a155f03bb24322aefc853b013493b45697df",
+      "pull_request": 6
+    },
+    {
+      "head_commit": "ab0d27cfa190afad7dd8e77410b0dec2f2d9ef60",
+      "merge_commit": "19925b2bd8ddef6d3478e8728adf7529fda9533c",
+      "pull_request": 7
+    },
+    {
+      "head_commit": "5aadfe1240daa85893e6f7c2f9101a03befd9884",
+      "merge_commit": "0dca5af7dc1129c14a8122601ab2d599351322db",
+      "pull_request": 8
+    },
+    {
+      "head_commit": "c6b5982327346f98537494846680e18063e0b933",
+      "merge_commit": "7b9600164a034e19c4f916e3e6638f0c7d7a99fc",
+      "pull_request": 9
+    },
+    {
+      "head_commit": "9f6039dadd3e01d8fb580f253e458ebbebf96a4a",
+      "merge_commit": "998dd2682f033753f0a516bbe4f5901dc208ad1b",
+      "pull_request": 10
+    },
+    {
+      "head_commit": "90ca465bc1691e119a8e3a2e33c786847737d35e",
+      "merge_commit": "94fafc70bdcdc729d12b1c4ca4cd5e96071e3403",
+      "pull_request": 11
+    },
+    {
+      "head_commit": "dc3e280c1e1a5b8f5737ddda739dc902c6f907cd",
+      "merge_commit": "ffabcab47d3c9fe05d3bbdc1ff8daca9a9485945",
+      "pull_request": 12
     }
   ],
   "required_merge_method": "merge_commit",
   "technical_preconditions": {
     "exact_head_ci_green": true,
-    "fresh_clone_before_default_switch": true,
+    "independent_ai_technical_review": true,
     "release_gate_green": true,
-    "immutable_control_plane_equal_to_root": true,
-    "independent_human_review": false,
-    "post_switch_fresh_clone": false
+    "reproducible_package_proof": true,
+    "platform_matrix_green": true,
+    "post_switch_public_fresh_clone": true,
+    "legacy_lineage_preserved": true,
+    "branch_protection_active": true,
+    "tag_protection_active": true
   },
-  "owner_actions": [
+  "fresh_clone_proof": {
+    "commit": "ffabcab47d3c9fe05d3bbdc1ff8daca9a9485945",
+    "gate": "runsieve-final-alpha-candidate",
+    "passed": true,
+    "checks": [
+      "verify",
+      "security",
+      "secrets",
+      "killer-demo",
+      "minimality-oracle"
+    ]
+  },
+  "repository_controls": {
+    "required_human_approvals": 0,
+    "conversation_resolution": true,
+    "force_pushes": false,
+    "branch_deletion": false,
+    "release_tag_ruleset": 19776058,
+    "release_tag": "v0.1.0a1"
+  },
+  "migration_actions": [
     {
-      "id": "review-pr-4",
-      "status": "pending"
+      "id": "merge-prs-4-through-12-in-order",
+      "status": "completed"
     },
     {
-      "id": "protect-contract-v2-main",
-      "status": "pending"
+      "id": "preserve-legacy-and-contract-refs",
+      "status": "completed"
     },
     {
-      "id": "merge-pr-4-with-merge-commit",
-      "status": "pending"
+      "id": "select-canonical-main-default",
+      "status": "completed"
     },
     {
-      "id": "retarget-review-and-merge-pr-5-with-merge-commit",
-      "status": "pending"
-    },
-    {
-      "id": "rename-legacy-and-replacement-branches",
-      "status": "pending"
-    },
-    {
-      "id": "select-new-default-main",
-      "status": "pending"
+      "id": "configure-branch-and-tag-protection",
+      "status": "completed"
     },
     {
       "id": "post-switch-public-fresh-clone",
-      "status": "pending"
+      "status": "completed"
     },
     {
-      "id": "close-pr-3-as-superseded",
-      "status": "pending"
+      "id": "close-pr-3-as-superseded-unmerged",
+      "status": "completed"
     }
   ]
 }

@@ -39,5 +39,5 @@ from bypassing injected interfaces.
 
 The frozen implementation now has independent synthetic RS-05-AR1 gate
 evidence. The 0.5 claim remains pending until at least one permissioned real
-case and independent human review exist. ADR 0002 remains authoritative for
+case and independent technical review exist. ADR 0002 remains authoritative for
 0.1.
