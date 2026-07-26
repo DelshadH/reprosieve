@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from runsieve.redact import RedactionLimits, RedactionPolicy, redact, redact_with_report
+from reprosieve.redact import RedactionLimits, RedactionPolicy, redact, redact_with_report
 
 
 class RedactionTests(unittest.TestCase):

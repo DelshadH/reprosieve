@@ -2,7 +2,7 @@
 
 ## Before-disk invariant
 
-RunSieve does not write an unredacted capture payload to its files, archives,
+ReproSieve does not write an unredacted capture payload to its files, archives,
 logs, exceptions, telemetry, or target-output relay. The adapter converts each
 completed public SDK span to bounded in-memory primitives, redacts it, and only
 then allows capsule construction. Target stdout and stderr are discarded.
@@ -11,7 +11,7 @@ Capture replaces the Agents SDK default trace processors. The
 `--retain-sdk-exporter` option weakens this privacy boundary intentionally and is
 never enabled implicitly.
 
-This contract covers RunSieve. It cannot prevent the captured application,
+This contract covers ReproSieve. It cannot prevent the captured application,
 provider SDK, operating system, debugger, or crash reporter from writing its own
 data.
 

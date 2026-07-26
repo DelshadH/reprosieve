@@ -3,10 +3,10 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from runsieve.fixtures import killer_capsule, killer_predicate
-from runsieve.hierarchy import minimize_capsule
-from runsieve.schema import Capsule, JsonValue
-from runsieve.verify import verify_one_minimal
+from reprosieve.fixtures import killer_capsule, killer_predicate
+from reprosieve.hierarchy import minimize_capsule
+from reprosieve.schema import Capsule, JsonValue
+from reprosieve.verify import verify_one_minimal
 
 _CHUNK = 32
 
@@ -24,7 +24,7 @@ def _walk_paths(
                 paths.append(path)
             return
         if isinstance(current, dict):
-            if current.get("$runsieve_redacted") is True:
+            if current.get("$reprosieve_redacted") is True:
                 return
             for key, child in current.items():
                 if target is str:

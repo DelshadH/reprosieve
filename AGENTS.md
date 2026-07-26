@@ -1,4 +1,4 @@
-# RunSieve agent contract
+# ReproSieve agent contract
 
 Act as principal engineer, failure-reduction researcher, privacy engineer, and adversarial user. Execute the task graph without waiting for routine decisions.
 
@@ -15,7 +15,9 @@ The v0.1 graph has a **72-hour elapsed execution window from bootstrap**. At a m
 
 ## Fixed choices
 
-- Public name/executable/package: `RunSieve` / `runsieve` until a final collision check.
+- Public name/executable/package: `ReproSieve` / `reprosieve`. The final
+  collision check found a material `RunSieve` / `runsieve` collision; the
+  immutable contract-v2 lineage retains its historical `runsieve` identifier.
 - Runtime: Python 3.11–3.13; core minimizer uses the standard library.
 - First capture adapter: OpenAI Agents SDK through its public custom tracing processor surface. Default capture replaces the SDK default exporter with `set_trace_processors()` so captured data is not also exported elsewhere.
 - Captured tools: JSON-safe request/response payloads only.

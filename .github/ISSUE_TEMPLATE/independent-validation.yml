@@ -1,5 +1,5 @@
 name: Independent validation report
-description: Report a clean, non-sensitive independent RunSieve verification.
+description: Report a clean, non-sensitive independent ReproSieve verification.
 title: "[Validation]: "
 body:
   - type: markdown
@@ -11,7 +11,7 @@ body:
   - type: input
     id: commit
     attributes:
-      label: Full RunSieve commit SHA
+      label: Full ReproSieve commit SHA
       placeholder: 40 lowercase hexadecimal characters
     validations:
       required: true

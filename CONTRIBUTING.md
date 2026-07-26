@@ -1,6 +1,6 @@
 # Contributing
 
-RunSieve handles data that may contain credentials, source code, and personal
+ReproSieve handles data that may contain credentials, source code, and personal
 information. Read the [privacy contract](docs/PRIVACY.md) and
 [architecture](docs/ARCHITECTURE.md) before changing capture, storage,
 materialization, predicate reproduction, application replay, or export

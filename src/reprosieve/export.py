@@ -25,7 +25,7 @@ import unicodedata
 import zipfile
 from pathlib import Path, PurePosixPath
 
-CAPSULE = Path(__file__).with_name("capsule.runsieve")
+CAPSULE = Path(__file__).with_name("capsule.reprosieve")
 MAX_ARCHIVE = 32 * 1024 * 1024
 MAX_MEMBER = 16 * 1024 * 1024
 MAX_TOTAL = 64 * 1024 * 1024
@@ -157,7 +157,7 @@ def load() -> tuple[dict[str, bytes], dict[str, object]]:
                 raise ValueError("expansion ratio")
         members = {info.filename: archive.read(info) for info in infos}
     manifest = strict_json(members["manifest.json"])
-    if manifest.get("format") != "runsieve-capsule" or manifest.get("format_version") != 1:
+    if manifest.get("format") != "reprosieve-capsule" or manifest.get("format_version") != 1:
         raise ValueError("unsupported capsule")
     entries = manifest.get("entries")
     if not isinstance(entries, dict) or set(entries) != set(members) - {"manifest.json"}:
@@ -355,7 +355,7 @@ def trial(
     predicate: dict[str, object],
     index: int,
 ) -> int | None:
-    with tempfile.TemporaryDirectory(prefix="runsieve-repro-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="reprosieve-repro-") as temporary:
         root = Path(temporary)
         workspace_index = strict_json(members["workspace/index.json"])
         if not isinstance(workspace_index, list):
@@ -500,10 +500,10 @@ def export_reproduction(source: str | Path, output: str | Path) -> Path:
     destination = ensure_new_path(output, label="export output")
     destination.mkdir(mode=0o700)
     try:
-        (destination / "capsule.runsieve").write_bytes(source_path.read_bytes())
+        (destination / "capsule.reprosieve").write_bytes(source_path.read_bytes())
         (destination / "reproduce.py").write_text(_REPRODUCER, encoding="utf-8", newline="\n")
         (destination / "README.md").write_text(
-            "# RunSieve issue reproduction\n\n"
+            "# ReproSieve issue reproduction\n\n"
             "Run the redacted, offline reproduction with:\n\n"
             "```bash\npython reproduce.py\n```\n\n"
             "The command validates the capsule, reconstructs recorded model and tool outputs, "

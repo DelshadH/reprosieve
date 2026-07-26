@@ -1,6 +1,6 @@
 # Independent external validation
 
-External reports can strengthen RunSieve evidence only when they identify
+External reports can strengthen ReproSieve evidence only when they identify
 exactly what was executed. A report is not accepted merely because it contains
 a hash, a passing screenshot, or the name of a configured assertion.
 

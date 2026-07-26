@@ -3,7 +3,7 @@
 ## Promise
 
 Given one failed agent-run capsule and an embedded Python failure predicate,
-RunSieve produces a smaller redacted capsule that reproduces the same failure
+ReproSieve produces a smaller redacted capsule that reproduces the same failure
 offline and is 1-minimal under declared reduction units.
 
 The primary user is an agent framework maintainer who needs a compact issue
@@ -31,13 +31,13 @@ unsupported SDK versions, or more than one completed trace fail closed.
 
 ## Recorded values and predicate reproduction
 
-`runsieve materialize` walks the retained event graph and materializes recorded model
+`reprosieve materialize` walks the retained event graph and materializes recorded model
 and tool outputs as deterministic JSON. That command does not execute
 application or orchestration code.
 
-`runsieve reproduce-predicate` executes only the declared predicate against
+`reprosieve reproduce-predicate` executes only the declared predicate against
 those values in a fresh constrained directory. The exported `reproduce.py`
-performs the same predicate reproduction without requiring RunSieve or a source
+performs the same predicate reproduction without requiring ReproSieve or a source
 checkout.
 
 Application replay is not supported by the 0.1 CLI. An `application_replay`
@@ -76,7 +76,7 @@ deletion without sharing the reducer cache.
 
 ## Capsule and export
 
-A `.runsieve` file is a deterministic ZIP with stored entries, normalized
+A `.reprosieve` file is a deterministic ZIP with stored entries, normalized
 timestamps/order/permissions, canonical JSON, a complete SHA-256 manifest, and:
 
 - `events/v1.json`
@@ -98,6 +98,6 @@ reconstructs recorded outputs, and runs the embedded predicate.
 
 ## Non-goals
 
-RunSieve does not diagnose root cause, guarantee a global minimum, reproduce
+ReproSieve does not diagnose root cause, guarantee a global minimum, reproduce
 model semantics, replace an observability backend, capture arbitrary processes,
 support arbitrary predicate languages, or make side-effecting tools hermetic.

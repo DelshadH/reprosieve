@@ -11,10 +11,10 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from runsieve.capsule import write_capsule
-from runsieve.cli import main as runsieve_main
-from runsieve.fixtures import killer_capsule
-from runsieve.safeio import ensure_new_path
+from reprosieve.capsule import write_capsule
+from reprosieve.cli import main as reprosieve_main
+from reprosieve.fixtures import killer_capsule
+from reprosieve.safeio import ensure_new_path
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_LIMIT = 65_536
@@ -135,13 +135,13 @@ def collect(output: Path) -> dict[str, Any]:
     target = ensure_new_path(output, label="portable proof output")
     target.mkdir(mode=0o700)
 
-    with tempfile.TemporaryDirectory(prefix="runsieve-proof-build-") as build_temporary:
+    with tempfile.TemporaryDirectory(prefix="reprosieve-proof-build-") as build_temporary:
         build_root = Path(build_temporary)
-        source = build_root / "source.runsieve"
+        source = build_root / "source.reprosieve"
         reduced = build_root / "reduced"
         reduced.mkdir()
         write_capsule(killer_capsule(), source)
-        if runsieve_main(
+        if reprosieve_main(
             [
                 "reduce",
                 str(source),
@@ -155,14 +155,14 @@ def collect(output: Path) -> dict[str, Any]:
             ]
         ):
             raise RuntimeError("portable proof minimization failed")
-        reduced_capsules = list(reduced.glob("*.runsieve"))
+        reduced_capsules = list(reduced.glob("*.reprosieve"))
         if len(reduced_capsules) != 1:
             raise RuntimeError("portable proof did not produce exactly one capsule")
         export = build_root / "issue-repro"
-        if runsieve_main(["export", str(reduced_capsules[0]), "--output", str(export)]):
+        if reprosieve_main(["export", str(reduced_capsules[0]), "--output", str(export)]):
             raise RuntimeError("portable proof export failed")
 
-        with tempfile.TemporaryDirectory(prefix="runsieve-clean-room-") as clean_temporary:
+        with tempfile.TemporaryDirectory(prefix="reprosieve-clean-room-") as clean_temporary:
             clean_root = Path(clean_temporary)
             fresh = not any(clean_root.iterdir())
             clean_export = clean_root / "issue-repro"
@@ -190,7 +190,7 @@ def collect(output: Path) -> dict[str, Any]:
             )
             if len(completed.stdout) + len(completed.stderr) > OUTPUT_LIMIT:
                 raise RuntimeError("portable reproduction output exceeded its bound")
-            capsule = (clean_export / "capsule.runsieve").read_bytes()
+            capsule = (clean_export / "capsule.reprosieve").read_bytes()
             reproducer = (clean_export / "reproduce.py").read_bytes()
 
     proof = build_portable_proof(
@@ -212,7 +212,7 @@ def collect(output: Path) -> dict[str, Any]:
         raise RuntimeError("portable one-command reproduction failed")
     (target / "command.stdout").write_bytes(completed.stdout)
     (target / "command.stderr").write_bytes(completed.stderr)
-    (target / "capsule.runsieve").write_bytes(capsule)
+    (target / "capsule.reprosieve").write_bytes(capsule)
     (target / "reproduce.py").write_bytes(reproducer)
     (target / "proof.json").write_text(
         json.dumps(proof, sort_keys=True, separators=(",", ":")) + "\n",

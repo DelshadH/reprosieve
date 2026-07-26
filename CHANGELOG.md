@@ -4,6 +4,11 @@ All notable changes will be recorded here.
 
 ## 0.1.0a1 - release candidate
 
+- Renamed the unpublished public product, distribution, module, executable,
+  capsule suffix, and repository target to ReproSieve / `reprosieve` after the
+  final collision check found an active project using RunSieve / `runsieve`.
+  Immutable contract-v2 records and `RUNSIEVE_*` evidence protocol variables
+  retain their historical identifiers.
 - Added public OpenAI Agents SDK trace capture for version 0.18.3.
 - Added bounded before-disk redaction and deterministic validated capsules.
 - Added constrained recorded-output materialization and strict tri-state/K-of-N predicate trials.

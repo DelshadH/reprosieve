@@ -18,9 +18,9 @@
 
 ## Capture
 
-`runsieve capture` starts the target with a temporary `sitecustomize.py`. The
+`reprosieve capture` starts the target with a temporary `sitecustomize.py`. The
 bootstrap imports only public `agents` and `agents.tracing` surfaces and installs
-one `RunSieveTraceProcessor`. The target command is an argument vector; no shell
+one `ReproSieveTraceProcessor`. The target command is an argument vector; no shell
 parsing is used.
 
 Trace and span callbacks are synchronous and thread-safe. Span start order is

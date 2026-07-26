@@ -3,7 +3,7 @@
 - Status: accepted
 - Date: 2026-07-25
 
-RunSieve uses four non-interchangeable terms:
+ReproSieve uses four non-interchangeable terms:
 
 - trace reduction removes declared units while preserving graph validity;
 - recorded-output materialization reconstructs retained model and tool values;

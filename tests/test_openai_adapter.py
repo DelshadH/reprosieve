@@ -17,13 +17,13 @@ from agents import (
 )
 from agents.tracing import TracingProcessor
 
-from runsieve.adapters.openai_agents import (
-    RunSieveTraceProcessor,
+from reprosieve.adapters.openai_agents import (
+    ReproSieveTraceProcessor,
     ensure_supported_agents_version,
     install_processor,
 )
-from runsieve.capsule import load_capsule
-from runsieve.schema import validate_capsule
+from reprosieve.capsule import load_capsule
+from reprosieve.schema import validate_capsule
 
 
 class CanaryProcessor(TracingProcessor):
@@ -55,8 +55,8 @@ def test_public_processor_captures_real_sdk_spans_without_duplicate_export(
     canary = "OPENAI-ADAPTER-SECRET-CANARY"
     canary_exporter = CanaryProcessor()
     set_trace_processors([canary_exporter])
-    output = tmp_path / "capture.runsieve"
-    processor = RunSieveTraceProcessor(
+    output = tmp_path / "capture.reprosieve"
+    processor = ReproSieveTraceProcessor(
         output_path=output,
         exact_canaries=(canary,),
         environment_names=(),
@@ -64,7 +64,7 @@ def test_public_processor_captures_real_sdk_spans_without_duplicate_export(
     install_processor(processor, retain_existing=False)
     assert isinstance(processor, TracingProcessor)
 
-    with trace("RunSieve adapter fixture", metadata={"authorization": f"Bearer {canary}"}):
+    with trace("ReproSieve adapter fixture", metadata={"authorization": f"Bearer {canary}"}):
         with generation_span(
             input=[{"role": "user", "content": canary}],
             output=[{"type": "function_call", "name": "probe", "arguments": "{}"}],
@@ -105,7 +105,7 @@ def test_public_processor_captures_real_sdk_spans_without_duplicate_export(
 def test_retaining_an_existing_exporter_requires_explicit_opt_in() -> None:
     canary = CanaryProcessor()
     set_trace_processors([canary])
-    processor = RunSieveTraceProcessor()
+    processor = ReproSieveTraceProcessor()
     install_processor(processor, retain_existing=True)
     with trace("explicit duplicate fixture"):
         pass
@@ -131,8 +131,8 @@ def test_declared_workspace_and_environment_are_bounded_redacted_and_sanitized(
 
     monkeypatch.setattr(Path, "read_bytes", reject_split_validation_read)
     monkeypatch.setenv("RUNSIEVE_FIXTURE_VALUE", canary)
-    output = tmp_path / "bounded.runsieve"
-    processor = RunSieveTraceProcessor(
+    output = tmp_path / "bounded.reprosieve"
+    processor = ReproSieveTraceProcessor(
         output_path=output,
         exact_canaries=(canary,),
         workspace_root=tmp_path,
@@ -171,7 +171,7 @@ def test_malformed_or_oversized_span_fails_closed_without_echoing_payload() -> N
         def export(self) -> dict[str, object]:
             return {"span_data": {"type": "custom", "data": canary * 1000}}
 
-    processor = RunSieveTraceProcessor(
+    processor = ReproSieveTraceProcessor(
         exact_canaries=(canary,),
         max_string_bytes=128,
     )
@@ -193,8 +193,8 @@ def test_multiple_completed_traces_never_publish_a_partial_capture(tmp_path: Pat
         def __init__(self, trace_id: str) -> None:
             self.trace_id = trace_id
 
-    output = tmp_path / "multiple.runsieve"
-    processor = RunSieveTraceProcessor(output_path=output)
+    output = tmp_path / "multiple.reprosieve"
+    processor = ReproSieveTraceProcessor(output_path=output)
     for trace_id in ("trace_one", "trace_two"):
         fake = FakeTrace(trace_id)
         processor.on_trace_start(fake)

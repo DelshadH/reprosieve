@@ -62,13 +62,13 @@ def _fingerprint(value: object, salt: bytes) -> str:
         payload = value
     else:
         payload = str(value).encode("utf-8", errors="replace")
-    return hashlib.sha256(b"runsieve-redaction-v1\0" + salt + b"\0" + payload).hexdigest()[:20]
+    return hashlib.sha256(b"reprosieve-redaction-v1\0" + salt + b"\0" + payload).hexdigest()[:20]
 
 
 def _typed_marker(value: object, salt: bytes) -> dict[str, JsonValue]:
     type_name = "null" if value is None else type(value).__name__
     return {
-        "$runsieve_redacted": True,
+        "$reprosieve_redacted": True,
         "fingerprint": _fingerprint(value, salt),
         "type": type_name,
     }

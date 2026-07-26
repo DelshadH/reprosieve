@@ -2,7 +2,7 @@
 
 Review date: 2026-07-24.
 
-The RunSieve core has no runtime dependencies. It uses Python's standard library
+The ReproSieve core has no runtime dependencies. It uses Python's standard library
 for archives, hashing, subprocesses, replay, reduction, validation, and export.
 
 The optional `openai` extra installs `openai-agents>=0.18.3,<0.19`. Version
@@ -32,5 +32,5 @@ pip-licenses --format=markdown --with-urls
 ```
 
 No package performs an install-time project hook; installation uses standard
-wheel metadata. The wheel smoke test installs RunSieve with `--no-deps`, proving
+wheel metadata. The wheel smoke test installs ReproSieve with `--no-deps`, proving
 the core command can start without the optional SDK dependency.

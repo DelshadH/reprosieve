@@ -79,7 +79,7 @@ def run_final_gate() -> dict[str, object]:
     return {
         "checks": results,
         "commit": commit,
-        "gate": "runsieve-final-alpha-candidate",
+        "gate": "reprosieve-final-alpha-candidate",
         "passed": True,
         "schema_version": 1,
     }

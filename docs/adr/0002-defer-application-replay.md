@@ -5,7 +5,7 @@
 
 ## Decision
 
-RunSieve 0.1 supports trace reduction, recorded-output materialization, and
+ReproSieve 0.1 supports trace reduction, recorded-output materialization, and
 offline predicate reproduction. It does not claim application or orchestration
 replay. Capsules containing the experimental `application_replay` declaration
 fail closed during predicate execution and export.

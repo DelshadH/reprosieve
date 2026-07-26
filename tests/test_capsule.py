@@ -12,8 +12,8 @@ from pathlib import Path
 
 import pytest
 
-from runsieve.capsule import CapsuleLimits, capsule_bytes, load_capsule, write_capsule
-from runsieve.safeio import read_regular_file_bounded
+from reprosieve.capsule import CapsuleLimits, capsule_bytes, load_capsule, write_capsule
+from reprosieve.safeio import read_regular_file_bounded
 from tests.helpers import sample_capsule
 
 
@@ -24,7 +24,7 @@ def test_capsule_is_deterministic_validated_and_immutable(tmp_path: Path) -> Non
     assert first == second
     assert hashlib.sha256(first).hexdigest() == hashlib.sha256(second).hexdigest()
 
-    path = tmp_path / "source.runsieve"
+    path = tmp_path / "source.reprosieve"
     info = write_capsule(capsule, path, redaction_report={"replacements": 2})
     assert info.sha256 == hashlib.sha256(path.read_bytes()).hexdigest()
     assert load_capsule(path) == capsule
@@ -43,11 +43,11 @@ def test_manifest_covers_every_payload_and_corruption_is_rejected(tmp_path: Path
             assert manifest["entries"][name]["sha256"] == hashlib.sha256(payload).hexdigest()
             assert manifest["entries"][name]["size"] == len(payload)
 
-    source = tmp_path / "source.runsieve"
+    source = tmp_path / "source.reprosieve"
     source.write_bytes(data)
     corrupted = bytearray(data)
     corrupted[-30] ^= 0x01
-    bad = tmp_path / "corrupt.runsieve"
+    bad = tmp_path / "corrupt.reprosieve"
     bad.write_bytes(corrupted)
     with pytest.raises(ValueError, match="corrupt|hash|archive"):
         load_capsule(bad)
@@ -55,7 +55,7 @@ def test_manifest_covers_every_payload_and_corruption_is_rejected(tmp_path: Path
 
 @pytest.mark.parametrize("member", ["../escape", "/absolute", "C:/drive", "a/../../b"])
 def test_archive_traversal_is_rejected(tmp_path: Path, member: str) -> None:
-    path = tmp_path / "hostile.runsieve"
+    path = tmp_path / "hostile.reprosieve"
     with zipfile.ZipFile(path, "w") as archive:
         archive.writestr(member, b"x")
     with pytest.raises(ValueError, match="unsafe archive member"):
@@ -63,7 +63,7 @@ def test_archive_traversal_is_rejected(tmp_path: Path, member: str) -> None:
 
 
 def test_duplicate_symlink_bomb_and_oversize_archives_are_rejected(tmp_path: Path) -> None:
-    duplicate = tmp_path / "duplicate.runsieve"
+    duplicate = tmp_path / "duplicate.reprosieve"
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UserWarning)
         with zipfile.ZipFile(duplicate, "w") as archive:
@@ -72,7 +72,7 @@ def test_duplicate_symlink_bomb_and_oversize_archives_are_rejected(tmp_path: Pat
     with pytest.raises(ValueError, match="duplicate"):
         load_capsule(duplicate)
 
-    symlink = tmp_path / "symlink.runsieve"
+    symlink = tmp_path / "symlink.reprosieve"
     info = zipfile.ZipInfo("workspace/link")
     info.external_attr = (stat.S_IFLNK | 0o777) << 16
     with zipfile.ZipFile(symlink, "w") as archive:
@@ -80,13 +80,13 @@ def test_duplicate_symlink_bomb_and_oversize_archives_are_rejected(tmp_path: Pat
     with pytest.raises(ValueError, match="symlink"):
         load_capsule(symlink)
 
-    bomb = tmp_path / "bomb.runsieve"
+    bomb = tmp_path / "bomb.reprosieve"
     with zipfile.ZipFile(bomb, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         archive.writestr("huge", b"0" * 50_000)
     with pytest.raises(ValueError, match="expansion|size"):
         load_capsule(bomb, limits=CapsuleLimits(max_member_bytes=100_000, max_ratio=5))
 
-    source = tmp_path / "source.runsieve"
+    source = tmp_path / "source.reprosieve"
     source.write_bytes(capsule_bytes(sample_capsule()))
     with pytest.raises(ValueError, match="archive size"):
         load_capsule(source, limits=CapsuleLimits(max_archive_bytes=10))
@@ -96,7 +96,7 @@ def test_oversized_capsule_is_rejected_before_path_read_bytes(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    source = tmp_path / "oversized.runsieve"
+    source = tmp_path / "oversized.reprosieve"
     source.write_bytes(b"x" * 4096)
 
     def forbidden_read_bytes(_path: Path) -> bytes:
@@ -157,7 +157,7 @@ def test_bounded_read_rejects_an_ancestor_swapped_during_open(
 
 def test_canary_never_reaches_capsule_bytes_or_errors() -> None:
     canary = "CAPSULE-SECRET-CANARY"
-    from runsieve.redact import RedactionPolicy, redact_with_report
+    from reprosieve.redact import RedactionPolicy, redact_with_report
 
     raw = sample_capsule()
     metadata, report = redact_with_report(
@@ -185,14 +185,14 @@ def test_capsule_paths_reject_symlink_ancestors(tmp_path: Path) -> None:
     except OSError:
         pytest.skip("symlink creation is unavailable")
     with pytest.raises(ValueError, match="symlink|junction"):
-        write_capsule(sample_capsule(), linked / "escape.runsieve")
+        write_capsule(sample_capsule(), linked / "escape.reprosieve")
 
 
 def test_capsule_paths_allow_only_a_symlinked_system_temp_prefix(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from runsieve import safeio
+    from reprosieve import safeio
 
     temp_root = tmp_path / "system-temp"
     temp_root.mkdir()
@@ -207,9 +207,9 @@ def test_capsule_paths_allow_only_a_symlinked_system_temp_prefix(
         lambda path: path in {temp_root, user_link},
     )
 
-    output = safe_directory / "portable.runsieve"
+    output = safe_directory / "portable.reprosieve"
     write_capsule(sample_capsule(), output)
     assert output.is_file()
 
     with pytest.raises(ValueError, match="symlink|junction"):
-        write_capsule(sample_capsule(), user_link / "escape.runsieve")
+        write_capsule(sample_capsule(), user_link / "escape.reprosieve")

@@ -5,9 +5,9 @@ import json
 import os
 from typing import Any
 
-from .adapters.openai_agents import RunSieveTraceProcessor, install_processor
+from .adapters.openai_agents import ReproSieveTraceProcessor, install_processor
 
-_PROCESSOR: RunSieveTraceProcessor | None = None
+_PROCESSOR: ReproSieveTraceProcessor | None = None
 _MAX_CONFIG_BYTES = 1024 * 1024
 
 
@@ -17,7 +17,7 @@ def _string_tuple(value: Any, *, label: str) -> tuple[str, ...]:
     return tuple(value)
 
 
-def install_from_environment() -> RunSieveTraceProcessor:
+def install_from_environment() -> ReproSieveTraceProcessor:
     global _PROCESSOR
     encoded = os.environ.pop("RUNSIEVE_CAPTURE_CONFIG_B64", "")
     if not encoded or len(encoded) > _MAX_CONFIG_BYTES * 2:
@@ -51,7 +51,7 @@ def install_from_environment() -> RunSieveTraceProcessor:
         raise ValueError("capture event limit is invalid")
     if not isinstance(value["retain_existing"], bool):
         raise ValueError("capture exporter policy is invalid")
-    processor = RunSieveTraceProcessor(
+    processor = ReproSieveTraceProcessor(
         output_path=value["output_path"],
         exact_canaries=_string_tuple(value["exact_canaries"], label="canaries"),
         patterns=_string_tuple(value["patterns"], label="patterns"),

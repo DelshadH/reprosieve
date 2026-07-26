@@ -63,7 +63,7 @@ def test_portable_command_streams_are_not_duplicated_as_artifacts(
         )
         (directory / "command.stdout").write_bytes(stdout)
         (directory / "command.stderr").write_bytes(stderr)
-        (directory / "capsule.runsieve").write_bytes(capsule)
+        (directory / "capsule.reprosieve").write_bytes(capsule)
         (directory / "reproduce.py").write_bytes(reproducer)
         (directory / "proof.json").write_text(json.dumps(proof), encoding="utf-8")
         inputs.append(directory)

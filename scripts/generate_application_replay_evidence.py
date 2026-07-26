@@ -17,18 +17,18 @@ from openai.types.responses import (
     ResponseOutputText,
 )
 
-from runsieve.adapters.openai_agents_replay import (
+from reprosieve.adapters.openai_agents_replay import (
     ApplicationReplayDivergence,
     ApplicationReplayUnsupported,
     OpenAIAgentsCaptureSession,
     OpenAIAgentsReplaySession,
 )
-from runsieve.capsule import canonical_json, write_capsule
-from runsieve.ddmin import PredicateResult
-from runsieve.hierarchy import minimize_capsule
-from runsieve.redact import RedactionPolicy
-from runsieve.safeio import ensure_new_path
-from runsieve.verify import verify_one_minimal
+from reprosieve.capsule import canonical_json, write_capsule
+from reprosieve.ddmin import PredicateResult
+from reprosieve.hierarchy import minimize_capsule
+from reprosieve.redact import RedactionPolicy
+from reprosieve.safeio import ensure_new_path
+from reprosieve.verify import verify_one_minimal
 
 ROOT = Path(__file__).resolve().parents[1]
 _SHA = re.compile(r"^[0-9a-f]{40}$")
@@ -101,7 +101,7 @@ def _tool(counter: dict[str, int]) -> FunctionTool:
 
 async def _application(session: Any) -> Any:
     agent = Agent(
-        name="RunSieve evidence application",
+        name="ReproSieve evidence application",
         instructions="Call probe once, then report the marker.",
         model=session.model,
         tools=list(session.tools),
@@ -143,7 +143,7 @@ def generate_evidence(output: Path, *, commit: str) -> dict[str, str]:
         OpenAIAgentsCaptureSession(
             live_model=live_model,
             original_tools=(tool,),
-            redaction_policy=RedactionPolicy(salt=b"runsieve-application-evidence-v1"),
+            redaction_policy=RedactionPolicy(salt=b"reprosieve-application-evidence-v1"),
             trace_id="trace_application_evidence",
         ).execute(_application)
     )
@@ -192,8 +192,8 @@ def generate_evidence(output: Path, *, commit: str) -> dict[str, str]:
     ):
         raise RuntimeError("application replay producer did not satisfy its fixture")
 
-    source_path = target / "source.runsieve"
-    reduced_path = target / "reduced.runsieve"
+    source_path = target / "source.reprosieve"
+    reduced_path = target / "reduced.reprosieve"
     write_capsule(
         source,
         source_path,

@@ -114,7 +114,7 @@ def _semantic_checks(wheel: Path, sdist: Path) -> dict[str, object]:
         metadata = BytesParser().parsebytes(archive.read(metadata_names[0]))
         entry_points = archive.read(entry_names[0]).decode("utf-8")
         wheel_schemas = sorted(
-            name for name in archive.namelist() if name.startswith("runsieve/schemas/")
+            name for name in archive.namelist() if name.startswith("reprosieve/schemas/")
         )
     with tarfile.open(sdist, "r:gz") as archive:
         pyprojects = [
@@ -137,7 +137,7 @@ def _semantic_checks(wheel: Path, sdist: Path) -> dict[str, object]:
     sdist_schema_names = sorted(Path(name).name for name in sdist_schemas)
     checks = {
         "core_dependencies_empty": not unguarded and project.get("dependencies") == [],
-        "entry_point": "runsieve = runsieve.cli:main" in entry_points,
+        "entry_point": "reprosieve = reprosieve.cli:main" in entry_points,
         "extras": sorted(metadata.get_all("Provides-Extra", [])),
         "name": metadata.get("Name"),
         "python_requires": metadata.get("Requires-Python"),
@@ -147,7 +147,7 @@ def _semantic_checks(wheel: Path, sdist: Path) -> dict[str, object]:
         "wheel_schema_parity": wheel_schema_names == expected_schema_names,
     }
     if (
-        checks["name"] != "runsieve"
+        checks["name"] != "reprosieve"
         or checks["version"] != VERSION
         or checks["python_requires"] != "<3.14,>=3.11"
         or checks["extras"] != ["dev", "openai"]
@@ -194,15 +194,15 @@ def _write_supply_chain(
         "SPDXID": "SPDXRef-DOCUMENT",
         "creationInfo": {
             "created": created,
-            "creators": ["Tool: RunSieve package_matrix_proof.py"],
+            "creators": ["Tool: ReproSieve package_matrix_proof.py"],
         },
         "dataLicense": "CC0-1.0",
-        "documentNamespace": f"https://github.com/DelshadH/runsieve/spdx/{commit}",
-        "name": f"runsieve-{VERSION}-distributions",
+        "documentNamespace": f"https://github.com/DelshadH/reprosieve/spdx/{commit}",
+        "name": f"reprosieve-{VERSION}-distributions",
         "packages": packages,
         "spdxVersion": "SPDX-2.3",
     }
-    sbom_path = output / "runsieve.spdx.json"
+    sbom_path = output / "reprosieve.spdx.json"
     write_canonical_json(sbom_path, sbom)
     return {
         "checksums": {
@@ -266,7 +266,7 @@ def collect_package_proof(output: Path, *, commit: str) -> dict[str, object]:
         "PYTHONPATH": "",
         "SOURCE_DATE_EPOCH": _commit_epoch(commit),
     }
-    with tempfile.TemporaryDirectory(prefix="runsieve-package-proof-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="reprosieve-package-proof-") as temporary:
         temporary_root = Path(temporary)
         archive_path = temporary_root / "checkout.zip"
         archived = subprocess.run(

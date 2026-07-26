@@ -1,5 +1,5 @@
 {
-  "$id": "https://github.com/DelshadH/runsieve/schemas/materialization-v1.schema.json",
+  "$id": "https://github.com/DelshadH/reprosieve/schemas/materialization-v1.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {
@@ -16,6 +16,6 @@
     "tool_outputs",
     "trace_id"
   ],
-  "title": "RunSieve recorded-output materialization version 1",
+  "title": "ReproSieve recorded-output materialization version 1",
   "type": "object"
 }

@@ -60,7 +60,7 @@ def run_installed_flows(distribution: Path, *, with_openai: bool) -> tuple[str, 
     environment["PIP_NO_INPUT"] = "1"
     environment["PYTHONPATH"] = ""
     flows: list[str] = []
-    with tempfile.TemporaryDirectory(prefix="runsieve-installed-cli-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="reprosieve-installed-cli-") as temporary:
         root = Path(temporary)
         _run(
             [sys.executable, "-m", "venv", "venv"],
@@ -69,7 +69,7 @@ def run_installed_flows(distribution: Path, *, with_openai: bool) -> tuple[str, 
         )
         scripts = root / "venv" / ("Scripts" if os.name == "nt" else "bin")
         python = scripts / ("python.exe" if os.name == "nt" else "python")
-        cli = scripts / ("runsieve.exe" if os.name == "nt" else "runsieve")
+        cli = scripts / ("reprosieve.exe" if os.name == "nt" else "reprosieve")
         requirement = (
             f"{distribution}[openai]" if with_openai else str(distribution)
         )
@@ -81,10 +81,10 @@ def run_installed_flows(distribution: Path, *, with_openai: bool) -> tuple[str, 
 
         _run([str(cli), "--help"], cwd=root, environment=environment)
         flows.append("help")
-        source = root / "source.runsieve"
+        source = root / "source.reprosieve"
         create_fixture = (
-            "from runsieve.capsule import write_capsule;"
-            "from runsieve.fixtures import killer_capsule;"
+            "from reprosieve.capsule import write_capsule;"
+            "from reprosieve.fixtures import killer_capsule;"
             f"write_capsule(killer_capsule(),r'{source}')"
         )
         _run([str(python), "-c", create_fixture], cwd=root, environment=environment)
@@ -117,7 +117,7 @@ def run_installed_flows(distribution: Path, *, with_openai: bool) -> tuple[str, 
             environment=environment,
         )
         flows.append("reduce")
-        artifacts = tuple(reduced.glob("*.runsieve"))
+        artifacts = tuple(reduced.glob("*.reprosieve"))
         if len(artifacts) != 1:
             raise RuntimeError("installed reduce flow produced an unexpected artifact set")
         artifact = artifacts[0]
@@ -151,7 +151,7 @@ def run_installed_flows(distribution: Path, *, with_openai: bool) -> tuple[str, 
                 encoding="utf-8",
                 newline="\n",
             )
-            captured = root / "captured.runsieve"
+            captured = root / "captured.reprosieve"
             _run(
                 [
                     str(cli),

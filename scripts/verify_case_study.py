@@ -8,9 +8,9 @@ from datetime import date
 from pathlib import Path
 from typing import Any, cast
 
-from runsieve.capsule import canonical_json
-from runsieve.safeio import ensure_real_directory, ensure_regular_file
-from runsieve.schema import safe_relative_path
+from reprosieve.capsule import canonical_json
+from reprosieve.safeio import ensure_real_directory, ensure_regular_file
+from reprosieve.schema import safe_relative_path
 
 _CASE_ID = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 _DIGEST = re.compile(r"^[0-9a-f]{64}$")

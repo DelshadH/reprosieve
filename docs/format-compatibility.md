@@ -9,7 +9,7 @@ change the meaning of an existing field.
 
 A breaking capsule change requires a new schema and archive format version,
 golden read/write fixtures, an architecture decision, and a documented
-migration path. RunSieve never rewrites a source capsule in place.
+migration path. ReproSieve never rewrites a source capsule in place.
 
 ## Reports
 

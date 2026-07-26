@@ -12,7 +12,7 @@
 | RS-G07 | Tri-state correctness | Predicate tests cover reproduces, absent, invalid, timeout, signal, output overflow, missing harness, and cancellation. |
 | RS-G08 | Hierarchical dependency reduction | `test_each_hierarchy_level_accepts_a_real_reduction` requires accepted span, message, pair, JSON field/item, text, file/chunk, and environment reductions. |
 | RS-G09 | Probabilistic mode | The seeded three-trial fixture proves fresh directories, full attempt bookkeeping, complete cache keys, K-of-N, and the `probabilistic` label. |
-| RS-G10 | Clean issue capsule | Linux and macOS jobs run `python reproduce.py` from a fresh directory without RunSieve, a source checkout, a provider key, or network; the final workflow verifies GitHub attestations before aggregating their proofs. |
+| RS-G10 | Clean issue capsule | Linux and macOS jobs run `python reproduce.py` from a fresh directory without ReproSieve, a source checkout, a provider key, or network; the final workflow verifies GitHub attestations before aggregating their proofs. |
 | RS-G11 | Resource bounds | Schema, redaction, capsule, predicate, capture, cancellation, recursion, output, archive, and regex limit tests cover adversarial input. |
 | RS-G12 | Release experience | A clean committed tree runs `python -m scripts.verify`, then `python scripts/killer_demo.py` performs fixture creation, minimization, verification, export, and reproduction in at most 20 seconds. |
 

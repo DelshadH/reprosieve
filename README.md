@@ -1,8 +1,8 @@
-# RunSieve
+# ReproSieve
 
 **Turn a large failed agent run into a small, redacted, offline reproduction.**
 
-RunSieve captures one supported OpenAI Agents SDK trace, removes secrets before
+ReproSieve captures one supported OpenAI Agents SDK trace, removes secrets before
 persistence, replaces model and tool calls with recorded outputs, and reduces the
 trace against an executable failure predicate. The result is a deterministic,
 hash-addressed capsule with an independent 1-minimality proof.
@@ -16,7 +16,7 @@ hash-addressed capsule with an independent 1-minimality proof.
 - Python 3.11, 3.12, and 3.13.
 - `openai-agents>=0.18.3,<0.19`; CI tests 0.18.3.
 - One completed SDK trace captured through the public `TracingProcessor` API.
-- Embedded Python predicates. RunSieve invokes them with a direct argument vector,
+- Embedded Python predicates. ReproSieve invokes them with a direct argument vector,
   a clean temporary directory, provider keys removed, bounded time/output/process
   resources, and Python audit hooks that deny outbound network, child processes,
   native loading, and host-file access.
@@ -36,13 +36,13 @@ hash-addressed capsule with an independent 1-minimality proof.
 Install the core:
 
 ```bash
-python -m pip install runsieve
+python -m pip install reprosieve
 ```
 
 Install capture support:
 
 ```bash
-python -m pip install "runsieve[openai]"
+python -m pip install "reprosieve[openai]"
 ```
 
 ## Workflow
@@ -51,26 +51,26 @@ The predicate script must be included in the capsule and `--predicate` must be
 the final option because everything after it is an argument vector.
 
 ```bash
-runsieve capture \
-  --output failed.runsieve \
+reprosieve capture \
+  --output failed.reprosieve \
   --workspace-root . \
   --include verify_failure.py \
   -- python app.py
 
-runsieve reduce failed.runsieve \
+reprosieve reduce failed.reprosieve \
   --output-dir reduced \
   --predicate python verify_failure.py
 
-runsieve materialize reduced/<sha256>.runsieve \
+reprosieve materialize reduced/<sha256>.reprosieve \
   --output materialized.json
 
-runsieve reproduce-predicate reduced/<sha256>.runsieve \
+reprosieve reproduce-predicate reduced/<sha256>.reprosieve \
   --predicate python verify_failure.py
 
-runsieve verify-minimal reduced/<sha256>.runsieve \
+reprosieve verify-minimal reduced/<sha256>.reprosieve \
   --predicate python verify_failure.py
 
-runsieve export reduced/<sha256>.runsieve \
+reprosieve export reduced/<sha256>.reprosieve \
   --output issue-repro
 
 cd issue-repro
@@ -127,8 +127,8 @@ the clean Git state and every registered evidence manifest.
 
 ## Scope and comparison
 
-RunSieve is not a trace viewer, observability backend, VM sandbox, or general
-record/replay system. Existing record/replay tools preserve executions; RunSieve
+ReproSieve is not a trace viewer, observability backend, VM sandbox, or general
+record/replay system. Existing record/replay tools preserve executions; ReproSieve
 adds dependency-aware reduction, redaction before its own persistence, strict
 tri-state predicates, and an independently checked 1-minimality claim for one
 recorded agent trajectory. It does not diagnose root cause, rerun application
@@ -136,7 +136,7 @@ logic, or replay live model semantics.
 
 ## Privacy boundary
 
-RunSieve redacts SDK payloads in memory before its own first write. Capture
+ReproSieve redacts SDK payloads in memory before its own first write. Capture
 replaces the SDK default exporter unless `--retain-sdk-exporter` is explicitly
 passed. Captured target stdout and stderr are discarded because they may contain
 secrets. Exact canaries, bounded regexes, allow paths, deny paths, declared

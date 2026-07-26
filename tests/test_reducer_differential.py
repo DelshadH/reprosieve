@@ -6,11 +6,11 @@ from dataclasses import replace
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from runsieve.capsule import capsule_bytes
-from runsieve.ddmin import PredicateResult
-from runsieve.hierarchy import minimize_capsule
-from runsieve.schema import Capsule, Event, JsonValue, validate_capsule
-from runsieve.verify import verify_one_minimal
+from reprosieve.capsule import capsule_bytes
+from reprosieve.ddmin import PredicateResult
+from reprosieve.hierarchy import minimize_capsule
+from reprosieve.schema import Capsule, Event, JsonValue, validate_capsule
+from reprosieve.verify import verify_one_minimal
 
 
 def _contains_failure(value: JsonValue) -> bool:

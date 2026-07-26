@@ -11,9 +11,9 @@ The official guide states that `set_trace_processors()` replaces the default
 processors, while `add_trace_processor()` keeps the OpenAI backend exporter.
 The 0.18.3 public `TracingProcessor` interface has synchronous
 `on_trace_start`, `on_trace_end`, `on_span_start`, `on_span_end`, `shutdown`,
-and `force_flush` methods. RunSieve supports `>=0.18.3,<0.19` and CI installs
+and `force_flush` methods. ReproSieve supports `>=0.18.3,<0.19` and CI installs
 0.18.3 as both the minimum and current release at review time.
 
-RunSieve does not claim record/replay novelty. Its narrow claim is automatic
+ReproSieve does not claim record/replay novelty. Its narrow claim is automatic
 dependency-aware reduction to a redacted, deterministic, offline, 1-minimal
 failure capsule.

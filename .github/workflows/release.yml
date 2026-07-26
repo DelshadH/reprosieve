@@ -66,14 +66,14 @@ jobs:
         uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v3.2.0
         with:
           subject-path: |
-            release-proof/runsieve-*.whl
-            release-proof/runsieve-*.tar.gz
+            release-proof/reprosieve-*.whl
+            release-proof/reprosieve-*.tar.gz
             release-proof/SHA256SUMS
-            release-proof/runsieve.spdx.json
+            release-proof/reprosieve.spdx.json
       - name: Upload immutable candidate bundle
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: runsieve-${{ github.ref_name }}
+          name: reprosieve-${{ github.ref_name }}
           path: release-proof/*
           if-no-files-found: error
           retention-days: 30
@@ -90,7 +90,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: runsieve-${{ github.ref_name }}
+          name: reprosieve-${{ github.ref_name }}
           path: candidate
       - name: Verify downloaded checksums and GitHub attestations
         env:
@@ -98,15 +98,15 @@ jobs:
         run: |
           cd candidate
           sha256sum --check SHA256SUMS
-          gh attestation verify runsieve-*.whl --repo "${{ github.repository }}"
-          gh attestation verify runsieve-*.tar.gz --repo "${{ github.repository }}"
+          gh attestation verify reprosieve-*.whl --repo "${{ github.repository }}"
+          gh attestation verify reprosieve-*.tar.gz --repo "${{ github.repository }}"
           gh attestation verify SHA256SUMS --repo "${{ github.repository }}"
-          gh attestation verify runsieve.spdx.json --repo "${{ github.repository }}"
+          gh attestation verify reprosieve.spdx.json --repo "${{ github.repository }}"
       - name: Select only primary distributions
         run: |
           mkdir dist
-          cp candidate/runsieve-*.whl dist/
-          cp candidate/runsieve-*.tar.gz dist/
+          cp candidate/reprosieve-*.whl dist/
+          cp candidate/reprosieve-*.tar.gz dist/
           test "$(find dist -maxdepth 1 -type f | wc -l)" -eq 2
       - name: Publish artifact-bound distributions to PyPI
         uses: pypa/gh-action-pypi-publish@ba38be9e461d3875417946c167d0b5f3d385a247 # release/v1
@@ -123,19 +123,19 @@ jobs:
     steps:
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: runsieve-${{ github.ref_name }}
+          name: reprosieve-${{ github.ref_name }}
           path: candidate
       - name: Create immutable GitHub prerelease
         env:
           GH_TOKEN: ${{ github.token }}
         run: >-
           gh release create "${{ github.ref_name }}"
-          candidate/runsieve-*.whl
-          candidate/runsieve-*.tar.gz
+          candidate/reprosieve-*.whl
+          candidate/reprosieve-*.tar.gz
           candidate/SHA256SUMS
-          candidate/runsieve.spdx.json
+          candidate/reprosieve.spdx.json
           --repo "${{ github.repository }}"
           --verify-tag
           --prerelease
           --generate-notes
-          --title "RunSieve 0.1.0a1"
+          --title "ReproSieve 0.1.0a1"

@@ -176,7 +176,7 @@ def predicate_spec_from_json(value: object) -> PredicateSpec:
 def predicate_cache_key(capsule: Capsule, spec: PredicateSpec) -> str:
     validate_capsule(capsule)
     digest = hashlib.sha256()
-    digest.update(b"runsieve-predicate-cache-v1\0")
+    digest.update(b"reprosieve-predicate-cache-v1\0")
     digest.update(hashlib.sha256(capsule_bytes(capsule)).digest())
     digest.update(hashlib.sha256(canonical_json(spec.to_json())).digest())
     digest.update(b"\0offline")
@@ -203,16 +203,16 @@ def _network_guard_source(timeout: float, output_limit: int, process_limit: int)
     cpu_seconds = max(1, math.ceil(timeout) + 1)
     return (
         "import socket, sys\n"
-        "def _runsieve_denied(*args, **kwargs):\n"
-        "    raise PermissionError('outbound network disabled by RunSieve')\n"
-        "socket.create_connection = _runsieve_denied\n"
-        "socket.getaddrinfo = _runsieve_denied\n"
-        "socket.socket.connect = _runsieve_denied\n"
-        "socket.socket.connect_ex = _runsieve_denied\n"
+        "def _reprosieve_denied(*args, **kwargs):\n"
+        "    raise PermissionError('outbound network disabled by ReproSieve')\n"
+        "socket.create_connection = _reprosieve_denied\n"
+        "socket.getaddrinfo = _reprosieve_denied\n"
+        "socket.socket.connect = _reprosieve_denied\n"
+        "socket.socket.connect_ex = _reprosieve_denied\n"
         "try:\n"
         "    import _winapi\n"
         "    for _name in ('CreateProcess', 'CreateProcessAsUser', 'CreateProcessWithLogonW'):\n"
-        "        if hasattr(_winapi, _name): setattr(_winapi, _name, _runsieve_denied)\n"
+        "        if hasattr(_winapi, _name): setattr(_winapi, _name, _reprosieve_denied)\n"
         "except ImportError:\n"
         "    pass\n"
         "sys.setrecursionlimit(min(sys.getrecursionlimit(), 1000))\n"
@@ -234,7 +234,7 @@ def _network_guard_source(timeout: float, output_limit: int, process_limit: int)
         "for root in roots)\n"
         "def _audit(event, args):\n"
         "    if event.startswith('socket.'):\n"
-        "        raise PermissionError('outbound network disabled by RunSieve')\n"
+        "        raise PermissionError('outbound network disabled by ReproSieve')\n"
         "    if event == 'open' and args:\n"
         "        mode = args[1] if len(args) > 1 and isinstance(args[1], str) else ''\n"
         "        flags = args[2] if len(args) > 2 and isinstance(args[2], int) else 0\n"
@@ -470,13 +470,13 @@ def _execute_attempt(
             application_replay=True,
         )
 
-    with tempfile.TemporaryDirectory(prefix="runsieve-predicate-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="reprosieve-predicate-") as temporary:
         workspace = Path(temporary)
         for name, content in capsule.workspace.items():
             target = workspace / Path(name)
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(content, encoding="utf-8", newline="\n")
-        capsule_path = workspace / "candidate.runsieve"
+        capsule_path = workspace / "candidate.reprosieve"
         write_capsule(capsule, capsule_path, predicate=spec.to_json())
         replay_path = workspace / "replay.json"
         write_replay(offline_replay(capsule), replay_path)
@@ -487,7 +487,7 @@ def _execute_attempt(
         guard_directory: Path | None = None
         network_guard = "unavailable"
         if is_python:
-            guard_directory = workspace / ".runsieve-guard"
+            guard_directory = workspace / ".reprosieve-guard"
             guard_directory.mkdir()
             (guard_directory / "sitecustomize.py").write_text(
                 _network_guard_source(

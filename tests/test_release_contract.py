@@ -7,8 +7,8 @@ import time
 import tomllib
 from pathlib import Path
 
-import runsieve
-from runsieve.fixtures import killer_capsule
+import reprosieve
+from reprosieve.fixtures import killer_capsule
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -44,8 +44,16 @@ def test_package_identifies_as_the_first_0_1_alpha_without_broad_replay_claims()
     metadata = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8").lower()
 
+    assert metadata["project"]["name"] == "reprosieve"
+    assert metadata["project"]["scripts"] == {"reprosieve": "reprosieve.cli:main"}
     assert metadata["project"]["version"] == "0.1.0a1"
-    assert runsieve.__version__ == "0.1.0a1"
+    assert metadata["tool"]["hatch"]["build"]["targets"]["wheel"]["packages"] == [
+        "src/reprosieve"
+    ]
+    assert metadata["tool"]["hatch"]["build"]["targets"]["sdist"]["include"][0] == (
+        "/src/reprosieve"
+    )
+    assert reprosieve.__version__ == "0.1.0a1"
     assert "hermetic" not in changelog
     assert "recorded-output replay" not in changelog
 
@@ -60,10 +68,10 @@ def test_release_workflow_attests_the_reproducibility_checked_artifacts() -> Non
     assert 'tags:\n      - "v0.1.0a1"' in workflow
     assert "scripts.release_preflight" in workflow
     assert "python -m scripts.package_matrix_proof" in workflow
-    assert "release-proof/runsieve-*.whl" in workflow
-    assert "release-proof/runsieve-*.tar.gz" in workflow
+    assert "release-proof/reprosieve-*.whl" in workflow
+    assert "release-proof/reprosieve-*.tar.gz" in workflow
     assert "release-proof/SHA256SUMS" in workflow
-    assert "release-proof/runsieve.spdx.json" in workflow
+    assert "release-proof/reprosieve.spdx.json" in workflow
     assert "release-proof/*" in workflow
     assert "environment: pypi" in workflow
     assert "pypa/gh-action-pypi-publish@ba38be9e461d3875417946c167d0b5f3d385a247" in workflow
@@ -156,7 +164,7 @@ def test_killer_demo_completes_the_full_claim_within_twenty_seconds() -> None:
 
 def test_cli_help_starts_without_the_optional_sdk_imported() -> None:
     completed = subprocess.run(
-        [sys.executable, "-m", "runsieve.cli", "--help"],
+        [sys.executable, "-m", "reprosieve.cli", "--help"],
         cwd=ROOT,
         capture_output=True,
         text=True,

@@ -20,7 +20,7 @@ from .schema import (
     validate_capsule,
 )
 
-_FORMAT = "runsieve-capsule"
+_FORMAT = "reprosieve-capsule"
 _FORMAT_VERSION = 1
 _TIMESTAMP = (1980, 1, 1, 0, 0, 0)
 _REQUIRED_MEMBERS = {

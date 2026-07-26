@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from runsieve.schema import Capsule, Event, SchemaLimits, validate_capsule
+from reprosieve.schema import Capsule, Event, SchemaLimits, validate_capsule
 
 
 class SchemaTests(unittest.TestCase):

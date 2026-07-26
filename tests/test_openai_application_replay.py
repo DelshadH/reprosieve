@@ -17,17 +17,17 @@ from openai.types.responses import (
     ResponseOutputText,
 )
 
-from runsieve.adapters.openai_agents_replay import (
+from reprosieve.adapters.openai_agents_replay import (
     ApplicationReplayDivergence,
     ApplicationReplayUnsupported,
     OpenAIAgentsCaptureSession,
     OpenAIAgentsReplaySession,
 )
-from runsieve.capsule import capsule_bytes
-from runsieve.ddmin import PredicateResult
-from runsieve.hierarchy import minimize_capsule
-from runsieve.redact import RedactionPolicy
-from runsieve.verify import verify_one_minimal
+from reprosieve.capsule import capsule_bytes
+from reprosieve.ddmin import PredicateResult
+from reprosieve.hierarchy import minimize_capsule
+from reprosieve.redact import RedactionPolicy
+from reprosieve.verify import verify_one_minimal
 
 
 def _run(awaitable: Any) -> Any:
@@ -144,7 +144,7 @@ def test_public_sdk_application_capture_and_replay_execute_application_without_l
         "model_request",
         "model_response",
     ]
-    (tmp_path / "capture.runsieve").write_bytes(
+    (tmp_path / "capture.reprosieve").write_bytes(
         capsule_bytes(
             captured.capsule,
             redaction_report=captured.redaction_report,

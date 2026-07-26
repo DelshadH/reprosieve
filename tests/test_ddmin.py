@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from runsieve.ddmin import PredicateResult, ddmin
+from reprosieve.ddmin import PredicateResult, ddmin
 
 
 class DdminTests(unittest.TestCase):

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from runsieve.capsule import canonical_json
+from reprosieve.capsule import canonical_json
 from scripts.verify_case_study import verify_case_study_package
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -23,10 +23,10 @@ def _case_study(tmp_path: Path) -> Path:
         "dependency-inventory": ("dependencies.txt", b"openai-agents==0.18.3\n"),
         "export": ("reproduction.zip", b"bounded-export-fixture"),
         "minimality-report": ("minimality-report.json", b"{}\n"),
-        "original-capsule": ("original.runsieve", b"original-capsule-fixture"),
+        "original-capsule": ("original.reprosieve", b"original-capsule-fixture"),
         "permission-record": ("permission.json", b'{"publication_approved":true}\n'),
         "predicate": ("predicate.py", b"raise SystemExit(0)\n"),
-        "reduced-capsule": ("reduced.runsieve", b"reduced-capsule-fixture"),
+        "reduced-capsule": ("reduced.reprosieve", b"reduced-capsule-fixture"),
         "reduction-report": ("reduction-report.json", b"{}\n"),
     }
     artifacts: list[dict[str, object]] = []
@@ -125,7 +125,7 @@ def test_case_study_rejects_missing_permission_artifact(tmp_path: Path) -> None:
 
 def test_case_study_rejects_corrupted_artifact(tmp_path: Path) -> None:
     root = _case_study(tmp_path)
-    with (root / "reduced.runsieve").open("ab") as stream:
+    with (root / "reduced.reprosieve").open("ab") as stream:
         stream.write(b"corruption")
 
     with pytest.raises(ValueError, match="hash/size"):
