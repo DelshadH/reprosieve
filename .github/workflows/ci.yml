@@ -37,7 +37,7 @@ jobs:
           python -m venv .test-env/smoke
           .test-env/smoke/bin/python -m pip install --no-deps dist/*.whl
           cd .test-env
-          smoke/bin/runsieve --help
+          smoke/bin/reprosieve --help
       - name: Produce measured package proof
         run: >-
           python -m scripts.package_matrix_proof

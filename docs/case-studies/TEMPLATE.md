@@ -32,7 +32,7 @@ Every package requires these hash-bound artifact roles:
 
 An `application-replay` case also requires `application-entrypoint` and
 `application-replay-report`. The entry point is reviewed application source,
-not a capsule-supplied command that RunSieve silently executes.
+not a capsule-supplied command that ReproSieve silently executes.
 
 The permission record must state the publication scope for the exact package
 bytes. A disclosure reviewer separately checks credentials, private source,

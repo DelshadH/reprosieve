@@ -1,8 +1,12 @@
 # Independent AI technical review
 
-RunSieve's `0.1.0a1` candidate was reviewed under the autonomous release
+The historical RunSieve `0.1.0a1` candidate was reviewed under the autonomous release
 policy. This is an independent AI technical review, not human approval or a
 professional external audit.
+
+The unpublished public surface was subsequently renamed to ReproSieve after a
+material name collision was found. That mechanical rename requires its own
+exact-head tests and CI; this record does not retroactively claim that review.
 
 ## Review sequence
 

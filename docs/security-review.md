@@ -24,7 +24,7 @@ OpenAI adapter, predicate runner, reducer, exporter, packaging, and CI.
 - Capture necessarily holds raw SDK values briefly in process memory. A debugger,
   memory dump, compromised interpreter, or target crash reporter can observe them.
 - Redaction cannot identify arbitrary personal or proprietary information.
-- The parent application may write its own secrets before RunSieve sees a trace.
+- The parent application may write its own secrets before ReproSieve sees a trace.
 - Windows does not expose every POSIX resource limit. Timeout, output, direct
   command, clean directory, environment, network, filesystem, process, and native
   loading controls still apply.

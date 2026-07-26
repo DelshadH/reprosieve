@@ -257,7 +257,7 @@ def _json_paths(value: JsonValue, *, target: type[str | int]) -> list[JsonPath]:
 
     def walk(current: JsonValue, path: JsonPath) -> None:
         if isinstance(current, dict):
-            if current.get("$runsieve_redacted") is True:
+            if current.get("$reprosieve_redacted") is True:
                 return
             for key, child in current.items():
                 if target is str:
@@ -280,7 +280,7 @@ def _text_paths(value: JsonValue) -> list[JsonPath]:
         if isinstance(current, str):
             paths.append(path)
         elif isinstance(current, dict):
-            if current.get("$runsieve_redacted") is True:
+            if current.get("$reprosieve_redacted") is True:
                 return
             for key, child in current.items():
                 walk(child, (*path, key))
@@ -541,7 +541,7 @@ def minimize_capsule(
         f"{getattr(predicate, '__qualname__', type(predicate).__qualname__)}"
     )
     cache_key = hashlib.sha256(
-        b"runsieve-reduction-cache-v1\0"
+        b"reprosieve-reduction-cache-v1\0"
         + source_data
         + b"\0"
         + identity.encode("utf-8")

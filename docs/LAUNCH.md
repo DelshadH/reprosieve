@@ -12,4 +12,4 @@ README order:
 6. capsule format;
 7. limitations and comparison to record/replay tools.
 
-Before publication, repeat searches for `RunSieve`, `runsieve`, package/executable variants, and relevant trademarks. Rename before registry publication if a material collision appears. Never claim the broader TraceCase name.
+Before publication, repeat searches for `ReproSieve`, `reprosieve`, package/executable variants, and relevant trademarks. Rename before registry publication if a material collision appears. Never claim the broader TraceCase name.

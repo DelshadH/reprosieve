@@ -2,7 +2,7 @@
 
 This is an experimental 0.5 library surface. It is not part of the immutable
 0.1 promise, has no CLI entry point, and is not release evidence by itself.
-RunSieve's 0.1 `materialize`, `reproduce-predicate`, and deprecated `replay`
+ReproSieve's 0.1 `materialize`, `reproduce-predicate`, and deprecated `replay`
 alias retain their narrower meanings.
 
 ## What executes
@@ -21,8 +21,8 @@ Capture executes:
 Replay executes:
 
 - the application callback and SDK `Runner`;
-- RunSieve's recorded-response `Model`;
-- RunSieve's recorded-result `FunctionTool` wrappers.
+- ReproSieve's recorded-response `Model`;
+- ReproSieve's recorded-result `FunctionTool` wrappers.
 
 Replay does not call the supplied original tool handlers. The SDK model
 provider is replaced with a fail-closed canary. Original handlers are
@@ -38,7 +38,7 @@ callback:
 ```python
 from agents import Agent
 
-from runsieve.adapters.openai_agents_replay import (
+from reprosieve.adapters.openai_agents_replay import (
     OpenAIAgentsCaptureSession,
     OpenAIAgentsReplaySession,
 )
@@ -112,7 +112,7 @@ version and evidence.
 ## Privacy and trust boundary
 
 Every recorded request, response, tool argument, tool result, and returned
-application value passes through RunSieve redaction before capsule
+application value passes through ReproSieve redaction before capsule
 persistence. If any matching field is changed by redaction, the capsule is
 marked application-replay-ineligible. This prevents equality matching from
 quietly accepting a redacted approximation.

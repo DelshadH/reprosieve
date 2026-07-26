@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from runsieve.schema import Capsule, Event
+from reprosieve.schema import Capsule, Event
 
 
 def sample_capsule(*, with_predicate: bool = False) -> Capsule:

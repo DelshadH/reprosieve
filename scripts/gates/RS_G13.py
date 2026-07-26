@@ -133,7 +133,7 @@ def validate_package_proof(
             "core_dependencies_empty": True,
             "entry_point": True,
             "extras": ["dev", "openai"],
-            "name": "runsieve",
+            "name": "reprosieve",
             "python_requires": "<3.14,>=3.11",
             "schema_names": [
                 "capsule-v1.schema.json",

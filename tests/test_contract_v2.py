@@ -30,7 +30,7 @@ from scripts.gates.RS_G12 import assert_evidence_files_tracked
 
 class ContractV2Tests(unittest.TestCase):
     def test_bootstrap_writes_control_state_with_canonical_lf_bytes(self) -> None:
-        with tempfile.TemporaryDirectory(prefix="runsieve-bootstrap-bytes-") as raw:
+        with tempfile.TemporaryDirectory(prefix="reprosieve-bootstrap-bytes-") as raw:
             root = Path(raw)
             (root / "PROGRESS.json").write_text(
                 '{"updated_at":"1970-01-01T00:00:00Z"}\n',
@@ -47,13 +47,13 @@ class ContractV2Tests(unittest.TestCase):
             self.assertNotIn(b"\r", (root / "PROGRESS.json").read_bytes())
 
     def test_bootstrap_refuses_to_initialize_without_contract_v2_identity(self) -> None:
-        with tempfile.TemporaryDirectory(prefix="runsieve-bootstrap-test-") as raw:
+        with tempfile.TemporaryDirectory(prefix="reprosieve-bootstrap-test-") as raw:
             root = Path(raw)
             with self.assertRaisesRegex(ValueError, "CONTRACT_VERSION"):
                 validate_bootstrap_contract(root)
 
     def test_control_bundle_lists_sorted_paths_and_hashes_exact_bytes(self) -> None:
-        with tempfile.TemporaryDirectory(prefix="runsieve-bundle-test-") as raw:
+        with tempfile.TemporaryDirectory(prefix="reprosieve-bundle-test-") as raw:
             root = Path(raw)
             expected = hashlib.sha256()
             for relative in sorted(CONTROL_PLANE_FILES):
@@ -159,19 +159,19 @@ class ContractV2Tests(unittest.TestCase):
             validate_state_shape(**state)
 
     def test_release_evidence_rejects_ignored_untracked_artifacts(self) -> None:
-        with tempfile.TemporaryDirectory(prefix="runsieve-tracked-evidence-") as raw:
+        with tempfile.TemporaryDirectory(prefix="reprosieve-tracked-evidence-") as raw:
             root = Path(raw)
             subprocess.run(["git", "init", "-q"], cwd=root, check=True)
             evidence = root / ".evidence" / "RS-G10" / "run"
             evidence.mkdir(parents=True)
             manifest_path = evidence / "manifest.json"
             stream = evidence / "command.stdout"
-            capsule = evidence / "capsule.runsieve"
+            capsule = evidence / "capsule.reprosieve"
             verifier = root / "scripts" / "gates" / "RS_G10.py"
             verifier.parent.mkdir(parents=True)
             for path in (manifest_path, stream, capsule, verifier):
                 path.write_bytes(b"evidence\n")
-            (root / ".gitignore").write_text("*.runsieve\n", encoding="utf-8")
+            (root / ".gitignore").write_text("*.reprosieve\n", encoding="utf-8")
             subprocess.run(
                 [
                     "git",
@@ -188,9 +188,9 @@ class ContractV2Tests(unittest.TestCase):
                 [
                     "git",
                     "-c",
-                    "user.name=RunSieve Test",
+                    "user.name=ReproSieve Test",
                     "-c",
-                    "user.email=runsieve@example.invalid",
+                    "user.email=reprosieve@example.invalid",
                     "commit",
                     "-qm",
                     "tracked evidence fixture",
@@ -199,7 +199,7 @@ class ContractV2Tests(unittest.TestCase):
                 check=True,
             )
             manifest = {
-                "artifacts": [{"path": "capsule.runsieve"}],
+                "artifacts": [{"path": "capsule.reprosieve"}],
                 "commands": [
                     {
                         "stderr": {"path": "command.stdout"},
@@ -226,9 +226,9 @@ class ContractV2Tests(unittest.TestCase):
                 [
                     "git",
                     "-c",
-                    "user.name=RunSieve Test",
+                    "user.name=ReproSieve Test",
                     "-c",
-                    "user.email=runsieve@example.invalid",
+                    "user.email=reprosieve@example.invalid",
                     "commit",
                     "-qm",
                     "track capsule",

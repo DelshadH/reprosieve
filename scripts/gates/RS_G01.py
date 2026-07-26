@@ -13,7 +13,7 @@ from scripts.gates._verify import (
 )
 
 ROOT = Path(__file__).resolve().parents[2]
-ADAPTER = "src/runsieve/adapters/openai_agents.py"
+ADAPTER = "src/reprosieve/adapters/openai_agents.py"
 
 
 def scan_sdk_imports(source: bytes) -> tuple[str, ...]:

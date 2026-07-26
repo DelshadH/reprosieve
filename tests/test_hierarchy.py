@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from runsieve.capsule import capsule_bytes
-from runsieve.ddmin import PredicateResult
-from runsieve.fixtures import killer_capsule, killer_predicate
-from runsieve.hierarchy import minimize_capsule
-from runsieve.schema import Capsule, Event, validate_capsule
-from runsieve.verify import verify_one_minimal
+from reprosieve.capsule import capsule_bytes
+from reprosieve.ddmin import PredicateResult
+from reprosieve.fixtures import killer_capsule, killer_predicate
+from reprosieve.hierarchy import minimize_capsule
+from reprosieve.schema import Capsule, Event, validate_capsule
+from reprosieve.verify import verify_one_minimal
 
 
 def test_real_247_event_fixture_reduces_to_at_most_ten_and_is_one_minimal() -> None:

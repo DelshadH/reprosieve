@@ -35,7 +35,7 @@ from .verify import verify_one_minimal
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="runsieve",
+        prog="reprosieve",
         description="Capture and reduce a failed agent run into an offline reproduction.",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -176,12 +176,12 @@ def _capture(args: argparse.Namespace) -> int:
         "workspace_root": str(ensure_real_directory(args.workspace_root, label="workspace root")),
     }
     encoded = base64.b64encode(canonical_json(config)).decode("ascii")
-    with tempfile.TemporaryDirectory(prefix="runsieve-capture-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="reprosieve-capture-") as temporary:
         bootstrap = Path(temporary)
         (bootstrap / "sitecustomize.py").write_text(
             "import os\n"
             "try:\n"
-            "    from runsieve._capture_bootstrap import install_from_environment\n"
+            "    from reprosieve._capture_bootstrap import install_from_environment\n"
             "    install_from_environment()\n"
             "except Exception:\n"
             "    os._exit(78)\n",
@@ -279,7 +279,7 @@ def _reduce(args: argparse.Namespace) -> int:
     redaction = read_capsule_document(source_path, "redaction.json")
     data = capsule_bytes(final, redaction_report=redaction, predicate=spec.to_json())
     digest = hashlib.sha256(data).hexdigest()
-    destination = output_directory / f"{digest}.runsieve"
+    destination = output_directory / f"{digest}.reprosieve"
     if destination.exists():
         if destination.read_bytes() != data:
             raise RuntimeError("hash-addressed output collision")
@@ -297,7 +297,7 @@ def _reduce(args: argparse.Namespace) -> int:
             "artifact_bytes": len(data),
             "artifact_sha256": digest,
             "final_predicate": final_predicate.to_json(),
-            "format": "runsieve-reduction-report",
+            "format": "reprosieve-reduction-report",
             "format_version": 1,
             "minimality": proof.to_json(),
             "predicate": spec.to_json(),
@@ -315,13 +315,13 @@ def _reduce(args: argparse.Namespace) -> int:
     print(
         f"reduced {len(source.events)} events to {len(final.events)}; "
         f"1-minimal; {result.report.predicate_calls} predicate calls; "
-        f"{result.report.wall_seconds:.3f}s; artifact {digest}.runsieve"
+        f"{result.report.wall_seconds:.3f}s; artifact {digest}.reprosieve"
     )
     return 0
 
 
 def _minimize(args: argparse.Namespace) -> int:
-    print("runsieve: minimize is deprecated; use reduce", file=sys.stderr)
+    print("reprosieve: minimize is deprecated; use reduce", file=sys.stderr)
     return _reduce(args)
 
 
@@ -336,7 +336,7 @@ def _materialize(args: argparse.Namespace) -> int:
 
 
 def _replay(args: argparse.Namespace) -> int:
-    print("runsieve: replay is deprecated; use materialize", file=sys.stderr)
+    print("reprosieve: replay is deprecated; use materialize", file=sys.stderr)
     return _materialize(args)
 
 
@@ -391,7 +391,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         }
         return handlers[args.command](args)
     except (FileExistsError, OSError, RuntimeError, ValueError) as error:
-        print(f"runsieve: {error}", file=sys.stderr)
+        print(f"reprosieve: {error}", file=sys.stderr)
         return 2
 
 

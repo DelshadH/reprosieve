@@ -6,16 +6,16 @@ import tempfile
 import time
 from pathlib import Path
 
-from runsieve.capsule import write_capsule
-from runsieve.cli import main
-from runsieve.fixtures import killer_capsule
+from reprosieve.capsule import write_capsule
+from reprosieve.cli import main
+from reprosieve.fixtures import killer_capsule
 
 
 def run() -> int:
     started = time.monotonic()
-    with tempfile.TemporaryDirectory(prefix="runsieve-demo-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="reprosieve-demo-") as temporary:
         root = Path(temporary)
-        source = root / "source.runsieve"
+        source = root / "source.reprosieve"
         reduced = root / "reduced"
         reduced.mkdir()
         write_capsule(killer_capsule(), source)
@@ -33,7 +33,7 @@ def run() -> int:
             ]
         ):
             return 1
-        artifact = next(reduced.glob("*.runsieve"))
+        artifact = next(reduced.glob("*.reprosieve"))
         materialized = root / "materialized.json"
         if main(["materialize", str(artifact), "--output", str(materialized)]):
             return 1

@@ -8,15 +8,15 @@ from pathlib import Path
 
 import pytest
 
-from runsieve.capsule import capsule_bytes, write_capsule
-from runsieve.export import export_reproduction
-from runsieve.fixtures import killer_capsule
-from runsieve.predicate import PredicateSpec
+from reprosieve.capsule import capsule_bytes, write_capsule
+from reprosieve.export import export_reproduction
+from reprosieve.fixtures import killer_capsule
+from reprosieve.predicate import PredicateSpec
 from tests.helpers import sample_capsule
 
 
 def test_export_refuses_symlink_output_and_hostile_predicate(tmp_path: Path) -> None:
-    source = tmp_path / "source.runsieve"
+    source = tmp_path / "source.reprosieve"
     write_capsule(
         killer_capsule(),
         source,
@@ -52,7 +52,7 @@ def test_standalone_reproducer_denies_network_audit_event_without_connection(
         workspace=workspace,
         environment=capsule.environment,
     )
-    source = tmp_path / "network.runsieve"
+    source = tmp_path / "network.reprosieve"
     write_capsule(
         capsule,
         source,
@@ -84,7 +84,7 @@ def test_standalone_reproducer_restores_declared_environment(tmp_path: Path) -> 
         },
         environment={"DEMO_FLAG": "1"},
     )
-    source = tmp_path / "environment.runsieve"
+    source = tmp_path / "environment.reprosieve"
     write_capsule(
         capsule,
         source,
@@ -113,14 +113,14 @@ def test_export_rejects_deferred_application_replay_declarations(
         metadata={
             **sample_capsule().metadata,
             "application_replay": {
-                "protocol": "runsieve-recorded-v1",
+                "protocol": "reprosieve-recorded-v1",
                 "argv": ["python", "replay_application.py"],
             },
         },
         workspace={
             "replay_application.py": (
                 "import json, os, pathlib\n"
-                "from runsieve_replay_adapter import next_tool_output\n"
+                "from reprosieve_replay_adapter import next_tool_output\n"
                 "print('RUNSIEVE-SYNTHETIC-OUTPUT-CANARY')\n"
                 "persisted = list(pathlib.Path('.').glob('.*.stdout')) + "
                 "list(pathlib.Path('.').glob('.*.stderr'))\n"
@@ -138,7 +138,7 @@ def test_export_rejects_deferred_application_replay_declarations(
             ),
         },
     )
-    source = tmp_path / "application.runsieve"
+    source = tmp_path / "application.reprosieve"
     write_capsule(
         capsule,
         source,
@@ -150,7 +150,7 @@ def test_export_rejects_deferred_application_replay_declarations(
 
 
 def test_export_readme_never_claims_application_replay(tmp_path: Path) -> None:
-    source = tmp_path / "source.runsieve"
+    source = tmp_path / "source.reprosieve"
     write_capsule(
         killer_capsule(),
         source,
@@ -184,11 +184,11 @@ def test_standalone_reproducer_rejects_hostile_resource_policy_before_execution(
         workspace={"predicate.py": "import time\ntime.sleep(30)\nraise SystemExit(0)\n"},
     )
     valid = PredicateSpec(("python", "predicate.py"), timeout_seconds=1).to_json()
-    source = tmp_path / "source.runsieve"
+    source = tmp_path / "source.reprosieve"
     write_capsule(capsule, source, predicate=valid)
     output = export_reproduction(source, tmp_path / "repro")
     hostile = {**valid, field: value}
-    (output / "capsule.runsieve").write_bytes(
+    (output / "capsule.reprosieve").write_bytes(
         capsule_bytes(capsule, predicate=hostile)
     )
     result = subprocess.run(

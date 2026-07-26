@@ -11,8 +11,8 @@ from pathlib import Path
 
 import pytest
 
-from runsieve.ddmin import PredicateResult
-from runsieve.predicate import PredicateSpec, predicate_cache_key, run_predicate
+from reprosieve.ddmin import PredicateResult
+from reprosieve.predicate import PredicateSpec, predicate_cache_key, run_predicate
 from tests.helpers import sample_capsule
 
 

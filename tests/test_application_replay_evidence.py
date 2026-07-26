@@ -36,7 +36,7 @@ def test_application_replay_evidence_capsules_are_not_ignored() -> None:
             "git",
             "check-ignore",
             "--no-index",
-            ".evidence/RS-05-AR1/fixture/source.runsieve",
+            ".evidence/RS-05-AR1/fixture/source.reprosieve",
         ],
         cwd=ROOT,
         text=True,
@@ -124,8 +124,8 @@ def test_application_replay_evidence_must_be_committed_in_head(
     ):
         shutil.copyfile(ROOT / "scripts" / name, scripts / name)
     _git(repository, "init", "--initial-branch=main")
-    _git(repository, "config", "user.email", "runsieve@example.invalid")
-    _git(repository, "config", "user.name", "RunSieve test")
+    _git(repository, "config", "user.email", "reprosieve@example.invalid")
+    _git(repository, "config", "user.name", "ReproSieve test")
     _git(repository, "add", "scripts")
     _git(repository, "commit", "-m", "implementation")
     implementation_commit = _git(repository, "rev-parse", "HEAD")

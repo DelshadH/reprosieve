@@ -232,7 +232,7 @@ def _portable_inputs(
             "proof.json",
             "command.stdout",
             "command.stderr",
-            "capsule.runsieve",
+            "capsule.reprosieve",
             "reproduce.py",
         ):
             source = source_directory / name

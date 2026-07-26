@@ -128,7 +128,7 @@ def test_rs_g01_scans_the_committed_adapter_for_private_sdk_imports() -> None:
     module = importlib.import_module("scripts.gates.RS_G01")
     scan = getattr(module, "scan_sdk_imports", None)
     assert callable(scan)
-    adapter = Path("src/runsieve/adapters/openai_agents.py").read_bytes()
+    adapter = Path("src/reprosieve/adapters/openai_agents.py").read_bytes()
     assert scan(adapter) == ()
     assert scan(b"from agents._internal import exporter\n") == ("agents._internal",)
 
@@ -150,8 +150,8 @@ def test_rs_g13_requires_real_clean_install_proof_for_each_python() -> None:
     validate = getattr(module, "validate_package_proof", None)
     assert callable(validate)
     commit = "c" * 40
-    wheel = "runsieve-0.1.0a1-py3-none-any.whl"
-    sdist = "runsieve-0.1.0a1.tar.gz"
+    wheel = "reprosieve-0.1.0a1-py3-none-any.whl"
+    sdist = "reprosieve-0.1.0a1.tar.gz"
     core_flows = [
         "help",
         "materialize",
@@ -234,13 +234,13 @@ def test_rs_g13_requires_real_clean_install_proof_for_each_python() -> None:
         },
         "members": {
             "sdist": [
-                "runsieve-0.1.0a1/README.md",
-                "runsieve-0.1.0a1/pyproject.toml",
-                "runsieve-0.1.0a1/src/runsieve/__init__.py",
+                "reprosieve-0.1.0a1/README.md",
+                "reprosieve-0.1.0a1/pyproject.toml",
+                "reprosieve-0.1.0a1/src/reprosieve/__init__.py",
             ],
             "wheel": [
-                "runsieve-0.1.0a1.dist-info/METADATA",
-                "runsieve/__init__.py",
+                "reprosieve-0.1.0a1.dist-info/METADATA",
+                "reprosieve/__init__.py",
             ],
         },
         "installed_flows": {
@@ -253,7 +253,7 @@ def test_rs_g13_requires_real_clean_install_proof_for_each_python() -> None:
             "core_dependencies_empty": True,
             "entry_point": True,
             "extras": ["dev", "openai"],
-            "name": "runsieve",
+            "name": "reprosieve",
             "python_requires": "<3.14,>=3.11",
             "schema_names": [
                 "capsule-v1.schema.json",
@@ -275,7 +275,7 @@ def test_rs_g13_requires_real_clean_install_proof_for_each_python() -> None:
             },
             "sbom": {
                 "bytes": 500,
-                "name": "runsieve.spdx.json",
+                "name": "reprosieve.spdx.json",
                 "sha256": "e" * 64,
             },
         },
@@ -334,7 +334,7 @@ def test_rs_g13_requires_real_clean_install_proof_for_each_python() -> None:
             **proof["members"],
             "sdist": [
                 *proof["members"]["sdist"],
-                "runsieve-0.1.0a1/.evidence/RS-G13/proof.json",
+                "reprosieve-0.1.0a1/.evidence/RS-G13/proof.json",
             ],
         },
     }
@@ -388,8 +388,8 @@ def test_evidence_generator_consumes_three_distinct_package_proofs(
     for minor in ("3.11", "3.12", "3.13"):
         source = tmp_path / f"input-{minor}"
         source.mkdir()
-        wheel = "runsieve-0.1.0a1-py3-none-any.whl"
-        sdist = "runsieve-0.1.0a1.tar.gz"
+        wheel = "reprosieve-0.1.0a1-py3-none-any.whl"
+        sdist = "reprosieve-0.1.0a1.tar.gz"
         rebuilt_wheel = f"rebuild-{wheel}"
         rebuilt_sdist = f"rebuild-{sdist}"
         commands = []
@@ -427,7 +427,7 @@ def test_evidence_generator_consumes_three_distinct_package_proofs(
         (source / rebuilt_wheel).write_bytes(b"wheel")
         (source / rebuilt_sdist).write_bytes(b"sdist")
         (source / "SHA256SUMS").write_bytes(b"checksums")
-        (source / "runsieve.spdx.json").write_bytes(b"sbom")
+        (source / "reprosieve.spdx.json").write_bytes(b"sbom")
         core_flows = [
             "help",
             "materialize",
@@ -474,12 +474,12 @@ def test_evidence_generator_consumes_three_distinct_package_proofs(
             },
             "members": {
                 "sdist": [
-                    "runsieve-0.1.0a1/README.md",
-                    "runsieve-0.1.0a1/pyproject.toml",
+                    "reprosieve-0.1.0a1/README.md",
+                    "reprosieve-0.1.0a1/pyproject.toml",
                 ],
                 "wheel": [
-                    "runsieve-0.1.0a1.dist-info/METADATA",
-                    "runsieve/__init__.py",
+                    "reprosieve-0.1.0a1.dist-info/METADATA",
+                    "reprosieve/__init__.py",
                 ],
             },
             "installed_flows": {
@@ -492,7 +492,7 @@ def test_evidence_generator_consumes_three_distinct_package_proofs(
                 "core_dependencies_empty": True,
                 "entry_point": True,
                 "extras": ["dev", "openai"],
-                "name": "runsieve",
+                "name": "reprosieve",
                 "python_requires": "<3.14,>=3.11",
                 "schema_names": [
                     "capsule-v1.schema.json",
@@ -514,7 +514,7 @@ def test_evidence_generator_consumes_three_distinct_package_proofs(
                 },
                 "sbom": {
                     "bytes": 4,
-                    "name": "runsieve.spdx.json",
+                    "name": "reprosieve.spdx.json",
                     "sha256": hashlib.sha256(b"sbom").hexdigest(),
                 },
             },

@@ -1,6 +1,6 @@
 # Support policy
 
-RunSieve is a pre-0.1 project. Only the behavior documented for the current
+ReproSieve is a pre-0.1 project. Only the behavior documented for the current
 repository version is supported; there is no long-term support branch or
 backward-compatibility guarantee yet.
 
@@ -11,7 +11,7 @@ Supported runtime combinations:
 - Linux and macOS for the exported one-command reproduction;
 - synthetic or disposable inputs only.
 
-Use the GitHub issue forms for reproducible defects. Include the RunSieve
+Use the GitHub issue forms for reproducible defects. Include the ReproSieve
 version, platform, exact command, exit code, and a redacted synthetic capsule
 when possible. Do not attach credentials, private source, personal data, or raw
 production traces.

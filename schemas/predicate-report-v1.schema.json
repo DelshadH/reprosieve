@@ -1,5 +1,5 @@
 {
-  "$id": "https://github.com/DelshadH/runsieve/schemas/predicate-report-v1.schema.json",
+  "$id": "https://github.com/DelshadH/reprosieve/schemas/predicate-report-v1.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {
@@ -30,6 +30,6 @@
     "result",
     "trials"
   ],
-  "title": "RunSieve predicate report version 1",
+  "title": "ReproSieve predicate report version 1",
   "type": "object"
 }

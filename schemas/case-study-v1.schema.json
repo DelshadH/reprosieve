@@ -1,5 +1,5 @@
 {
-  "$id": "https://github.com/DelshadH/runsieve/schemas/case-study-v1.schema.json",
+  "$id": "https://github.com/DelshadH/reprosieve/schemas/case-study-v1.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "allOf": [
@@ -301,6 +301,6 @@
     "synthetic",
     "title"
   ],
-  "title": "RunSieve permissioned case-study package version 1",
+  "title": "ReproSieve permissioned case-study package version 1",
   "type": "object"
 }

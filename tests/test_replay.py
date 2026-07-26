@@ -8,9 +8,9 @@ from pathlib import Path
 
 import pytest
 
-from runsieve.ddmin import PredicateResult
-from runsieve.predicate import PredicateSpec, run_predicate
-from runsieve.replay import offline_replay, write_replay
+from reprosieve.ddmin import PredicateResult
+from reprosieve.predicate import PredicateSpec, run_predicate
+from reprosieve.replay import offline_replay, write_replay
 from tests.helpers import sample_capsule
 
 
@@ -93,7 +93,7 @@ def test_seed_release_rejects_application_replay_declarations() -> None:
     capsule = sample_capsule()
     application = (
         "import json, os, pathlib\n"
-        "from runsieve_replay_adapter import next_model_output, next_tool_output\n"
+        "from reprosieve_replay_adapter import next_model_output, next_tool_output\n"
         "model = next_model_output()\n"
         "tool = next_tool_output('probe')\n"
         "result = {'model_type': model[0]['type'], 'failure': tool['failure']}\n"
@@ -112,7 +112,7 @@ def test_seed_release_rejects_application_replay_declarations() -> None:
         metadata={
             **capsule.metadata,
             "application_replay": {
-                "protocol": "runsieve-recorded-v1",
+                "protocol": "reprosieve-recorded-v1",
                 "argv": ["python", "replay_application.py"],
             },
         },

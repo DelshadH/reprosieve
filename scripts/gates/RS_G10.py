@@ -187,7 +187,7 @@ def _validate_rs_g10(
                 raise ValueError(f"{platform} portable {stream} does not match proof")
         export = portable["export"]
         if hashlib.sha256(
-            _read_bundle_file(base, platform, "capsule.runsieve")
+            _read_bundle_file(base, platform, "capsule.reprosieve")
         ).hexdigest() != export["capsule_sha256"]:
             raise ValueError(f"{platform} portable capsule identity mismatch")
         if hashlib.sha256(

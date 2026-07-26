@@ -1,5 +1,5 @@
 {
-  "$id": "https://github.com/DelshadH/runsieve/schemas/capsule-v1.schema.json",
+  "$id": "https://github.com/DelshadH/reprosieve/schemas/capsule-v1.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {
@@ -57,6 +57,6 @@
     "trace_id",
     "workspace"
   ],
-  "title": "RunSieve logical capsule version 1",
+  "title": "ReproSieve logical capsule version 1",
   "type": "object"
 }

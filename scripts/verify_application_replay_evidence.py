@@ -14,16 +14,16 @@ from unittest.mock import patch
 
 from agents import Agent, FunctionTool
 
-from runsieve.adapters.openai_agents_replay import (
+from reprosieve.adapters.openai_agents_replay import (
     ApplicationReplayDivergence,
     ApplicationReplayUnsupported,
     OpenAIAgentsReplaySession,
 )
-from runsieve.capsule import canonical_json, load_capsule
-from runsieve.ddmin import PredicateResult
-from runsieve.safeio import ensure_real_directory, ensure_regular_file
-from runsieve.schema import Capsule, safe_relative_path
-from runsieve.verify import verify_one_minimal
+from reprosieve.capsule import canonical_json, load_capsule
+from reprosieve.ddmin import PredicateResult
+from reprosieve.safeio import ensure_real_directory, ensure_regular_file
+from reprosieve.schema import Capsule, safe_relative_path
+from reprosieve.verify import verify_one_minimal
 
 ROOT = Path(__file__).resolve().parents[1]
 _SHA = re.compile(r"^[0-9a-f]{40}$")
@@ -136,7 +136,7 @@ def _tool(counter: dict[str, int]) -> FunctionTool:
 async def _application(session: Any, executions: dict[str, int]) -> Any:
     executions["calls"] += 1
     agent = Agent(
-        name="RunSieve evidence application",
+        name="ReproSieve evidence application",
         instructions="Call probe once, then report the marker.",
         model=session.model,
         tools=list(session.tools),
@@ -278,7 +278,7 @@ def _verify_caught_original_attempt(reduced: Capsule) -> None:
 def _verify_early_exit(reduced: Capsule, tool: FunctionTool) -> None:
     async def early_exit(session: Any) -> Any:
         agent = Agent(
-            name="RunSieve evidence application",
+            name="ReproSieve evidence application",
             instructions="Call probe once, then report the marker.",
             model=session.model,
             tools=list(session.tools),

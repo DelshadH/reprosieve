@@ -3,13 +3,13 @@ requires = ["hatchling==1.31.0"]
 build-backend = "hatchling.build"
 
 [project]
-name = "runsieve"
+name = "reprosieve"
 version = "0.1.0a1"
 description = "Reduce failed agent traces into redacted offline predicate reproductions"
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
 license = "Apache-2.0"
-authors = [{ name = "RunSieve contributors" }]
+authors = [{ name = "ReproSieve contributors" }]
 dependencies = []
 classifiers = [
   "Development Status :: 3 - Alpha",
@@ -23,9 +23,9 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/DelshadH/runsieve"
-Issues = "https://github.com/DelshadH/runsieve/issues"
-Source = "https://github.com/DelshadH/runsieve"
+Homepage = "https://github.com/DelshadH/reprosieve"
+Issues = "https://github.com/DelshadH/reprosieve/issues"
+Source = "https://github.com/DelshadH/reprosieve"
 
 [project.optional-dependencies]
 openai = ["openai-agents>=0.18.3,<0.19"]
@@ -44,17 +44,17 @@ dev = [
 ]
 
 [project.scripts]
-runsieve = "runsieve.cli:main"
+reprosieve = "reprosieve.cli:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/runsieve"]
+packages = ["src/reprosieve"]
 
 [tool.hatch.build.targets.wheel.force-include]
-"schemas" = "runsieve/schemas"
+"schemas" = "reprosieve/schemas"
 
 [tool.hatch.build.targets.sdist]
 include = [
-  "/src",
+  "/src/reprosieve",
   "/schemas",
   "/CHANGELOG.md",
   "/LICENSE",
@@ -77,7 +77,7 @@ ignore = ["FURB162", "TRY004", "UP017"]
 [tool.mypy]
 python_version = "3.11"
 strict = true
-packages = ["runsieve"]
+packages = ["reprosieve"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

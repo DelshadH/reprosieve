@@ -7,9 +7,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-from runsieve.capsule import load_capsule, write_capsule
-from runsieve.cli import main
-from runsieve.fixtures import killer_capsule
+from reprosieve.capsule import load_capsule, write_capsule
+from reprosieve.cli import main
+from reprosieve.fixtures import killer_capsule
 
 
 def test_capture_runs_real_sdk_target_and_redacts_process_output(
@@ -31,7 +31,7 @@ def test_capture_runs_real_sdk_target_and_redacts_process_output(
         encoding="utf-8",
     )
     monkeypatch.setenv("CAPTURE_CANARY", canary)  # type: ignore[attr-defined]
-    output = tmp_path / "captured.runsieve"
+    output = tmp_path / "captured.reprosieve"
     exit_code = main(
         [
             "capture",
@@ -56,7 +56,7 @@ def test_capture_runs_real_sdk_target_and_redacts_process_output(
 
 
 def test_minimize_verify_replay_and_one_command_export(tmp_path: Path, capfd: object) -> None:
-    source = tmp_path / "source.runsieve"
+    source = tmp_path / "source.reprosieve"
     write_capsule(killer_capsule(), source)
     source_before = source.read_bytes()
     output_directory = tmp_path / "reduced"
@@ -78,7 +78,7 @@ def test_minimize_verify_replay_and_one_command_export(tmp_path: Path, capfd: ob
         == 0
     )
     assert source.read_bytes() == source_before
-    outputs = list(output_directory.glob("*.runsieve"))
+    outputs = list(output_directory.glob("*.reprosieve"))
     assert len(outputs) == 1
     reduced_path = outputs[0]
     report_paths = list(output_directory.glob("*.report.json"))
@@ -171,14 +171,14 @@ def test_minimize_verify_replay_and_one_command_export(tmp_path: Path, capfd: ob
 
 
 def test_reproduce_predicate_runs_the_declared_offline_predicate(tmp_path: Path) -> None:
-    source = tmp_path / "source.runsieve"
+    source = tmp_path / "source.reprosieve"
     write_capsule(killer_capsule(), source)
 
     result = subprocess.run(
         [
             sys.executable,
             "-m",
-            "runsieve.cli",
+            "reprosieve.cli",
             "reproduce-predicate",
             str(source),
             "--predicate",
@@ -196,7 +196,7 @@ def test_reproduce_predicate_runs_the_declared_offline_predicate(tmp_path: Path)
 
 
 def test_replay_alias_is_explicitly_deprecated(tmp_path: Path) -> None:
-    source = tmp_path / "source.runsieve"
+    source = tmp_path / "source.reprosieve"
     output = tmp_path / "materialized.json"
     write_capsule(killer_capsule(), source)
 
@@ -204,7 +204,7 @@ def test_replay_alias_is_explicitly_deprecated(tmp_path: Path) -> None:
         [
             sys.executable,
             "-m",
-            "runsieve.cli",
+            "reprosieve.cli",
             "replay",
             str(source),
             "--output",
@@ -221,7 +221,7 @@ def test_replay_alias_is_explicitly_deprecated(tmp_path: Path) -> None:
 
 
 def test_minimize_alias_is_explicitly_deprecated(tmp_path: Path) -> None:
-    source = tmp_path / "source.runsieve"
+    source = tmp_path / "source.reprosieve"
     output_directory = tmp_path / "reduced"
     write_capsule(killer_capsule(), source)
 
@@ -229,7 +229,7 @@ def test_minimize_alias_is_explicitly_deprecated(tmp_path: Path) -> None:
         [
             sys.executable,
             "-m",
-            "runsieve.cli",
+            "reprosieve.cli",
             "minimize",
             str(source),
             "--output-dir",
@@ -245,11 +245,11 @@ def test_minimize_alias_is_explicitly_deprecated(tmp_path: Path) -> None:
 
     assert result.returncode == 0, result.stderr
     assert "deprecated" in result.stderr.casefold()
-    assert list(output_directory.glob("*.runsieve"))
+    assert list(output_directory.glob("*.reprosieve"))
 
 
 def test_cli_rejects_shell_strings_and_does_not_overwrite_outputs(tmp_path: Path) -> None:
-    source = tmp_path / "source.runsieve"
+    source = tmp_path / "source.reprosieve"
     write_capsule(killer_capsule(), source)
     output_directory = tmp_path / "output"
     output_directory.mkdir()

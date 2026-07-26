@@ -3,8 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from runsieve.capsule import canonical_json
-from runsieve.replay import offline_replay
+from reprosieve.capsule import canonical_json
+from reprosieve.replay import offline_replay
 from tests.helpers import sample_capsule
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -25,7 +25,7 @@ def test_machine_readable_schema_catalog_is_well_formed() -> None:
         assert document["$schema"] == "https://json-schema.org/draft/2020-12/schema"
         assert document["$id"].endswith(f"/schemas/{name}")
         assert document["type"] == "object"
-        assert document["title"].startswith("RunSieve")
+        assert document["title"].startswith("ReproSieve")
 
 
 def test_materialization_matches_the_versioned_golden_artifact() -> None:

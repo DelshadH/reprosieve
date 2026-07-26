@@ -1,6 +1,6 @@
 # Governance
 
-RunSieve is currently maintained through reviewed GitHub pull requests. The
+ReproSieve is currently maintained through reviewed GitHub pull requests. The
 repository owner is the final decision maker while the project has fewer than
 two active maintainers.
 
