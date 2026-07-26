@@ -12,6 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
+      actions: read
       attestations: write
       contents: read
       id-token: write
@@ -30,6 +31,29 @@ jobs:
           python-version: "3.11"
       - name: Verify exact annotated release ref and canonical head
         run: python -m scripts.release_preflight "${{ github.ref_name }}"
+      - name: Require attested final-evidence receipt for this exact commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          RUN_ID="$(gh run list \
+            --workflow final-evidence.yml \
+            --branch main \
+            --commit "$RUNSIEVE_EVIDENCE_COMMIT" \
+            --event workflow_dispatch \
+            --status success \
+            --limit 1 \
+            --json databaseId \
+            --jq '.[0].databaseId // empty')"
+          test -n "$RUN_ID"
+          gh run download "$RUN_ID" \
+            --name final-decision-receipt \
+            --dir final-evidence
+          gh attestation verify \
+            final-evidence/final-decision-receipt.json \
+            --repo "${{ github.repository }}"
+          python -m scripts.verify_final_receipt \
+            final-evidence/final-decision-receipt.json \
+            "$RUNSIEVE_EVIDENCE_COMMIT"
       - name: Build candidate distributions twice and run package proof
         run: |
           python -m pip install --upgrade pip

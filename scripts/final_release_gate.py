@@ -81,7 +81,6 @@ def run_final_gate() -> dict[str, object]:
         "commit": commit,
         "gate": "runsieve-final-alpha-candidate",
         "passed": True,
-        "review_kind": "independent-ai-technical-review",
         "schema_version": 1,
     }
 

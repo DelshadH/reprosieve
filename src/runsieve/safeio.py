@@ -52,6 +52,18 @@ def read_regular_file_bounded(
     if isinstance(max_bytes, bool) or not isinstance(max_bytes, int) or max_bytes < 0:
         raise ValueError(f"{label} size limit is invalid")
     absolute = _reject_link_ancestors(Path(path), label=label)
+    before: dict[Path, tuple[int, int, int, int]] = {}
+    for candidate in (absolute, *absolute.parents):
+        try:
+            metadata = candidate.lstat()
+        except OSError:
+            continue
+        before[candidate] = (
+            metadata.st_dev,
+            metadata.st_ino,
+            metadata.st_mode,
+            getattr(metadata, "st_file_attributes", 0),
+        )
     flags = os.O_RDONLY
     for name in ("O_BINARY", "O_CLOEXEC", "O_NOINHERIT", "O_NOFOLLOW"):
         flags |= int(getattr(os, name, 0))
@@ -61,6 +73,20 @@ def read_regular_file_bounded(
         raise ValueError(f"{label} could not be opened safely") from error
     try:
         opened = os.fstat(descriptor)
+        after: dict[Path, tuple[int, int, int, int]] = {}
+        for candidate in before:
+            try:
+                metadata = candidate.lstat()
+            except OSError as error:
+                raise ValueError(f"{label} changed while it was opened") from error
+            after[candidate] = (
+                metadata.st_dev,
+                metadata.st_ino,
+                metadata.st_mode,
+                getattr(metadata, "st_file_attributes", 0),
+            )
+        if after != before or any(is_link_like(candidate) for candidate in before):
+            raise ValueError(f"{label} changed while it was opened")
         current = os.stat(absolute, follow_symlinks=False)
         if (
             not stat.S_ISREG(opened.st_mode)

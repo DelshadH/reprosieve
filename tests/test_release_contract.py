@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 import time
@@ -70,6 +71,11 @@ def test_release_workflow_attests_the_reproducibility_checked_artifacts() -> Non
     publish = workflow.split("publish-pypi:", 1)[1]
     assert "actions/checkout@" not in publish
     assert "gh attestation verify" in publish
+    build = workflow.split("build-and-attest:", 1)[1].split("publish-pypi:", 1)[0]
+    assert "--workflow final-evidence.yml" in build
+    assert "--commit \"$RUNSIEVE_EVIDENCE_COMMIT\"" in build
+    assert "final-decision-receipt" in build
+    assert "scripts.verify_final_receipt" in build
 
 
 def test_release_preflight_tag_matches_project_version() -> None:
@@ -103,6 +109,30 @@ def test_final_release_gate_declares_current_exact_head_checks() -> None:
         "killer-demo",
         "minimality-oracle",
     ]
+
+
+def test_final_receipt_rejects_a_different_commit(tmp_path: Path) -> None:
+    from scripts.verify_final_receipt import verify_receipt
+
+    receipt = tmp_path / "receipt.json"
+    receipt.write_text(
+        json.dumps(
+            {
+                "commit": "a" * 40,
+                "gate": "final-release-evidence",
+                "passed": True,
+                "workflow_run": "123-1",
+            }
+        ),
+        encoding="utf-8",
+    )
+    assert verify_receipt(receipt, expected_commit="a" * 40)["passed"] is True
+    try:
+        verify_receipt(receipt, expected_commit="b" * 40)
+    except ValueError as error:
+        assert "expected commit" in str(error)
+    else:
+        raise AssertionError("mismatched final-evidence receipt was accepted")
 
 
 def test_killer_demo_completes_the_full_claim_within_twenty_seconds() -> None:
