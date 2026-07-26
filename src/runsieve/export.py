@@ -12,6 +12,7 @@ _REPRODUCER = r'''from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 import signal
 import stat
@@ -20,6 +21,7 @@ import sys
 import tempfile
 import threading
 import time
+import unicodedata
 import zipfile
 from pathlib import Path, PurePosixPath
 
@@ -29,10 +31,15 @@ MAX_MEMBER = 16 * 1024 * 1024
 MAX_TOTAL = 64 * 1024 * 1024
 MAX_MEMBERS = 512
 MAX_RATIO = 20
+WINDOWS_DEVICES = {
+    "aux", "con", "nul", "prn",
+    *(f"com{index}" for index in range(1, 10)),
+    *(f"lpt{index}" for index in range(1, 10)),
+}
 
 
 def fail(message: str, code: int = 2) -> int:
-    print(message)
+    print(message, file=sys.stderr)
     return code
 
 
@@ -42,8 +49,83 @@ def safe_path(value: str) -> str:
     path = PurePosixPath(value)
     if path.is_absolute() or any(part in {"", ".", ".."} for part in path.parts):
         raise ValueError("unsafe path")
-    if ":" in path.parts[0] or path.parts[0].startswith("~") or path.as_posix() != value:
+    if path.parts[0].startswith("~") or path.as_posix() != value:
         raise ValueError("unsafe path")
+    for part in path.parts:
+        normalized = unicodedata.normalize("NFC", part)
+        portable = normalized.rstrip(" .")
+        if (
+            normalized != part
+            or portable != part
+            or not portable
+            or ":" in portable
+            or portable.split(".", 1)[0].casefold() in WINDOWS_DEVICES
+        ):
+            raise ValueError("unsafe path")
+    return value
+
+
+def path_identity(value: str) -> str:
+    return "/".join(part.casefold() for part in PurePosixPath(safe_path(value)).parts)
+
+
+def strict_json(payload: bytes) -> object:
+    def reject_pairs(pairs: list[tuple[str, object]]) -> dict[str, object]:
+        result: dict[str, object] = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("duplicate JSON key")
+            result[key] = value
+        return result
+
+    return json.loads(
+        payload,
+        object_pairs_hook=reject_pairs,
+        parse_constant=lambda _value: (_ for _ in ()).throw(ValueError("non-finite JSON")),
+    )
+
+
+def predicate_spec(value: object) -> dict[str, object]:
+    fields = {
+        "argv",
+        "output_limit_bytes",
+        "process_limit",
+        "required_reproductions",
+        "timeout_seconds",
+        "trials",
+    }
+    if not isinstance(value, dict) or set(value) != fields:
+        raise ValueError("invalid predicate")
+    argv = value["argv"]
+    integers = ("output_limit_bytes", "process_limit", "required_reproductions", "trials")
+    if (
+        not isinstance(argv, list)
+        or not argv
+        or any(
+            not isinstance(item, str)
+            or not item
+            or "\x00" in item
+            or len(item.encode("utf-8")) > 16 * 1024
+            for item in argv
+        )
+        or any(isinstance(value[name], bool) or not isinstance(value[name], int) for name in integers)
+    ):
+        raise ValueError("invalid predicate")
+    timeout = value["timeout_seconds"]
+    if (
+        isinstance(timeout, bool)
+        or not isinstance(timeout, (int, float))
+        or not math.isfinite(timeout)
+        or not 0 < timeout <= 3600
+        or not 256 <= value["output_limit_bytes"] <= 16 * 1024 * 1024
+        or not 1 <= value["trials"] <= 100
+        or not 1 <= value["required_reproductions"] <= value["trials"]
+        or not 1 <= value["process_limit"] <= 128
+        or len(argv) < 2
+        or Path(argv[0]).name.casefold() not in {"python", "python3", "python.exe", "py"}
+    ):
+        raise ValueError("invalid predicate")
+    safe_path(argv[1])
     return value
 
 
@@ -55,12 +137,15 @@ def load() -> tuple[dict[str, bytes], dict[str, object]]:
         if len(infos) > MAX_MEMBERS:
             raise ValueError("too many members")
         names: set[str] = set()
+        identities: set[str] = set()
         total = 0
         for info in infos:
             safe_path(info.filename)
-            if info.filename in names:
+            identity = path_identity(info.filename)
+            if info.filename in names or identity in identities:
                 raise ValueError("duplicate member")
             names.add(info.filename)
+            identities.add(identity)
             if stat.S_ISLNK(info.external_attr >> 16):
                 raise ValueError("symlink member")
             if info.file_size > MAX_MEMBER:
@@ -71,7 +156,7 @@ def load() -> tuple[dict[str, bytes], dict[str, object]]:
             if info.file_size / max(1, info.compress_size) > MAX_RATIO:
                 raise ValueError("expansion ratio")
         members = {info.filename: archive.read(info) for info in infos}
-    manifest = json.loads(members["manifest.json"])
+    manifest = strict_json(members["manifest.json"])
     if manifest.get("format") != "runsieve-capsule" or manifest.get("format_version") != 1:
         raise ValueError("unsupported capsule")
     entries = manifest.get("entries")
@@ -137,6 +222,11 @@ def guard_source(timeout: float, output_limit: int, process_limit: int) -> str:
         "socket.getaddrinfo=denied\n"
         "socket.socket.connect=denied\n"
         "socket.socket.connect_ex=denied\n"
+        "try:\n"
+        " import _winapi\n"
+        " for name in ('CreateProcess','CreateProcessAsUser','CreateProcessWithLogonW'):\n"
+        "  if hasattr(_winapi,name): setattr(_winapi,name,denied)\n"
+        "except ImportError: pass\n"
         "sys.setrecursionlimit(min(sys.getrecursionlimit(),1000))\n"
         "try:\n"
         " import resource\n"
@@ -183,7 +273,17 @@ def terminate(process: subprocess.Popen[bytes]) -> None:
         if os.name == "posix":
             os.killpg(process.pid, signal.SIGKILL)
         else:
-            process.kill()
+            completed = subprocess.run(
+                ["taskkill", "/PID", str(process.pid), "/T", "/F"],
+                check=False,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                timeout=2,
+            )
+            if completed.returncode != 0 and process.poll() is None:
+                process.kill()
     except OSError:
         pass
 
@@ -257,13 +357,18 @@ def trial(
 ) -> int | None:
     with tempfile.TemporaryDirectory(prefix="runsieve-repro-") as temporary:
         root = Path(temporary)
-        workspace_index = json.loads(members["workspace/index.json"])
+        workspace_index = strict_json(members["workspace/index.json"])
         if not isinstance(workspace_index, list):
             return None
+        workspace_identities: set[str] = set()
         for raw_path in workspace_index:
             if not isinstance(raw_path, str):
                 return None
             path = safe_path(raw_path)
+            identity = path_identity(path)
+            if identity in workspace_identities:
+                return None
+            workspace_identities.add(identity)
             target = root.joinpath(*PurePosixPath(path).parts)
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(members[f"workspace/files/{path}"])
@@ -291,7 +396,7 @@ def trial(
             return None
         command = [sys.executable, script, *argv[2:]]
         environment: dict[str, str] = {}
-        captured_environment = json.loads(members["environment.json"])
+        captured_environment = strict_json(members["environment.json"])
         if not isinstance(captured_environment, dict) or any(
             not isinstance(name, str) or not isinstance(value, str)
             for name, value in captured_environment.items()
@@ -330,7 +435,7 @@ def trial(
             "RUNSIEVE_WORKSPACE": str(root),
         })
         deadline = time.monotonic() + timeout
-        metadata = json.loads(members["metadata.json"])
+        metadata = strict_json(members["metadata.json"])
         if not isinstance(metadata, dict):
             return None
         if "application_replay" in metadata:
@@ -355,11 +460,9 @@ def trial(
 def main() -> int:
     try:
         members, manifest = load()
-        predicate = json.loads(members["predicate.json"])
-        if not isinstance(predicate, dict):
-            return fail("invalid predicate")
-        trials = int(predicate["trials"])
-        required = int(predicate["required_reproductions"])
+        predicate = predicate_spec(strict_json(members["predicate.json"]))
+        trials = predicate["trials"]
+        required = predicate["required_reproductions"]
         results = [trial(members, manifest, predicate, index) for index in range(trials)]
         if any(result not in {0, 1} for result in results):
             return fail("reproduction harness invalid")
@@ -404,8 +507,8 @@ def export_reproduction(source: str | Path, output: str | Path) -> Path:
             "Run the redacted, offline reproduction with:\n\n"
             "```bash\npython reproduce.py\n```\n\n"
             "The command validates the capsule, reconstructs recorded model and tool outputs, "
-            "runs any declared embedded application adapter before the predicate, denies "
-            "outbound network, and never calls the original provider or tools.\n",
+            "runs the declared embedded predicate, denies outbound network, and never calls "
+            "the original provider or tools.\n",
             encoding="utf-8",
             newline="\n",
         )

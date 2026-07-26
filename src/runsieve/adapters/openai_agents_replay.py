@@ -4,6 +4,7 @@ import json
 import math
 import platform
 import sys
+import threading
 from collections.abc import AsyncIterator, Awaitable, Callable, Mapping, Sequence
 from dataclasses import asdict, dataclass, is_dataclass
 from enum import Enum
@@ -30,6 +31,8 @@ Application = Callable[[Any], Awaitable[Any]]
 
 _PROTOCOL = "openai-agents-public-v1"
 _MATCHING = "ordered-exact-v1"
+_TOOL_CLAIMS_LOCK = threading.Lock()
+_TOOL_CLAIMS: dict[int, object] = {}
 
 
 class ApplicationReplayUnsupported(ValueError):
@@ -670,6 +673,7 @@ class OpenAIAgentsReplaySession:
         self._provider = _DenyProvider()
         self._original_tools = original_tools
         self._original_handlers = tuple(tool.on_invoke_tool for tool in original_tools)
+        self._canary_handlers: tuple[Callable[..., Awaitable[Any]], ...] = ()
         self.model: Model = _ReplayModel(self)
         self.tools = tuple(
             self._replay_tool(tool)
@@ -677,6 +681,17 @@ class OpenAIAgentsReplaySession:
         )
 
     def _install_original_tool_canaries(self) -> None:
+        with _TOOL_CLAIMS_LOCK:
+            if any(
+                (owner := _TOOL_CLAIMS.get(id(tool))) is not None and owner is not self
+                for tool in self._original_tools
+            ):
+                raise ApplicationReplayUnsupported(
+                    "an original tool is already claimed by another replay session"
+                )
+            for tool in self._original_tools:
+                _TOOL_CLAIMS[id(tool)] = self
+        canaries: list[Callable[..., Awaitable[Any]]] = []
         for tool in self._original_tools:
             async def deny(_context: Any, _arguments: str, *, name: str = tool.name) -> Any:
                 self.original_tool_calls += 1
@@ -685,14 +700,22 @@ class OpenAIAgentsReplaySession:
                 )
 
             tool.on_invoke_tool = deny
+            canaries.append(deny)
+        self._canary_handlers = tuple(canaries)
 
     def _restore_original_tools(self) -> None:
-        for tool, handler in zip(
+        for tool, handler, canary in zip(
             self._original_tools,
             self._original_handlers,
+            self._canary_handlers,
             strict=True,
         ):
-            tool.on_invoke_tool = handler
+            if tool.on_invoke_tool is canary:
+                tool.on_invoke_tool = handler
+        with _TOOL_CLAIMS_LOCK:
+            for tool in self._original_tools:
+                if _TOOL_CLAIMS.get(id(tool)) is self:
+                    del _TOOL_CLAIMS[id(tool)]
 
     def _raise_deferred(self) -> None:
         if self._deferred is not None:

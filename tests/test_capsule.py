@@ -90,6 +90,21 @@ def test_duplicate_symlink_bomb_and_oversize_archives_are_rejected(tmp_path: Pat
         load_capsule(source, limits=CapsuleLimits(max_archive_bytes=10))
 
 
+def test_oversized_capsule_is_rejected_before_path_read_bytes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source = tmp_path / "oversized.runsieve"
+    source.write_bytes(b"x" * 4096)
+
+    def forbidden_read_bytes(_path: Path) -> bytes:
+        raise AssertionError("oversized capsule reached unbounded Path.read_bytes")
+
+    monkeypatch.setattr(Path, "read_bytes", forbidden_read_bytes)
+    with pytest.raises(ValueError, match="archive size"):
+        load_capsule(source, limits=CapsuleLimits(max_archive_bytes=1))
+
+
 def test_canary_never_reaches_capsule_bytes_or_errors() -> None:
     canary = "CAPSULE-SECRET-CANARY"
     from runsieve.redact import RedactionPolicy, redact_with_report

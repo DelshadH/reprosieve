@@ -133,12 +133,34 @@ def test_rs_g01_scans_the_committed_adapter_for_private_sdk_imports() -> None:
     assert scan(b"from agents._internal import exporter\n") == ("agents._internal",)
 
 
+def test_minimality_oracle_rejects_a_missing_final_unit_attempt() -> None:
+    module = importlib.import_module("scripts.minimality_oracle_proof")
+    proof = module.build_proof()
+    incomplete = {
+        **proof,
+        "attempted_units": proof["attempted_units"][:-1],
+        "exact_unit_coverage": True,
+    }
+    with pytest.raises(ValueError, match="exact one-unit coverage"):
+        module.validate_oracle_document(incomplete)
+
+
 def test_rs_g13_requires_real_clean_install_proof_for_each_python() -> None:
     module = importlib.import_module("scripts.gates.RS_G13")
     validate = getattr(module, "validate_package_proof", None)
     assert callable(validate)
     commit = "c" * 40
     wheel = "runsieve-0.1.0a1-py3-none-any.whl"
+    sdist = "runsieve-0.1.0a1.tar.gz"
+    core_flows = [
+        "help",
+        "materialize",
+        "reproduce-predicate",
+        "reduce",
+        "verify-minimal",
+        "export",
+        "exported-reproduce",
+    ]
     proof = {
         "schema_version": 1,
         "gate": "RS-G13",
@@ -165,19 +187,28 @@ def test_rs_g13_requires_real_clean_install_proof_for_each_python() -> None:
                 "stderr": {"bytes": 0, "sha256": "2" * 64},
             },
             {
-                "argv": ["python", "-m", "venv", "venv"],
+                "argv": [
+                    "python", "scripts/installed_cli_smoke.py",
+                    "--distribution", wheel,
+                ],
                 "exit_code": 0,
-                "stdout": {"bytes": 0, "sha256": "3" * 64},
+                "stdout": {"bytes": 10, "sha256": "3" * 64},
                 "stderr": {"bytes": 0, "sha256": "4" * 64},
             },
             {
-                "argv": ["python", "-m", "pip", "install", "--no-deps", wheel],
+                "argv": [
+                    "python", "scripts/installed_cli_smoke.py",
+                    "--distribution", sdist,
+                ],
                 "exit_code": 0,
                 "stdout": {"bytes": 10, "sha256": "5" * 64},
                 "stderr": {"bytes": 0, "sha256": "6" * 64},
             },
             {
-                "argv": ["runsieve", "--help"],
+                "argv": [
+                    "python", "scripts/installed_cli_smoke.py",
+                    "--distribution", wheel, "--with-openai",
+                ],
                 "exit_code": 0,
                 "stdout": {"bytes": 100, "sha256": "7" * 64},
                 "stderr": {"bytes": 0, "sha256": "8" * 64},
@@ -191,13 +222,13 @@ def test_rs_g13_requires_real_clean_install_proof_for_each_python() -> None:
             },
             "rebuild_sdist": {
                 "bytes": 1100,
-                "name": "rebuild-runsieve-0.1.0a1.tar.gz",
+                "name": f"rebuild-{sdist}",
                 "sha256": "a" * 64,
             },
             "wheel": {"bytes": 1000, "name": wheel, "sha256": "9" * 64},
             "sdist": {
                 "bytes": 1100,
-                "name": "runsieve-0.1.0a1.tar.gz",
+                "name": sdist,
                 "sha256": "a" * 64,
             },
         },
@@ -212,8 +243,42 @@ def test_rs_g13_requires_real_clean_install_proof_for_each_python() -> None:
                 "runsieve/__init__.py",
             ],
         },
+        "installed_flows": {
+            "sdist_core": core_flows,
+            "wheel_core": core_flows,
+            "wheel_openai": [*core_flows, "capture"],
+        },
         "reproducible_artifacts": True,
+        "semantic_checks": {
+            "core_dependencies_empty": True,
+            "entry_point": True,
+            "extras": ["dev", "openai"],
+            "name": "runsieve",
+            "python_requires": ">=3.11,<3.14",
+            "schema_names": [
+                "capsule-v1.schema.json",
+                "case-study-v1.schema.json",
+                "materialization-v1.schema.json",
+                "predicate-report-v1.schema.json",
+                "reduction-report-v1.schema.json",
+            ],
+            "sdist_schema_parity": True,
+            "version": "0.1.0a1",
+            "wheel_schema_parity": True,
+        },
         "source_date_epoch": "1753460000",
+        "supply_chain": {
+            "checksums": {
+                "bytes": 200,
+                "name": "SHA256SUMS",
+                "sha256": "c" * 64,
+            },
+            "sbom": {
+                "bytes": 500,
+                "name": "runsieve.spdx.json",
+                "sha256": "e" * 64,
+            },
+        },
     }
 
     assert validate(
@@ -331,12 +396,15 @@ def test_evidence_generator_consumes_three_distinct_package_proofs(
         argvs = (
             ["python", "-m", "build"],
             ["python", "-m", "build"],
-            ["python", "-m", "venv", "venv"],
-            ["python", "-m", "pip", "install", "--no-deps", wheel],
-            ["runsieve", "--help"],
+            ["python", "scripts/installed_cli_smoke.py", "--distribution", wheel],
+            ["python", "scripts/installed_cli_smoke.py", "--distribution", sdist],
+            [
+                "python", "scripts/installed_cli_smoke.py",
+                "--distribution", wheel, "--with-openai",
+            ],
         )
         for index, argv in enumerate(argvs):
-            stdout = b"usage: runsieve\n" if index == 4 else b"passed\n"
+            stdout = b'{"flows":["passed"]}\n' if index >= 2 else b"passed\n"
             stderr = b""
             (source / f"command-{index:02d}.stdout").write_bytes(stdout)
             (source / f"command-{index:02d}.stderr").write_bytes(stderr)
@@ -358,6 +426,17 @@ def test_evidence_generator_consumes_three_distinct_package_proofs(
         (source / sdist).write_bytes(b"sdist")
         (source / rebuilt_wheel).write_bytes(b"wheel")
         (source / rebuilt_sdist).write_bytes(b"sdist")
+        (source / "SHA256SUMS").write_bytes(b"checksums")
+        (source / "runsieve.spdx.json").write_bytes(b"sbom")
+        core_flows = [
+            "help",
+            "materialize",
+            "reproduce-predicate",
+            "reduce",
+            "verify-minimal",
+            "export",
+            "exported-reproduce",
+        ]
         proof = {
             "schema_version": 1,
             "gate": "RS-G13",
@@ -403,8 +482,42 @@ def test_evidence_generator_consumes_three_distinct_package_proofs(
                     "runsieve/__init__.py",
                 ],
             },
+            "installed_flows": {
+                "sdist_core": core_flows,
+                "wheel_core": core_flows,
+                "wheel_openai": [*core_flows, "capture"],
+            },
             "reproducible_artifacts": True,
+            "semantic_checks": {
+                "core_dependencies_empty": True,
+                "entry_point": True,
+                "extras": ["dev", "openai"],
+                "name": "runsieve",
+                "python_requires": ">=3.11,<3.14",
+                "schema_names": [
+                    "capsule-v1.schema.json",
+                    "case-study-v1.schema.json",
+                    "materialization-v1.schema.json",
+                    "predicate-report-v1.schema.json",
+                    "reduction-report-v1.schema.json",
+                ],
+                "sdist_schema_parity": True,
+                "version": "0.1.0a1",
+                "wheel_schema_parity": True,
+            },
             "source_date_epoch": "1753460000",
+            "supply_chain": {
+                "checksums": {
+                    "bytes": 9,
+                    "name": "SHA256SUMS",
+                    "sha256": hashlib.sha256(b"checksums").hexdigest(),
+                },
+                "sbom": {
+                    "bytes": 4,
+                    "name": "runsieve.spdx.json",
+                    "sha256": hashlib.sha256(b"sbom").hexdigest(),
+                },
+            },
         }
         (source / "proof.json").write_text(json.dumps(proof), encoding="utf-8")
         inputs.append(source)
@@ -419,7 +532,7 @@ def test_evidence_generator_consumes_three_distinct_package_proofs(
     )
 
     assert len(commands) == 3
-    assert len(artifacts) == 39
+    assert len(artifacts) == 45
     assert {
         path.name for path in destination.iterdir()
     } == {"package-py311", "package-py312", "package-py313"}

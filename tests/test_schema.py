@@ -102,6 +102,47 @@ class SchemaTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "depth"):
             validate_capsule(recursive, limits=SchemaLimits(max_depth=8))
 
+    def test_rejects_portable_workspace_path_aliases(self) -> None:
+        base = Capsule(
+            schema_version="1",
+            trace_id="trace",
+            events=(Event("run", "run", None, 0, {}),),
+            metadata={},
+        )
+        aliases = (
+            ("Predicate.py", "predicate.py"),
+            ("\u00e9.py", "e\u0301.py"),
+            ("name", "name. "),
+        )
+        for first, second in aliases:
+            with (
+                self.subTest(first=first, second=second),
+                self.assertRaisesRegex(ValueError, "workspace path"),
+            ):
+                validate_capsule(
+                    Capsule(
+                        schema_version=base.schema_version,
+                        trace_id=base.trace_id,
+                        events=base.events,
+                        metadata={},
+                        workspace={
+                            first: "raise SystemExit(1)\n",
+                            second: "raise SystemExit(0)\n",
+                        },
+                    )
+                )
+
+    def test_rejects_windows_device_workspace_names_on_every_platform(self) -> None:
+        capsule = Capsule(
+            schema_version="1",
+            trace_id="trace",
+            events=(Event("run", "run", None, 0, {}),),
+            metadata={},
+            workspace={"CON.txt": "unsafe portable name"},
+        )
+        with self.assertRaisesRegex(ValueError, "workspace path"):
+            validate_capsule(capsule)
+
 
 if __name__ == "__main__":
     unittest.main()

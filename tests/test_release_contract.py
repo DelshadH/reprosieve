@@ -56,9 +56,42 @@ def test_release_workflow_attests_the_reproducibility_checked_artifacts() -> Non
 
     assert "RUNSIEVE_EVIDENCE_COMMIT: ${{ github.sha }}" in workflow
     assert "ref: ${{ env.RUNSIEVE_EVIDENCE_COMMIT }}" in workflow
+    assert 'tags:\n      - "v0.1.0a1"' in workflow
+    assert "scripts.release_preflight" in workflow
     assert "python -m scripts.package_matrix_proof" in workflow
-    assert 'subject-path: "release-proof/runsieve-*"' in workflow
+    assert "release-proof/runsieve-*.whl" in workflow
+    assert "release-proof/runsieve-*.tar.gz" in workflow
+    assert "release-proof/SHA256SUMS" in workflow
+    assert "release-proof/runsieve.spdx.json" in workflow
     assert "release-proof/*" in workflow
+    assert "environment: pypi" in workflow
+    assert "pypa/gh-action-pypi-publish@ba38be9e461d3875417946c167d0b5f3d385a247" in workflow
+    assert workflow.count("id-token: write") == 2
+    publish = workflow.split("publish-pypi:", 1)[1]
+    assert "actions/checkout@" not in publish
+    assert "gh attestation verify" in publish
+
+
+def test_release_preflight_tag_matches_project_version() -> None:
+    from scripts.release_preflight import expected_tag
+
+    assert expected_tag() == "v0.1.0a1"
+
+
+def test_final_evidence_workflow_is_exact_head_and_attestation_bound() -> None:
+    workflow = (ROOT / ".github" / "workflows" / "final-evidence.yml").read_text(
+        encoding="utf-8"
+    )
+    assert "workflow_dispatch:" in workflow
+    assert "RUNSIEVE_EVIDENCE_COMMIT: ${{ inputs.commit }}" in workflow
+    assert workflow.count("ref: ${{ env.RUNSIEVE_EVIDENCE_COMMIT }}") >= 5
+    assert "python -m scripts.verify" in workflow
+    assert "python -m scripts.release_gate" in workflow
+    assert "scripts.package_matrix_proof" in workflow
+    assert "scripts.portable_reproduction_proof" in workflow
+    assert "scripts.verify_application_replay_evidence" in workflow
+    assert "gh attestation verify" in workflow
+    assert "final-decision-receipt" in workflow
 
 
 def test_killer_demo_completes_the_full_claim_within_twenty_seconds() -> None:

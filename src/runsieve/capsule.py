@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal, cast
 
-from .safeio import ensure_new_path, ensure_regular_file
+from .safeio import ensure_new_path, read_regular_file_bounded
 from .schema import (
     Capsule,
     Event,
@@ -270,12 +270,12 @@ def _require_dict(value: Any, *, label: str) -> dict[str, Any]:
 
 
 def load_capsule(path: str | Path, *, limits: CapsuleLimits | None = None) -> Capsule:
-    source = ensure_regular_file(path, label="capsule path")
     selected_limits = limits or CapsuleLimits()
-    try:
-        data = source.read_bytes()
-    except OSError as error:
-        raise ValueError("capsule could not be read") from error
+    data = read_regular_file_bounded(
+        path,
+        max_bytes=selected_limits.max_archive_bytes,
+        label="capsule archive",
+    )
     members, manifest = _validated_members(data, selected_limits)
     if not _REQUIRED_MEMBERS.issubset(members):
         raise ValueError("capsule is missing required members")
@@ -349,8 +349,12 @@ def load_capsule(path: str | Path, *, limits: CapsuleLimits | None = None) -> Ca
 
 
 def capsule_file_sha256(path: str | Path) -> str:
-    source = ensure_regular_file(path, label="capsule path")
-    return hashlib.sha256(source.read_bytes()).hexdigest()
+    data = read_regular_file_bounded(
+        path,
+        max_bytes=CapsuleLimits().max_archive_bytes,
+        label="capsule archive",
+    )
+    return hashlib.sha256(data).hexdigest()
 
 
 def read_capsule_document(
@@ -361,12 +365,12 @@ def read_capsule_document(
 ) -> dict[str, Any]:
     if name not in {"redaction.json", "predicate.json"}:
         raise ValueError("unsupported capsule document")
-    source = ensure_regular_file(path, label="capsule path")
     selected_limits = limits or CapsuleLimits()
-    try:
-        data = source.read_bytes()
-    except OSError as error:
-        raise ValueError("capsule could not be read") from error
+    data = read_regular_file_bounded(
+        path,
+        max_bytes=selected_limits.max_archive_bytes,
+        label="capsule archive",
+    )
     members, _manifest = _validated_members(data, selected_limits)
     if name not in members:
         raise ValueError("capsule document is missing")

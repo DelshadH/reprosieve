@@ -5,29 +5,34 @@ or failing release gate.
 
 ## Candidate
 
-1. Select a reviewed commit on the canonical branch.
+1. Select an independently AI-reviewed commit on canonical `main`.
 2. Run the documented local checks and inspect every security finding.
-3. Confirm Python 3.11–3.13 package proofs and Linux/macOS reproduction proofs
-   bind to the same commit.
-4. Run `python -m scripts.release_gate` from a fresh clone.
-5. Create an annotated release-candidate tag without moving an existing tag.
-6. Let the protected release workflow export the tagged commit twice, set
+3. Confirm attested Python 3.11–3.13 package proofs and Linux/macOS
+   reproduction proofs bind to the same exact commit.
+4. Run `python -m scripts.release_gate` from a fresh clone and require the
+   exact-head final-evidence workflow to pass.
+5. After the owner answers `PUBLISH? YES`, create the one annotated tag
+   `v0.1.0a1` on the exact canonical `main` head. Never move an existing tag.
+6. Let the release workflow export the tagged commit twice, set
    `SOURCE_DATE_EPOCH` to that commit's timestamp, require byte-identical wheel
-   and sdist pairs, attest the canonical pair, and upload the complete proof
-   bundle.
-7. Download the bundle into an empty directory, verify attestations and hashes,
-   install each distribution without the source tree, and run all public CLI
-   flows.
-8. Publish only after a human owner compares the reviewed commit, tag, workflow
-   run, artifact hashes, and changelog.
+   and sdist pairs, generate `SHA256SUMS` and an SPDX SBOM, attest the primary
+   artifacts, and upload the complete proof bundle.
+7. The separate `pypi` job downloads the attested bundle, verifies hashes and
+   attestations, selects only the primary wheel and sdist, and publishes with a
+   job-scoped OIDC trusted publisher. It does not checkout or rebuild source.
+8. Create the GitHub prerelease only after the registry upload succeeds.
+
+Independent AI technical review and exact-head CI are the alpha technical
+review gate. They must be recorded honestly and are not described as human
+approval. The owner's final publication decision is the only remaining manual
+release authorization.
 
 The sdist is an explicit allowlist of package source, schemas, license, readme,
 security policy, changelog, and build metadata. Contract state, work logs, and
 `.evidence` are intentionally absent from public distributions.
 
-Registry credentials must use a project-scoped trusted publisher or a
-hardware-backed account with 2FA. They must never be stored in the repository
-or local evidence.
+Registry authentication must use a project-scoped OIDC trusted publisher. A
+long-lived token must never be stored in the repository or local evidence.
 
 ## Rollback
 

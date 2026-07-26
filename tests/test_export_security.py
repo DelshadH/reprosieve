@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from runsieve.capsule import write_capsule
+from runsieve.capsule import capsule_bytes, write_capsule
 from runsieve.export import export_reproduction
 from runsieve.fixtures import killer_capsule
 from runsieve.predicate import PredicateSpec
@@ -147,3 +147,61 @@ def test_export_rejects_deferred_application_replay_declarations(
     output = tmp_path / "application-repro"
     with pytest.raises(ValueError, match="application replay is not supported"):
         export_reproduction(source, output)
+
+
+def test_export_readme_never_claims_application_replay(tmp_path: Path) -> None:
+    source = tmp_path / "source.runsieve"
+    write_capsule(
+        killer_capsule(),
+        source,
+        predicate=PredicateSpec(("python", "verify_failure.py")).to_json(),
+    )
+    output = export_reproduction(source, tmp_path / "repro")
+    readme = (output / "README.md").read_text(encoding="utf-8").casefold()
+    assert "application adapter" not in readme
+    assert "application replay" not in readme
+    assert "recorded" in readme
+    assert "predicate" in readme
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("timeout_seconds", 1_000_000),
+        ("output_limit_bytes", 1_000_000_000),
+        ("process_limit", 1_000_000_000),
+        ("trials", 101),
+        ("required_reproductions", 2),
+    ],
+)
+def test_standalone_reproducer_rejects_hostile_resource_policy_before_execution(
+    tmp_path: Path,
+    field: str,
+    value: object,
+) -> None:
+    capsule = replace(
+        sample_capsule(),
+        workspace={"predicate.py": "import time\ntime.sleep(30)\nraise SystemExit(0)\n"},
+    )
+    valid = PredicateSpec(("python", "predicate.py"), timeout_seconds=1).to_json()
+    source = tmp_path / "source.runsieve"
+    write_capsule(capsule, source, predicate=valid)
+    output = export_reproduction(source, tmp_path / "repro")
+    hostile = {**valid, field: value}
+    (output / "capsule.runsieve").write_bytes(
+        capsule_bytes(capsule, predicate=hostile)
+    )
+    result = subprocess.run(
+        [sys.executable, "reproduce.py"],
+        cwd=output,
+        env={
+            "PATH": os.environ.get("PATH", ""),
+            "SYSTEMROOT": os.environ.get("SYSTEMROOT", ""),
+        },
+        capture_output=True,
+        text=True,
+        timeout=3,
+        check=False,
+    )
+    assert result.returncode == 2
+    assert result.stderr.strip() == "reproduction capsule invalid"

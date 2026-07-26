@@ -84,6 +84,7 @@ def test_minimize_verify_replay_and_one_command_export(tmp_path: Path, capfd: ob
     report_paths = list(output_directory.glob("*.report.json"))
     assert len(report_paths) == 1
     reduction_report = json.loads(report_paths[0].read_text(encoding="utf-8"))
+    report_before = report_paths[0].read_bytes()
     assert reduction_report["artifact_sha256"] == reduced_path.stem
     assert reduction_report["predicate"]["trials"] == 1
     assert reduction_report["final_predicate"]["trials"] == 1
@@ -97,6 +98,23 @@ def test_minimize_verify_replay_and_one_command_export(tmp_path: Path, capfd: ob
     ).hexdigest()
     assert reduced.metadata["minimality"]["is_one_minimal"] is True
     assert "offline_proof" not in reduced.metadata
+    assert (
+        main(
+            [
+                "reduce",
+                str(source),
+                "--output-dir",
+                str(output_directory),
+                "--timeout",
+                "3",
+                "--predicate",
+                "python",
+                "verify_failure.py",
+            ]
+        )
+        == 0
+    )
+    assert report_paths[0].read_bytes() == report_before
 
     replay_path = tmp_path / "materialized.json"
     assert main(["materialize", str(reduced_path), "--output", str(replay_path)]) == 0

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import math
 import re
+import unicodedata
 from dataclasses import dataclass, field
 from pathlib import PurePosixPath
 from typing import Literal, TypeAlias
@@ -24,6 +25,14 @@ EventKind: TypeAlias = Literal[
 
 _ID = re.compile(r"^[A-Za-z0-9_.:-]{1,160}$")
 _ENVIRONMENT_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]{0,127}$")
+_WINDOWS_DEVICE_NAMES = {
+    "aux",
+    "con",
+    "nul",
+    "prn",
+    *(f"com{index}" for index in range(1, 10)),
+    *(f"lpt{index}" for index in range(1, 10)),
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -65,8 +74,19 @@ def safe_relative_path(value: str, *, label: str = "path") -> str:
     path = PurePosixPath(value)
     if path.is_absolute() or any(part in {"", ".", ".."} for part in path.parts):
         raise ValueError(f"unsafe {label}")
-    if path.parts and (":" in path.parts[0] or path.parts[0].startswith("~")):
+    if path.parts and path.parts[0].startswith("~"):
         raise ValueError(f"unsafe {label}")
+    for part in path.parts:
+        normalized_part = unicodedata.normalize("NFC", part)
+        portable_part = normalized_part.rstrip(" .")
+        if (
+            normalized_part != part
+            or portable_part != part
+            or not portable_part
+            or ":" in portable_part
+            or portable_part.split(".", 1)[0].casefold() in _WINDOWS_DEVICE_NAMES
+        ):
+            raise ValueError(f"unsafe {label}")
     normalized = path.as_posix()
     if normalized != value:
         raise ValueError(f"unsafe {label}")
@@ -195,11 +215,19 @@ def validate_capsule(capsule: Capsule, *, limits: SchemaLimits | None = None) ->
     if len(capsule.workspace) > limits.max_workspace_files:
         raise ValueError("workspace file limit exceeded")
     workspace_bytes = 0
+    portable_workspace_paths: set[str] = set()
     for path, content in capsule.workspace.items():
         try:
-            safe_relative_path(path, label="workspace path")
+            normalized_path = safe_relative_path(path, label="workspace path")
         except ValueError as error:
             raise ValueError("unsafe workspace path") from error
+        portable_identity = "/".join(
+            component.casefold()
+            for component in PurePosixPath(normalized_path).parts
+        )
+        if portable_identity in portable_workspace_paths:
+            raise ValueError("unsafe workspace path collision")
+        portable_workspace_paths.add(portable_identity)
         if not isinstance(content, str):
             raise ValueError("workspace content must be UTF-8 text")
         workspace_bytes += len(content.encode("utf-8"))

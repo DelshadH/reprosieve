@@ -1,17 +1,16 @@
+import json
 from pathlib import Path
 from typing import Any
 
 from scripts.gates._verify import (
     GateSpec,
+    Measurement,
+    _safe_blob,
     pytest_measurement,
     require_pytest_pass,
     verify_gate,
 )
-
-_MINIMAL_TEST = (
-    "tests/test_hierarchy.py::"
-    "test_real_247_event_fixture_reduces_to_at_most_ten_and_is_one_minimal"
-)
+from scripts.minimality_oracle_proof import validate_oracle_document
 
 
 def _validate_rs_g06(
@@ -19,24 +18,33 @@ def _validate_rs_g06(
     _proof: dict[str, Any],
     base: Path,
 ) -> set[str]:
-    assertions: set[str] = set()
-    for index, assertion in enumerate(
-        (
-            "every-unit-removal-checked",
-            "no-removable-reproducer",
-            "invalid-reasons-recorded",
-        )
-    ):
-        require_pytest_pass(manifest, base, index)
-        assertions.add(assertion)
-    return assertions
+    command = manifest["commands"][0]
+    _path, stdout = _safe_blob(
+        base,
+        command["stdout"],
+        label="minimality oracle stdout",
+    )
+    try:
+        oracle = json.loads(stdout)
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise ValueError("minimality oracle output is invalid JSON") from error
+    validate_oracle_document(oracle)
+    require_pytest_pass(manifest, base, 1)
+    return {
+        "every-unit-removal-checked",
+        "no-removable-reproducer",
+        "invalid-reasons-recorded",
+    }
 
 
 SPEC = GateSpec(
     gate="RS-G06",
     measurements=(
-        pytest_measurement(("every-unit-removal-checked",), _MINIMAL_TEST),
-        pytest_measurement(("no-removable-reproducer",), _MINIMAL_TEST),
+        Measurement(
+            assertions=("every-unit-removal-checked", "no-removable-reproducer"),
+            argv=("python", "-m", "scripts.minimality_oracle_proof"),
+            kind="minimality-oracle",
+        ),
         pytest_measurement(
             ("invalid-reasons-recorded",),
             "tests/test_hierarchy.py::test_minimality_proof_records_predicate_invalid_reasons",
