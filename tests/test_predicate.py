@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import hashlib
 import os
 import signal
+import sys
 import threading
 import time
 from dataclasses import replace
@@ -214,7 +216,9 @@ def test_predicate_output_is_hashed_not_retained_and_cache_key_is_complete(
         PredicateSpec(("python", "predicate.py"), timeout_seconds=2),
     )
     assert canary not in repr(report)
-    assert report.attempts[0].stdout_sha256
+    assert report.attempts[0].stdout_sha256 == hashlib.sha256(
+        f"{canary}{os.linesep}".encode()
+    ).hexdigest()
 
     spec = PredicateSpec(("python", "predicate.py"), timeout_seconds=2)
     first = predicate_cache_key(capsule, spec)
@@ -235,3 +239,28 @@ def test_predicate_output_is_hashed_not_retained_and_cache_key_is_complete(
         spec,
     )
     assert first != predicate_cache_key(replace(capsule, environment={"OTHER": "1"}), spec)
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows process bypass regression")
+def test_windows_guard_blocks_direct_winapi_process_creation(tmp_path: Path) -> None:
+    canary = tmp_path / "winapi-child-canary.txt"
+    command = (
+        f'"{sys.executable}" -S -c '
+        f'"from pathlib import Path; Path({str(canary)!r}).write_text(\'escaped\')"'
+    )
+    capsule = _capsule_with_script(
+        "import _winapi, subprocess\n"
+        "try:\n"
+        f"    _winapi.CreateProcess(None, {command!r}, None, None, False, 0, "
+        "None, None, subprocess.STARTUPINFO())\n"
+        "except PermissionError:\n"
+        "    raise SystemExit(0)\n"
+        "raise SystemExit(2)\n"
+    )
+    report = run_predicate(
+        capsule,
+        PredicateSpec(("python", "predicate.py"), timeout_seconds=2),
+    )
+    assert report.result is PredicateResult.REPRODUCES
+    time.sleep(0.2)
+    assert not canary.exists()

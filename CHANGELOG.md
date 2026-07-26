@@ -26,3 +26,14 @@ All notable changes will be recorded here.
   promise and is not 0.5-ready without permissioned real-case evidence.
 - Added a strict permissioned case-study package schema and structural verifier
   while recording all three real-case categories as external blockers.
+- Closed capsule and capture time-of-check/time-of-use windows with bounded
+  single-open reads; rejected portable case, Unicode, trailing-dot, device-name,
+  and archive-member aliases.
+- Made reduction reports byte-deterministic, corrected raw stdout/stderr
+  digests, hardened Windows process denial and tree termination, and validated
+  standalone reproduction resource policies before execution.
+- Added replay-session tool ownership, expanded independent divergence evidence,
+  and added an exact final-unit minimality oracle.
+- Added artifact-bound final evidence, wheel/sdist semantic and installed-flow
+  parity, deterministic SPDX and checksum artifacts, exact annotated-tag
+  preflight, and a separate OIDC-only PyPI publication job.

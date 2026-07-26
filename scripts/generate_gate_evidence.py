@@ -337,6 +337,16 @@ def _package_inputs(
             target = destination / artifact["name"]
             shutil.copyfile(source, target)
             artifacts.append(blob_reference(target, relative_to=directory))
+        for artifact in proof["supply_chain"].values():
+            source = source_directory / artifact["name"]
+            if source.is_symlink() or not source.is_file():
+                raise RuntimeError("package proof input is missing a supply-chain artifact")
+            data = source.read_bytes()
+            if len(data) != artifact["bytes"] or sha256(data) != artifact["sha256"]:
+                raise RuntimeError("package supply-chain artifact hash or size mismatch")
+            target = destination / artifact["name"]
+            shutil.copyfile(source, target)
+            artifacts.append(blob_reference(target, relative_to=directory))
         build = proof["commands"][0]
         commands.append(
             {

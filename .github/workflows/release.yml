@@ -1,48 +1,141 @@
-name: Release candidate
+name: Release
 
 on:
   push:
     tags:
-      - "v*"
+      - "v0.1.0a1"
 
-permissions:
-  attestations: write
-  contents: read
-  id-token: write
+permissions: {}
 
 jobs:
   build-and-attest:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+    permissions:
+      actions: read
+      attestations: write
+      contents: read
+      id-token: write
     env:
       RUNSIEVE_EVIDENCE_COMMIT: ${{ github.sha }}
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
           persist-credentials: false
           ref: ${{ env.RUNSIEVE_EVIDENCE_COMMIT }}
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+      - name: Fetch canonical main without credentials
+        run: git fetch --no-tags origin main:refs/remotes/origin/main
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.11"
-      - name: Build candidate distributions twice and compare bytes
+      - name: Verify exact annotated release ref and canonical head
+        run: python -m scripts.release_preflight "${{ github.ref_name }}"
+      - name: Require attested final-evidence receipt for this exact commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          RUN_ID="$(gh run list \
+            --workflow final-evidence.yml \
+            --branch main \
+            --commit "$RUNSIEVE_EVIDENCE_COMMIT" \
+            --event workflow_dispatch \
+            --status success \
+            --limit 1 \
+            --json databaseId \
+            --jq '.[0].databaseId // empty')"
+          test -n "$RUN_ID"
+          gh run download "$RUN_ID" \
+            --name final-decision-receipt \
+            --dir final-evidence
+          gh attestation verify \
+            final-evidence/final-decision-receipt.json \
+            --repo "${{ github.repository }}"
+          python -m scripts.verify_final_receipt \
+            final-evidence/final-decision-receipt.json \
+            "$RUNSIEVE_EVIDENCE_COMMIT"
+      - name: Build candidate distributions twice and run package proof
         run: |
           python -m pip install --upgrade pip
           python -m pip install build==1.5.0
           python -m scripts.package_matrix_proof --output release-proof
-      - name: Inspect and run installed public CLI flows
-        run: |
-          python -m zipfile -l release-proof/runsieve-*.whl
-          python -m scripts.installed_cli_smoke --wheel release-proof/runsieve-*.whl --with-openai
-      - name: Attest wheel and sdist provenance
-        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6
+      - name: Verify release checksums
+        working-directory: release-proof
+        run: sha256sum --check SHA256SUMS
+      - name: Attest primary wheel, sdist, checksums, and SBOM
+        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v3.2.0
         with:
-          subject-path: "release-proof/runsieve-*"
+          subject-path: |
+            release-proof/runsieve-*.whl
+            release-proof/runsieve-*.tar.gz
+            release-proof/SHA256SUMS
+            release-proof/runsieve.spdx.json
       - name: Upload immutable candidate bundle
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: runsieve-${{ github.ref_name }}
-          path: |
-            release-proof/*
-            schemas/*
+          path: release-proof/*
           if-no-files-found: error
           retention-days: 30
+
+  publish-pypi:
+    needs: build-and-attest
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: pypi
+    permissions:
+      attestations: read
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: runsieve-${{ github.ref_name }}
+          path: candidate
+      - name: Verify downloaded checksums and GitHub attestations
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd candidate
+          sha256sum --check SHA256SUMS
+          gh attestation verify runsieve-*.whl --repo "${{ github.repository }}"
+          gh attestation verify runsieve-*.tar.gz --repo "${{ github.repository }}"
+          gh attestation verify SHA256SUMS --repo "${{ github.repository }}"
+          gh attestation verify runsieve.spdx.json --repo "${{ github.repository }}"
+      - name: Select only primary distributions
+        run: |
+          mkdir dist
+          cp candidate/runsieve-*.whl dist/
+          cp candidate/runsieve-*.tar.gz dist/
+          test "$(find dist -maxdepth 1 -type f | wc -l)" -eq 2
+      - name: Publish artifact-bound distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@ba38be9e461d3875417946c167d0b5f3d385a247 # release/v1
+        with:
+          packages-dir: dist
+          print-hash: true
+
+  github-release:
+    needs: publish-pypi
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: runsieve-${{ github.ref_name }}
+          path: candidate
+      - name: Create immutable GitHub prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh release create "${{ github.ref_name }}"
+          candidate/runsieve-*.whl
+          candidate/runsieve-*.tar.gz
+          candidate/SHA256SUMS
+          candidate/runsieve.spdx.json
+          --repo "${{ github.repository }}"
+          --verify-tag
+          --prerelease
+          --generate-notes
+          --title "RunSieve 0.1.0a1"

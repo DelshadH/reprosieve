@@ -81,12 +81,15 @@ def validate_package_proof(
         "commit",
         "fresh_checkout",
         "gate",
+        "installed_flows",
         "members",
         "reproducible_artifacts",
         "runner",
         "schema_version",
+        "semantic_checks",
         "source_date_epoch",
         "source_tree_present",
+        "supply_chain",
     }:
         raise ValueError("RS-G13 package proof fields are incomplete")
     collector = proof.get("collector")
@@ -94,6 +97,9 @@ def validate_package_proof(
     artifacts = proof.get("artifacts")
     commands = proof.get("commands")
     members = proof.get("members")
+    semantic = proof.get("semantic_checks")
+    flows = proof.get("installed_flows")
+    supply_chain = proof.get("supply_chain")
     if (
         proof.get("schema_version") != 1
         or proof.get("gate") != "RS-G13"
@@ -121,6 +127,29 @@ def validate_package_proof(
         or not proof["source_date_epoch"].isdigit()
         or not isinstance(members, dict)
         or set(members) != {"sdist", "wheel"}
+        or not isinstance(semantic, dict)
+        or semantic
+        != {
+            "core_dependencies_empty": True,
+            "entry_point": True,
+            "extras": ["dev", "openai"],
+            "name": "runsieve",
+            "python_requires": "<3.14,>=3.11",
+            "schema_names": [
+                "capsule-v1.schema.json",
+                "case-study-v1.schema.json",
+                "materialization-v1.schema.json",
+                "predicate-report-v1.schema.json",
+                "reduction-report-v1.schema.json",
+            ],
+            "sdist_schema_parity": True,
+            "version": "0.1.0a1",
+            "wheel_schema_parity": True,
+        }
+        or not isinstance(flows, dict)
+        or set(flows) != {"sdist_core", "wheel_core", "wheel_openai"}
+        or not isinstance(supply_chain, dict)
+        or set(supply_chain) != {"checksums", "sbom"}
     ):
         raise ValueError("RS-G13 package proof did not use a clean supported runner")
     _artifact_reference(
@@ -142,6 +171,16 @@ def validate_package_proof(
         artifacts["rebuild_sdist"],
         suffix=".tar.gz",
         label="RS-G13 rebuilt sdist",
+    )
+    _artifact_reference(
+        supply_chain["checksums"],
+        suffix="SHA256SUMS",
+        label="RS-G13 checksums",
+    )
+    _artifact_reference(
+        supply_chain["sbom"],
+        suffix=".spdx.json",
+        label="RS-G13 SBOM",
     )
     if (
         artifacts["wheel"]["bytes"] != artifacts["rebuild_wheel"]["bytes"]
@@ -166,12 +205,22 @@ def validate_package_proof(
     if any(forbidden.intersection(member.split("/")) for member in sdist_members):
         raise ValueError("RS-G13 sdist contains internal control or evidence files")
     wheel_name = artifacts["wheel"]["name"]
+    sdist_name = artifacts["sdist"]["name"]
     expected_argv = (
         ["python", "-m", "build"],
         ["python", "-m", "build"],
-        ["python", "-m", "venv", "venv"],
-        ["python", "-m", "pip", "install", "--no-deps", wheel_name],
-        ["runsieve", "--help"],
+        [
+            "python", "scripts/installed_cli_smoke.py",
+            "--distribution", wheel_name,
+        ],
+        [
+            "python", "scripts/installed_cli_smoke.py",
+            "--distribution", sdist_name,
+        ],
+        [
+            "python", "scripts/installed_cli_smoke.py",
+            "--distribution", wheel_name, "--with-openai",
+        ],
     )
     for index, (command, argv) in enumerate(zip(commands, expected_argv, strict=True)):
         if (
@@ -183,8 +232,22 @@ def validate_package_proof(
             raise ValueError(f"RS-G13 package command {index} did not pass")
         _output_reference(command.get("stdout"), label=f"RS-G13 command {index} stdout")
         _output_reference(command.get("stderr"), label=f"RS-G13 command {index} stderr")
-    if commands[4]["stdout"]["bytes"] < 1:
-        raise ValueError("RS-G13 CLI smoke output is empty")
+    core_flows = [
+        "help",
+        "materialize",
+        "reproduce-predicate",
+        "reduce",
+        "verify-minimal",
+        "export",
+        "exported-reproduce",
+    ]
+    if (
+        flows["wheel_core"] != core_flows
+        or flows["sdist_core"] != core_flows
+        or flows["wheel_openai"] != [*core_flows, "capture"]
+        or any(commands[index]["stdout"]["bytes"] < 1 for index in (2, 3, 4))
+    ):
+        raise ValueError("RS-G13 installed CLI flows are incomplete")
     suffix = expected_python.replace(".", "")
     assertions = {f"clean-install-py{suffix}"}
     if expected_python == "3.11":
@@ -274,6 +337,15 @@ def _validate_rs_g13(
             )
             if relative not in artifact_paths:
                 raise ValueError("RS-G13 package artifact is not manifest-bound")
+        for artifact in package_proof["supply_chain"].values():
+            relative = f"{label}/{artifact['name']}"
+            _read_and_match(
+                base / relative,
+                artifact,
+                label=f"RS-G13 {minor} supply-chain artifact",
+            )
+            if relative not in artifact_paths:
+                raise ValueError("RS-G13 supply-chain artifact is not manifest-bound")
         if f"{label}/proof.json" not in artifact_paths:
             raise ValueError("RS-G13 package proof is not manifest-bound")
     return measured

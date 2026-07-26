@@ -41,10 +41,17 @@ def _run(argv: list[str], *, cwd: Path, environment: dict[str, str]) -> None:
         )
 
 
-def run_installed_flows(wheel: Path, *, with_openai: bool) -> tuple[str, ...]:
-    wheel = wheel.resolve(strict=True)
-    if wheel.suffix != ".whl" or not wheel.is_file() or wheel.is_symlink():
-        raise ValueError("installed CLI smoke requires a regular wheel")
+def run_installed_flows(distribution: Path, *, with_openai: bool) -> tuple[str, ...]:
+    distribution = distribution.resolve(strict=True)
+    if (
+        not distribution.is_file()
+        or distribution.is_symlink()
+        or not (
+            distribution.suffix == ".whl"
+            or distribution.name.endswith(".tar.gz")
+        )
+    ):
+        raise ValueError("installed CLI smoke requires a regular wheel or sdist")
     environment = {
         name: value
         for name, value in os.environ.items()
@@ -63,7 +70,9 @@ def run_installed_flows(wheel: Path, *, with_openai: bool) -> tuple[str, ...]:
         scripts = root / "venv" / ("Scripts" if os.name == "nt" else "bin")
         python = scripts / ("python.exe" if os.name == "nt" else "python")
         cli = scripts / ("runsieve.exe" if os.name == "nt" else "runsieve")
-        requirement = f"{wheel}[openai]" if with_openai else str(wheel)
+        requirement = (
+            f"{distribution}[openai]" if with_openai else str(distribution)
+        )
         install_argv = [str(python), "-m", "pip", "install"]
         if not with_openai:
             install_argv.append("--no-deps")
@@ -167,9 +176,10 @@ def main(argv: list[str] | None = None) -> int:
     with_openai = "--with-openai" in arguments
     if with_openai:
         arguments.remove("--with-openai")
-    if len(arguments) != 2 or arguments[0] != "--wheel":
+    if len(arguments) != 2 or arguments[0] not in {"--wheel", "--distribution"}:
         print(
-            "usage: python -m scripts.installed_cli_smoke --wheel WHEEL "
+            "usage: python -m scripts.installed_cli_smoke "
+            "--distribution WHEEL_OR_SDIST "
             "[--with-openai]",
             file=sys.stderr,
         )

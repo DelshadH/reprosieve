@@ -103,7 +103,6 @@ class PredicateAttempt:
         return {
             "application_exit_code": self.application_exit_code,
             "application_replay": self.application_replay,
-            "duration_seconds": round(self.duration_seconds, 6),
             "exit_code": self.exit_code,
             "network_guard": self.network_guard,
             "output_bytes": self.output_bytes,
@@ -210,6 +209,12 @@ def _network_guard_source(timeout: float, output_limit: int, process_limit: int)
         "socket.getaddrinfo = _runsieve_denied\n"
         "socket.socket.connect = _runsieve_denied\n"
         "socket.socket.connect_ex = _runsieve_denied\n"
+        "try:\n"
+        "    import _winapi\n"
+        "    for _name in ('CreateProcess', 'CreateProcessAsUser', 'CreateProcessWithLogonW'):\n"
+        "        if hasattr(_winapi, _name): setattr(_winapi, _name, _runsieve_denied)\n"
+        "except ImportError:\n"
+        "    pass\n"
         "sys.setrecursionlimit(min(sys.getrecursionlimit(), 1000))\n"
         "try:\n"
         "    import resource\n"
@@ -304,7 +309,17 @@ def _terminate(process: subprocess.Popen[bytes]) -> None:
         return
     try:
         if sys.platform == "win32":
-            process.kill()
+            completed = subprocess.run(
+                ["taskkill", "/PID", str(process.pid), "/T", "/F"],
+                check=False,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                timeout=2,
+            )
+            if completed.returncode != 0 and process.poll() is None:
+                process.kill()
         else:
             os.killpg(process.pid, signal.SIGKILL)
     except (ProcessLookupError, PermissionError, OSError):
@@ -536,10 +551,6 @@ def _execute_attempt(
             reason = "unexpected_exit"
             result = PredicateResult.INVALID
 
-        stdout_digest = hashlib.sha256()
-        stderr_digest = hashlib.sha256()
-        stdout_digest.update(bytes.fromhex(predicate_outcome.stdout_sha256))
-        stderr_digest.update(bytes.fromhex(predicate_outcome.stderr_sha256))
         return PredicateAttempt(
             trial=trial,
             result=result,
@@ -548,8 +559,8 @@ def _execute_attempt(
             signal=signal_number,
             duration_seconds=time.monotonic() - started,
             output_bytes=min(total_output, spec.output_limit_bytes * 2),
-            stdout_sha256=stdout_digest.hexdigest(),
-            stderr_sha256=stderr_digest.hexdigest(),
+            stdout_sha256=predicate_outcome.stdout_sha256,
+            stderr_sha256=predicate_outcome.stderr_sha256,
             workspace_id=f"trial-{trial:03d}",
             network_guard=network_guard,
             application_exit_code=application_exit_code,

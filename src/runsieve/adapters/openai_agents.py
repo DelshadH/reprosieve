@@ -18,7 +18,7 @@ from ..redact import (
     RedactionReport,
     redact_with_report,
 )
-from ..safeio import ensure_real_directory, ensure_regular_file
+from ..safeio import ensure_real_directory, read_regular_file_bounded
 from ..schema import Capsule, Event, JsonValue, safe_relative_path, validate_capsule
 
 try:
@@ -527,15 +527,16 @@ class RunSieveTraceProcessor(_TracingProcessor):
             raise ValueError("workspace root is not a real directory")
         for raw_path in self._workspace_paths:
             relative = safe_relative_path(raw_path, label="workspace path")
-            resolved = ensure_regular_file(
-                root / Path(relative),
+            resolved = root / Path(relative)
+            data = read_regular_file_bounded(
+                resolved,
+                max_bytes=self._max_workspace_bytes - total,
                 label="declared workspace path",
             )
             try:
                 resolved.relative_to(root)
             except ValueError as error:
                 raise ValueError("declared workspace path escapes its root") from error
-            data = resolved.read_bytes()
             total += len(data)
             if total > self._max_workspace_bytes:
                 raise ValueError("workspace size limit exceeded")

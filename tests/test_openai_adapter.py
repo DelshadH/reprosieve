@@ -120,7 +120,16 @@ def test_declared_workspace_and_environment_are_bounded_redacted_and_sanitized(
 ) -> None:
     canary = "FILENAME-SECRET-CANARY"
     workspace_name = f"fixture-{canary}.txt"
-    (tmp_path / workspace_name).write_text(f"value={canary}", encoding="utf-8")
+    workspace_file = tmp_path / workspace_name
+    workspace_file.write_text(f"value={canary}", encoding="utf-8")
+    original_read_bytes = Path.read_bytes
+
+    def reject_split_validation_read(path: Path) -> bytes:
+        if path == workspace_file:
+            raise AssertionError("workspace capture must read through one bounded open")
+        return original_read_bytes(path)
+
+    monkeypatch.setattr(Path, "read_bytes", reject_split_validation_read)
     monkeypatch.setenv("RUNSIEVE_FIXTURE_VALUE", canary)
     output = tmp_path / "bounded.runsieve"
     processor = RunSieveTraceProcessor(

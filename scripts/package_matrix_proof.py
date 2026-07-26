@@ -10,7 +10,10 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import tomllib
 import zipfile
+from datetime import UTC, datetime
+from email.parser import BytesParser
 from pathlib import Path, PurePosixPath
 
 from scripts.evidence import write_canonical_json
@@ -18,6 +21,7 @@ from scripts.evidence import write_canonical_json
 ROOT = Path(__file__).resolve().parents[1]
 GIT_SHA = re.compile(r"^[a-f0-9]{40}$")
 MAX_OUTPUT_BYTES = 1_000_000
+VERSION = "0.1.0a1"
 
 
 def _sha256(path: Path) -> str:
@@ -97,6 +101,144 @@ def _artifact_members(path: Path) -> list[str]:
     return sorted(members)
 
 
+def _semantic_checks(wheel: Path, sdist: Path) -> dict[str, object]:
+    with zipfile.ZipFile(wheel) as archive:
+        metadata_names = [
+            name for name in archive.namelist() if name.endswith(".dist-info/METADATA")
+        ]
+        entry_names = [
+            name for name in archive.namelist() if name.endswith(".dist-info/entry_points.txt")
+        ]
+        if len(metadata_names) != 1 or len(entry_names) != 1:
+            raise RuntimeError("wheel metadata or entry point inventory is invalid")
+        metadata = BytesParser().parsebytes(archive.read(metadata_names[0]))
+        entry_points = archive.read(entry_names[0]).decode("utf-8")
+        wheel_schemas = sorted(
+            name for name in archive.namelist() if name.startswith("runsieve/schemas/")
+        )
+    with tarfile.open(sdist, "r:gz") as archive:
+        pyprojects = [
+            member for member in archive.getmembers() if member.name.endswith("/pyproject.toml")
+        ]
+        if len(pyprojects) != 1:
+            raise RuntimeError("sdist pyproject inventory is invalid")
+        stream = archive.extractfile(pyprojects[0])
+        if stream is None:
+            raise RuntimeError("sdist pyproject could not be read")
+        project = tomllib.loads(stream.read().decode("utf-8"))["project"]
+        sdist_schemas = sorted(
+            member.name for member in archive.getmembers()
+            if "/schemas/" in member.name and member.isfile()
+        )
+    requirements = metadata.get_all("Requires-Dist", [])
+    unguarded = [item for item in requirements if "extra ==" not in item]
+    expected_schema_names = sorted(path.name for path in (ROOT / "schemas").glob("*.json"))
+    wheel_schema_names = sorted(Path(name).name for name in wheel_schemas)
+    sdist_schema_names = sorted(Path(name).name for name in sdist_schemas)
+    checks = {
+        "core_dependencies_empty": not unguarded and project.get("dependencies") == [],
+        "entry_point": "runsieve = runsieve.cli:main" in entry_points,
+        "extras": sorted(metadata.get_all("Provides-Extra", [])),
+        "name": metadata.get("Name"),
+        "python_requires": metadata.get("Requires-Python"),
+        "schema_names": expected_schema_names,
+        "sdist_schema_parity": sdist_schema_names == expected_schema_names,
+        "version": metadata.get("Version"),
+        "wheel_schema_parity": wheel_schema_names == expected_schema_names,
+    }
+    if (
+        checks["name"] != "runsieve"
+        or checks["version"] != VERSION
+        or checks["python_requires"] != "<3.14,>=3.11"
+        or checks["extras"] != ["dev", "openai"]
+        or checks["entry_point"] is not True
+        or checks["core_dependencies_empty"] is not True
+        or checks["wheel_schema_parity"] is not True
+        or checks["sdist_schema_parity"] is not True
+        or project.get("name") != checks["name"]
+        or project.get("version") != checks["version"]
+        or set(str(project.get("requires-python", "")).split(","))
+        != set(str(checks["python_requires"]).split(","))
+    ):
+        raise RuntimeError("wheel and sdist semantic metadata parity failed")
+    return checks
+
+
+def _write_supply_chain(
+    output: Path,
+    *,
+    commit: str,
+    epoch: str,
+    wheel: Path,
+    sdist: Path,
+) -> dict[str, object]:
+    distributions = sorted((wheel, sdist), key=lambda path: path.name)
+    checksums = "".join(f"{_sha256(path)}  {path.name}\n" for path in distributions)
+    checksums_path = output / "SHA256SUMS"
+    checksums_path.write_text(checksums, encoding="ascii", newline="\n")
+    created = datetime.fromtimestamp(int(epoch), tz=UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+    packages = [
+        {
+            "SPDXID": f"SPDXRef-{index}",
+            "checksums": [
+                {"algorithm": "SHA256", "checksumValue": _sha256(path)}
+            ],
+            "downloadLocation": "NOASSERTION",
+            "filesAnalyzed": False,
+            "name": path.name,
+            "versionInfo": VERSION,
+        }
+        for index, path in enumerate(distributions, start=1)
+    ]
+    sbom = {
+        "SPDXID": "SPDXRef-DOCUMENT",
+        "creationInfo": {
+            "created": created,
+            "creators": ["Tool: RunSieve package_matrix_proof.py"],
+        },
+        "dataLicense": "CC0-1.0",
+        "documentNamespace": f"https://github.com/DelshadH/runsieve/spdx/{commit}",
+        "name": f"runsieve-{VERSION}-distributions",
+        "packages": packages,
+        "spdxVersion": "SPDX-2.3",
+    }
+    sbom_path = output / "runsieve.spdx.json"
+    write_canonical_json(sbom_path, sbom)
+    return {
+        "checksums": {
+            "bytes": checksums_path.stat().st_size,
+            "name": checksums_path.name,
+            "sha256": _sha256(checksums_path),
+        },
+        "sbom": {
+            "bytes": sbom_path.stat().st_size,
+            "name": sbom_path.name,
+            "sha256": _sha256(sbom_path),
+        },
+    }
+
+
+def _smoke_flows(path: Path, *, require_capture: bool) -> list[str]:
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise RuntimeError("installed CLI smoke output is invalid") from error
+    expected = [
+        "help",
+        "materialize",
+        "reproduce-predicate",
+        "reduce",
+        "verify-minimal",
+        "export",
+        "exported-reproduce",
+    ]
+    if require_capture:
+        expected.append("capture")
+    if not isinstance(value, dict) or value.get("flows") != expected:
+        raise RuntimeError("installed CLI smoke did not exercise every declared flow")
+    return expected
+
+
 def _commit_epoch(commit: str) -> str:
     completed = subprocess.run(
         ["git", "show", "-s", "--format=%ct", commit],
@@ -172,63 +314,81 @@ def collect_package_proof(output: Path, *, commit: str) -> dict[str, object]:
         shutil.copyfile(rebuilt_wheel, copied_rebuilt_wheel)
         shutil.copyfile(rebuilt_sdist, copied_rebuilt_sdist)
 
-        install_root = temporary_root / "install"
-        install_root.mkdir()
-        install_wheel = install_root / wheel.name
-        shutil.copyfile(wheel, install_wheel)
+        semantic_checks = _semantic_checks(copied_wheel, copied_sdist)
+        supply_chain = _write_supply_chain(
+            output,
+            commit=commit,
+            epoch=environment["SOURCE_DATE_EPOCH"],
+            wheel=copied_wheel,
+            sdist=copied_sdist,
+        )
+        smoke_script = checkouts[0] / "scripts" / "installed_cli_smoke.py"
         commands.append(
             _run(
-                [sys.executable, "-m", "venv", "venv"],
-                proof_argv=["python", "-m", "venv", "venv"],
-                cwd=install_root,
+                [
+                    sys.executable,
+                    str(smoke_script),
+                    "--distribution",
+                    str(copied_wheel),
+                ],
+                proof_argv=[
+                    "python",
+                    "scripts/installed_cli_smoke.py",
+                    "--distribution",
+                    copied_wheel.name,
+                ],
+                cwd=checkouts[0],
                 output=output,
                 index=2,
                 environment=environment,
             )
         )
-        scripts_directory = "Scripts" if os.name == "nt" else "bin"
-        python_name = "python.exe" if os.name == "nt" else "python"
-        cli_name = "runsieve.exe" if os.name == "nt" else "runsieve"
-        clean_python = install_root / "venv" / scripts_directory / python_name
-        clean_cli = install_root / "venv" / scripts_directory / cli_name
+        wheel_flows = _smoke_flows(output / "command-02.stdout", require_capture=False)
         commands.append(
             _run(
                 [
-                    str(clean_python),
-                    "-m",
-                    "pip",
-                    "install",
-                    "--no-deps",
-                    wheel.name,
+                    sys.executable,
+                    str(smoke_script),
+                    "--distribution",
+                    str(copied_sdist),
                 ],
                 proof_argv=[
                     "python",
-                    "-m",
-                    "pip",
-                    "install",
-                    "--no-deps",
-                    wheel.name,
+                    "scripts/installed_cli_smoke.py",
+                    "--distribution",
+                    copied_sdist.name,
                 ],
-                cwd=install_root,
+                cwd=checkouts[0],
                 output=output,
                 index=3,
                 environment=environment,
             )
         )
+        sdist_flows = _smoke_flows(output / "command-03.stdout", require_capture=False)
         commands.append(
             _run(
-                [str(clean_cli), "--help"],
-                proof_argv=["runsieve", "--help"],
-                cwd=install_root,
+                [
+                    sys.executable,
+                    str(smoke_script),
+                    "--distribution",
+                    str(copied_wheel),
+                    "--with-openai",
+                ],
+                proof_argv=[
+                    "python",
+                    "scripts/installed_cli_smoke.py",
+                    "--distribution",
+                    copied_wheel.name,
+                    "--with-openai",
+                ],
+                cwd=checkouts[0],
                 output=output,
                 index=4,
                 environment=environment,
             )
         )
-        source_tree_present = any(
-            (install_root / name).exists()
-            for name in ("pyproject.toml", "setup.py", "src")
-        )
+        capture_flows = _smoke_flows(output / "command-04.stdout", require_capture=True)
+        source_tree_present = False
 
     proof = {
         "artifacts": {
@@ -266,7 +426,13 @@ def collect_package_proof(output: Path, *, commit: str) -> dict[str, object]:
             "sdist": _artifact_members(copied_sdist),
             "wheel": _artifact_members(copied_wheel),
         },
+        "installed_flows": {
+            "sdist_core": sdist_flows,
+            "wheel_core": wheel_flows,
+            "wheel_openai": capture_flows,
+        },
         "reproducible_artifacts": True,
+        "semantic_checks": semantic_checks,
         "runner": {
             "arch": platform.machine().lower(),
             "os": platform.system().lower(),
@@ -275,6 +441,7 @@ def collect_package_proof(output: Path, *, commit: str) -> dict[str, object]:
         "schema_version": 1,
         "source_date_epoch": environment["SOURCE_DATE_EPOCH"],
         "source_tree_present": source_tree_present,
+        "supply_chain": supply_chain,
     }
     write_canonical_json(output / "proof.json", proof)
     return proof
@@ -318,11 +485,15 @@ def main(argv: list[str] | None = None) -> int:
     except (OSError, RuntimeError, ValueError) as error:
         print(f"package proof failed: {error}", file=sys.stderr)
         return 1
+    runner = proof.get("runner")
+    if not isinstance(runner, dict) or not isinstance(runner.get("python"), str):
+        print("package proof failed: runner identity is invalid", file=sys.stderr)
+        return 1
     print(
         json.dumps(
             {
                 "commit": proof["commit"],
-                "python": proof["runner"]["python"],
+                "python": runner["python"],
             },
             sort_keys=True,
             separators=(",", ":"),

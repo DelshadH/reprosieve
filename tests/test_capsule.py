@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import os
 import stat
 import tempfile
 import warnings
@@ -12,6 +13,7 @@ from pathlib import Path
 import pytest
 
 from runsieve.capsule import CapsuleLimits, capsule_bytes, load_capsule, write_capsule
+from runsieve.safeio import read_regular_file_bounded
 from tests.helpers import sample_capsule
 
 
@@ -88,6 +90,69 @@ def test_duplicate_symlink_bomb_and_oversize_archives_are_rejected(tmp_path: Pat
     source.write_bytes(capsule_bytes(sample_capsule()))
     with pytest.raises(ValueError, match="archive size"):
         load_capsule(source, limits=CapsuleLimits(max_archive_bytes=10))
+
+
+def test_oversized_capsule_is_rejected_before_path_read_bytes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source = tmp_path / "oversized.runsieve"
+    source.write_bytes(b"x" * 4096)
+
+    def forbidden_read_bytes(_path: Path) -> bytes:
+        raise AssertionError("oversized capsule reached unbounded Path.read_bytes")
+
+    monkeypatch.setattr(Path, "read_bytes", forbidden_read_bytes)
+    with pytest.raises(ValueError, match="archive size"):
+        load_capsule(source, limits=CapsuleLimits(max_archive_bytes=1))
+
+
+def test_bounded_read_rejects_an_ancestor_swapped_during_open(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    declared_root = tmp_path / "declared"
+    declared_root.mkdir()
+    declared = declared_root / "fixture.txt"
+    declared.write_text("safe", encoding="utf-8")
+    host_root = tmp_path / "host"
+    host_root.mkdir()
+    (host_root / "fixture.txt").write_text("HOST-SECRET-CANARY", encoding="utf-8")
+    moved_root = tmp_path / "moved"
+    try:
+        probe = tmp_path / "symlink-probe"
+        probe.symlink_to(host_root, target_is_directory=True)
+        probe.unlink()
+    except OSError:
+        pytest.skip("directory symlink creation is unavailable")
+
+    original_open = os.open
+    swapped = False
+
+    def swap_before_open(
+        path: str | bytes | os.PathLike[str] | os.PathLike[bytes],
+        flags: int,
+    ) -> int:
+        nonlocal swapped
+        if not swapped and Path(path) == declared:
+            swapped = True
+            declared_root.rename(moved_root)
+            declared_root.symlink_to(host_root, target_is_directory=True)
+        return original_open(path, flags)
+
+    monkeypatch.setattr(os, "open", swap_before_open)
+    try:
+        with pytest.raises(ValueError, match="changed while it was opened"):
+            read_regular_file_bounded(
+                declared,
+                max_bytes=1024,
+                label="declared workspace path",
+            )
+    finally:
+        if declared_root.is_symlink():
+            declared_root.unlink()
+        if moved_root.exists():
+            moved_root.rename(declared_root)
 
 
 def test_canary_never_reaches_capsule_bytes_or_errors() -> None:

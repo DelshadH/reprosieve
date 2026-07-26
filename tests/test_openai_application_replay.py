@@ -524,3 +524,51 @@ def test_direct_original_tool_call_hits_measured_canary_and_is_restored() -> Non
 
     _run(tool.on_invoke_tool(None, '{"value":7}'))
     assert original_tool["calls"] == 1
+
+
+def test_concurrent_sessions_cannot_share_and_restore_one_original_tool() -> None:
+    original_tool = {"calls": 0}
+    tool = _tool(original_tool)
+
+    async def run_application(session: Any) -> Any:
+        agent = Agent(
+            name="Replay fixture",
+            instructions="Call probe once, then report the marker.",
+            model=session.model,
+            tools=list(session.tools),
+        )
+        return await session.run(agent, "find failure")
+
+    captured = _run(
+        OpenAIAgentsCaptureSession(
+            live_model=ScriptedModel(_scripted_tool_run()),
+            original_tools=(tool,),
+            redaction_policy=RedactionPolicy(salt=b"concurrent-tool-claim-salt"),
+            trace_id="trace_concurrent_tool_claim",
+        ).execute(run_application)
+    )
+    original_tool["calls"] = 0
+
+    async def exercise() -> None:
+        entered = asyncio.Event()
+        release = asyncio.Event()
+        first = OpenAIAgentsReplaySession(captured.capsule, original_tools=(tool,))
+        second = OpenAIAgentsReplaySession(captured.capsule, original_tools=(tool,))
+
+        async def blocked_application(session: Any) -> Any:
+            entered.set()
+            await release.wait()
+            return await run_application(session)
+
+        first_task = asyncio.create_task(first.execute(blocked_application))
+        await entered.wait()
+        with pytest.raises(ApplicationReplayUnsupported, match="already claimed"):
+            await second.execute(run_application)
+        release.set()
+        report = await first_task
+        assert report.all_interactions_consumed is True
+
+    _run(exercise())
+    assert original_tool["calls"] == 0
+    _run(tool.on_invoke_tool(None, '{"value":7}'))
+    assert original_tool["calls"] == 1

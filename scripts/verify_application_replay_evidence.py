@@ -34,7 +34,12 @@ _ASSERTIONS = (
     "provider-canary-zero",
     "original-tool-canary-zero",
     "instruction-divergence",
+    "input-divergence",
+    "tool-schema-divergence",
     "argument-divergence",
+    "ordering-divergence",
+    "early-exit-divergence",
+    "unsupported-surface-rejected",
     "caught-original-tool-attempt-rejected",
     "real-unit-reduced",
     "independent-one-minimal",
@@ -270,6 +275,56 @@ def _verify_caught_original_attempt(reduced: Capsule) -> None:
         raise ValueError("original-tool canary counters are invalid")
 
 
+def _verify_early_exit(reduced: Capsule, tool: FunctionTool) -> None:
+    async def early_exit(session: Any) -> Any:
+        agent = Agent(
+            name="RunSieve evidence application",
+            instructions="Call probe once, then report the marker.",
+            model=session.model,
+            tools=list(session.tools),
+            tool_use_behavior="stop_on_first_tool",
+        )
+        return await session.run(agent, "find failure")
+
+    try:
+        _run(OpenAIAgentsReplaySession(reduced, original_tools=(tool,)).execute(early_exit))
+    except ApplicationReplayDivergence as exc:
+        if "unconsumed" not in str(exc):
+            raise ValueError(f"unexpected early-exit divergence: {exc}") from exc
+    else:
+        raise ValueError("early application exit did not diverge")
+
+
+def _verify_unsupported_surface(reduced: Capsule, tool: FunctionTool) -> None:
+    replay = reduced.metadata.get("application_replay")
+    if not isinstance(replay, dict):
+        raise ValueError("application replay metadata is malformed")
+    unsupported = replace(
+        reduced,
+        metadata={
+            **reduced.metadata,
+            "application_replay": {**replay, "protocol": "unsupported-protocol"},
+        },
+    )
+    try:
+        OpenAIAgentsReplaySession(unsupported, original_tools=(tool,))
+    except ApplicationReplayUnsupported:
+        return
+    raise ValueError("unsupported application surface was accepted")
+
+
+def _ordering_mutation(capsule: Capsule) -> Capsule:
+    events = list(capsule.events)
+    requests = [index for index, event in enumerate(events) if event.kind == "model_request"]
+    if len(requests) != 2:
+        raise ValueError("application replay ordering fixture must have two model requests")
+    first, second = requests
+    first_event, second_event = events[first], events[second]
+    events[first] = replace(first_event, payload=second_event.payload)
+    events[second] = replace(second_event, payload=first_event.payload)
+    return replace(capsule, events=tuple(events))
+
+
 def _verify_minimality(reduced: Capsule) -> None:
     tool = _tool({"calls": 0})
 
@@ -350,6 +405,20 @@ def verify_evidence(directory: Path, *, expected_commit: str) -> dict[str, Any]:
         tool=tool,
         pattern="model request",
     )
+    input_mutation = _event_mutation(
+        reduced,
+        kind="model_request",
+        field="input",
+        value="different input",
+    )
+    _expect_divergence(input_mutation, tool=tool, pattern="model request")
+    schema_mutation = _event_mutation(
+        reduced,
+        kind="model_request",
+        field="tools",
+        value=[],
+    )
+    _expect_divergence(schema_mutation, tool=tool, pattern="model request")
     argument_mutation = _event_mutation(
         reduced,
         kind="tool_call",
@@ -361,6 +430,13 @@ def verify_evidence(directory: Path, *, expected_commit: str) -> dict[str, Any]:
         tool=tool,
         pattern="tool arguments",
     )
+    _expect_divergence(
+        _ordering_mutation(reduced),
+        tool=tool,
+        pattern="model request",
+    )
+    _verify_early_exit(reduced, tool)
+    _verify_unsupported_surface(reduced, tool)
     _verify_caught_original_attempt(reduced)
     _verify_minimality(reduced)
 
