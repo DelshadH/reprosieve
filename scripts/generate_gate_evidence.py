@@ -48,7 +48,7 @@ def build_manifest(
         "environment": environment,
         "finished_at": finished_at,
         "gate": gate,
-        "project": "reprosieve",
+        "project": "runsieve",
         "result": "passed",
         "schema_version": 1,
         "started_at": started_at,
@@ -121,7 +121,7 @@ def _clean_commit() -> str:
 
 
 def _gate_registry_spec(gate: str) -> dict[str, Any]:
-    documents = load_project_documents(ROOT, "reprosieve")
+    documents = load_project_documents(ROOT, "runsieve")
     for spec in documents["registry"]["gates"]:
         if spec["id"] == gate:
             return spec
@@ -450,7 +450,7 @@ def generate(
         "sha256": sha256(manifest_path.read_bytes()),
     }
     verify_evidence_reference(
-        project="reprosieve",
+        project="runsieve",
         root=ROOT,
         gate=gate,
         gate_spec=registry_spec,
