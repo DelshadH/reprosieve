@@ -254,7 +254,7 @@ def test_rs_g13_requires_real_clean_install_proof_for_each_python() -> None:
             "entry_point": True,
             "extras": ["dev", "openai"],
             "name": "runsieve",
-            "python_requires": ">=3.11,<3.14",
+            "python_requires": "<3.14,>=3.11",
             "schema_names": [
                 "capsule-v1.schema.json",
                 "case-study-v1.schema.json",
@@ -493,7 +493,7 @@ def test_evidence_generator_consumes_three_distinct_package_proofs(
                 "entry_point": True,
                 "extras": ["dev", "openai"],
                 "name": "runsieve",
-                "python_requires": ">=3.11,<3.14",
+                "python_requires": "<3.14,>=3.11",
                 "schema_names": [
                     "capsule-v1.schema.json",
                     "case-study-v1.schema.json",

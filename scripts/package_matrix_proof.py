@@ -149,7 +149,7 @@ def _semantic_checks(wheel: Path, sdist: Path) -> dict[str, object]:
     if (
         checks["name"] != "runsieve"
         or checks["version"] != VERSION
-        or checks["python_requires"] != ">=3.11,<3.14"
+        or checks["python_requires"] != "<3.14,>=3.11"
         or checks["extras"] != ["dev", "openai"]
         or checks["entry_point"] is not True
         or checks["core_dependencies_empty"] is not True
@@ -157,7 +157,8 @@ def _semantic_checks(wheel: Path, sdist: Path) -> dict[str, object]:
         or checks["sdist_schema_parity"] is not True
         or project.get("name") != checks["name"]
         or project.get("version") != checks["version"]
-        or project.get("requires-python") != checks["python_requires"]
+        or set(str(project.get("requires-python", "")).split(","))
+        != set(str(checks["python_requires"]).split(","))
     ):
         raise RuntimeError("wheel and sdist semantic metadata parity failed")
     return checks
