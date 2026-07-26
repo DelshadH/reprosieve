@@ -1,115 +1,241 @@
 {
   "schema_version": 1,
   "project": "runsieve",
-  "updated_at": "2026-07-25T18:37:16.888459Z",
+  "updated_at": "2026-07-25T19:16:00.503299Z",
   "tasks": {
     "RS-000": {
-      "status": "pending",
-      "evidence": [],
-      "notes": "",
+      "status": "passed",
+      "evidence": [
+        {
+          "path": ".evidence/RS-G13/github-30171123965-1/manifest.json",
+          "sha256": "0002be3fd1672bdeb0e3b9fd648f19fe1454f41f022d9cc366c6317cc1a93878"
+        }
+      ],
+      "notes": "Python 3.11-3.13 package proofs were produced and aggregated by CI run 30171123965.",
       "blocker_ids": []
     },
     "RS-010": {
-      "status": "pending",
-      "evidence": [],
-      "notes": "",
+      "status": "passed",
+      "evidence": [
+        {
+          "path": ".evidence/RS-G01/local-a660531-g01/manifest.json",
+          "sha256": "ebf349c7e3e6e8078a1fc91d1890fed13d48a2435012090fd1591668cc5f8a34"
+        }
+      ],
+      "notes": "Public SDK capture and deterministic recorded-output materialization feasibility are measured.",
       "blocker_ids": []
     },
     "RS-020": {
-      "status": "pending",
-      "evidence": [],
-      "notes": "",
+      "status": "passed",
+      "evidence": [
+        {
+          "path": ".evidence/RS-G02/local-a660531-g02/manifest.json",
+          "sha256": "a2e7832fb1c69a1d1d18dfa4221ac70f6733a2e9ea6a2c770b099f9fda8aae0e"
+        },
+        {
+          "path": ".evidence/RS-G03/local-a660531-g03/manifest.json",
+          "sha256": "13df5c051cfd00e7448bf5a29798b285f67c39079bd6239ebefa26037ffdf867"
+        }
+      ],
+      "notes": "Redaction-before-write and deterministic hostile-input-safe capsule construction are measured.",
       "blocker_ids": []
     },
     "RS-030": {
-      "status": "pending",
-      "evidence": [],
-      "notes": "",
+      "status": "passed",
+      "evidence": [
+        {
+          "path": ".evidence/RS-G04/local-a660531-g04/manifest.json",
+          "sha256": "907527f4584c335e1f9c5108a67ade3e4d782fa7fd32ed08b68c4d0cb7356b8f"
+        }
+      ],
+      "notes": "Only the declared predicate is executed against materialized recorded values in constrained trials.",
       "blocker_ids": []
     },
     "RS-040": {
-      "status": "pending",
-      "evidence": [],
-      "notes": "",
+      "status": "passed",
+      "evidence": [
+        {
+          "path": ".evidence/RS-G06/local-a660531-g06/manifest.json",
+          "sha256": "720dd93c0f420f79523f98ecb0457da0fd69c74a547b56b8c81de6917a79714b"
+        },
+        {
+          "path": ".evidence/RS-G07/local-a660531-g07/manifest.json",
+          "sha256": "632652b23a6113ad642c2ae74f7d11934b4c24f86fd14aae694e69fb4b94b86a"
+        }
+      ],
+      "notes": "Independent final-granularity 1-minimality and tri-state predicate behavior are measured.",
       "blocker_ids": []
     },
     "RS-050": {
-      "status": "pending",
-      "evidence": [],
-      "notes": "",
+      "status": "passed",
+      "evidence": [
+        {
+          "path": ".evidence/RS-G05/local-a660531-g05/manifest.json",
+          "sha256": "7ba5da875d832afd3516a33d4765af3c0bd5a397524ed262da8e38f3f8085efb"
+        },
+        {
+          "path": ".evidence/RS-G08/local-a660531-g08/manifest.json",
+          "sha256": "47414abf76d749910f68780dd83c38f4bc35c2826768722e37aad82bd5c18a66"
+        }
+      ],
+      "notes": "Killer reduction and dependency-aware hierarchical reduction are measured.",
       "blocker_ids": []
     },
     "RS-060": {
-      "status": "pending",
-      "evidence": [],
-      "notes": "",
+      "status": "passed",
+      "evidence": [
+        {
+          "path": ".evidence/RS-G09/local-a660531-g09/manifest.json",
+          "sha256": "fe3d26ad65e4b486b5d9766bafb26184257da3bc7dbd0e9eada098dddac39494"
+        },
+        {
+          "path": ".evidence/RS-G10/github-30171123965-1/manifest.json",
+          "sha256": "f1ca9bfa30dffaa294f4372b1e764318f8b1fc5814604f0df5d3e5e082a61449"
+        }
+      ],
+      "notes": "Repeated predicate trials and Linux/macOS portable export proofs are measured without application-replay claims.",
       "blocker_ids": []
     },
     "RS-070": {
-      "status": "pending",
-      "evidence": [],
-      "notes": "",
+      "status": "passed",
+      "evidence": [
+        {
+          "path": ".evidence/RS-G11/local-a660531-g11/manifest.json",
+          "sha256": "e5d376d835a31926028f9d2f6132e01c8016bde52c2a0363ae3569cf0e28dae5"
+        }
+      ],
+      "notes": "Timeout, output, event, archive, recursion, and cancellation limits are measured.",
       "blocker_ids": []
     },
     "RS-080": {
-      "status": "pending",
-      "evidence": [],
-      "notes": "",
+      "status": "passed",
+      "evidence": [
+        {
+          "path": ".evidence/RS-G12/local-9110228-g12/manifest.json",
+          "sha256": "1f71bff39539e311a972d17d407231eaa1ab0291b87501c393385c675e4b914a"
+        }
+      ],
+      "notes": "The clean-room 0.1 reduction, materialization, predicate reproduction, export, and minimality demo is measured.",
       "blocker_ids": []
     }
   },
   "gates": {
     "RS-G13": {
-      "status": "pending",
-      "evidence": []
+      "status": "passed",
+      "evidence": [
+        {
+          "path": ".evidence/RS-G13/github-30171123965-1/manifest.json",
+          "sha256": "0002be3fd1672bdeb0e3b9fd648f19fe1454f41f022d9cc366c6317cc1a93878"
+        }
+      ]
     },
     "RS-G01": {
-      "status": "pending",
-      "evidence": []
+      "status": "passed",
+      "evidence": [
+        {
+          "path": ".evidence/RS-G01/local-a660531-g01/manifest.json",
+          "sha256": "ebf349c7e3e6e8078a1fc91d1890fed13d48a2435012090fd1591668cc5f8a34"
+        }
+      ]
     },
     "RS-G02": {
-      "status": "pending",
-      "evidence": []
+      "status": "passed",
+      "evidence": [
+        {
+          "path": ".evidence/RS-G02/local-a660531-g02/manifest.json",
+          "sha256": "a2e7832fb1c69a1d1d18dfa4221ac70f6733a2e9ea6a2c770b099f9fda8aae0e"
+        }
+      ]
     },
     "RS-G03": {
-      "status": "pending",
-      "evidence": []
+      "status": "passed",
+      "evidence": [
+        {
+          "path": ".evidence/RS-G03/local-a660531-g03/manifest.json",
+          "sha256": "13df5c051cfd00e7448bf5a29798b285f67c39079bd6239ebefa26037ffdf867"
+        }
+      ]
     },
     "RS-G04": {
-      "status": "pending",
-      "evidence": []
+      "status": "passed",
+      "evidence": [
+        {
+          "path": ".evidence/RS-G04/local-a660531-g04/manifest.json",
+          "sha256": "907527f4584c335e1f9c5108a67ade3e4d782fa7fd32ed08b68c4d0cb7356b8f"
+        }
+      ]
     },
     "RS-G05": {
-      "status": "pending",
-      "evidence": []
+      "status": "passed",
+      "evidence": [
+        {
+          "path": ".evidence/RS-G05/local-a660531-g05/manifest.json",
+          "sha256": "7ba5da875d832afd3516a33d4765af3c0bd5a397524ed262da8e38f3f8085efb"
+        }
+      ]
     },
     "RS-G06": {
-      "status": "pending",
-      "evidence": []
+      "status": "passed",
+      "evidence": [
+        {
+          "path": ".evidence/RS-G06/local-a660531-g06/manifest.json",
+          "sha256": "720dd93c0f420f79523f98ecb0457da0fd69c74a547b56b8c81de6917a79714b"
+        }
+      ]
     },
     "RS-G07": {
-      "status": "pending",
-      "evidence": []
+      "status": "passed",
+      "evidence": [
+        {
+          "path": ".evidence/RS-G07/local-a660531-g07/manifest.json",
+          "sha256": "632652b23a6113ad642c2ae74f7d11934b4c24f86fd14aae694e69fb4b94b86a"
+        }
+      ]
     },
     "RS-G08": {
-      "status": "pending",
-      "evidence": []
+      "status": "passed",
+      "evidence": [
+        {
+          "path": ".evidence/RS-G08/local-a660531-g08/manifest.json",
+          "sha256": "47414abf76d749910f68780dd83c38f4bc35c2826768722e37aad82bd5c18a66"
+        }
+      ]
     },
     "RS-G09": {
-      "status": "pending",
-      "evidence": []
+      "status": "passed",
+      "evidence": [
+        {
+          "path": ".evidence/RS-G09/local-a660531-g09/manifest.json",
+          "sha256": "fe3d26ad65e4b486b5d9766bafb26184257da3bc7dbd0e9eada098dddac39494"
+        }
+      ]
     },
     "RS-G10": {
-      "status": "pending",
-      "evidence": []
+      "status": "passed",
+      "evidence": [
+        {
+          "path": ".evidence/RS-G10/github-30171123965-1/manifest.json",
+          "sha256": "f1ca9bfa30dffaa294f4372b1e764318f8b1fc5814604f0df5d3e5e082a61449"
+        }
+      ]
     },
     "RS-G11": {
-      "status": "pending",
-      "evidence": []
+      "status": "passed",
+      "evidence": [
+        {
+          "path": ".evidence/RS-G11/local-a660531-g11/manifest.json",
+          "sha256": "e5d376d835a31926028f9d2f6132e01c8016bde52c2a0363ae3569cf0e28dae5"
+        }
+      ]
     },
     "RS-G12": {
-      "status": "pending",
-      "evidence": []
+      "status": "passed",
+      "evidence": [
+        {
+          "path": ".evidence/RS-G12/local-9110228-g12/manifest.json",
+          "sha256": "1f71bff39539e311a972d17d407231eaa1ab0291b87501c393385c675e4b914a"
+        }
+      ]
     }
   }
 }

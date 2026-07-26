@@ -1,0 +1,214 @@
+{
+  "schema_version": 1,
+  "project": "runsieve",
+  "contract_v2_root": "8686965f35a6521400e404891a72fb5d8dc3471d",
+  "source_commit": "c866277d061130d8942ed37fe855bd708110b1f8",
+  "include_paths": [
+    ".github/ISSUE_TEMPLATE/bug-report.yml",
+    ".github/ISSUE_TEMPLATE/reproduction-failure.yml",
+    ".github/dependabot.yml",
+    ".github/workflows/ci.yml",
+    ".github/workflows/release.yml",
+    ".gitignore",
+    "CHANGELOG.md",
+    "CODE_OF_CONDUCT.md",
+    "CONTRIBUTING.md",
+    "GOVERNANCE.md",
+    "LICENSE",
+    "MANUAL_REQUIRED.md",
+    "README.md",
+    "RELEASING.md",
+    "ROADMAP.md",
+    "SECURITY.md",
+    "SUPPORT.md",
+    "docs/ARCHITECTURE.md",
+    "docs/EVIDENCE.md",
+    "docs/LAUNCH.md",
+    "docs/PRIVACY.md",
+    "docs/RESEARCH_SOURCES.md",
+    "docs/adr/0001-terminology-and-maturity.md",
+    "docs/adr/0002-defer-application-replay.md",
+    "docs/case-studies/BLOCKERS.md",
+    "docs/case-studies/README.md",
+    "docs/case-studies/TEMPLATE.md",
+    "docs/case-studies/synthetic/killer-247.md",
+    "docs/dependencies.md",
+    "docs/format-compatibility.md",
+    "docs/migration-plan.md",
+    "docs/product.md",
+    "docs/quality-plan.md",
+    "docs/recovery.md",
+    "docs/research.md",
+    "docs/security-review.md",
+    "pyproject.toml",
+    "requirements-audit.txt",
+    "schemas/capsule-v1.schema.json",
+    "schemas/materialization-v1.schema.json",
+    "schemas/predicate-report-v1.schema.json",
+    "schemas/reduction-report-v1.schema.json",
+    "scripts/__init__.py",
+    "scripts/detect_secrets_check.py",
+    "scripts/evidence.py",
+    "scripts/gates/RS_G01.py",
+    "scripts/gates/RS_G02.py",
+    "scripts/gates/RS_G03.py",
+    "scripts/gates/RS_G04.py",
+    "scripts/gates/RS_G05.py",
+    "scripts/gates/RS_G06.py",
+    "scripts/gates/RS_G07.py",
+    "scripts/gates/RS_G08.py",
+    "scripts/gates/RS_G09.py",
+    "scripts/gates/RS_G10.py",
+    "scripts/gates/RS_G11.py",
+    "scripts/gates/RS_G12.py",
+    "scripts/gates/RS_G13.py",
+    "scripts/gates/__init__.py",
+    "scripts/gates/_verify.py",
+    "scripts/generate_gate_evidence.py",
+    "scripts/installed_cli_smoke.py",
+    "scripts/killer_demo.py",
+    "scripts/package_matrix_proof.py",
+    "scripts/portable_reproduction_proof.py",
+    "scripts/security_check.py",
+    "src/runsieve/__init__.py",
+    "src/runsieve/_capture_bootstrap.py",
+    "src/runsieve/adapters/__init__.py",
+    "src/runsieve/adapters/openai_agents.py",
+    "src/runsieve/capsule.py",
+    "src/runsieve/cli.py",
+    "src/runsieve/ddmin.py",
+    "src/runsieve/export.py",
+    "src/runsieve/fixtures.py",
+    "src/runsieve/hierarchy.py",
+    "src/runsieve/predicate.py",
+    "src/runsieve/py.typed",
+    "src/runsieve/redact.py",
+    "src/runsieve/replay.py",
+    "src/runsieve/safeio.py",
+    "src/runsieve/schema.py",
+    "src/runsieve/verify.py",
+    "tests/__init__.py",
+    "tests/golden/materialization-v1.json",
+    "tests/helpers.py",
+    "tests/test_capsule.py",
+    "tests/test_cli_e2e.py",
+    "tests/test_ddmin.py",
+    "tests/test_export_security.py",
+    "tests/test_format_artifacts.py",
+    "tests/test_gate_verifiers.py",
+    "tests/test_hierarchy.py",
+    "tests/test_installed_cli_smoke.py",
+    "tests/test_openai_adapter.py",
+    "tests/test_package_matrix_proof.py",
+    "tests/test_portable_reproduction_proof.py",
+    "tests/test_predicate.py",
+    "tests/test_redact.py",
+    "tests/test_reducer_differential.py",
+    "tests/test_release_contract.py",
+    "tests/test_replay.py",
+    "tests/test_schema.py",
+    "tests/test_security_tooling.py"
+  ],
+  "excluded_paths": [
+    {
+      "path": ".agent-state.json",
+      "reason": "contract-v1 execution anchor"
+    },
+    {
+      "path": ".evidence/",
+      "reason": "contract-v1 and superseded evidence"
+    },
+    {
+      "path": ".gitattributes",
+      "reason": "retain the reviewed contract-v2 root attributes"
+    },
+    {
+      "path": ".secrets.baseline",
+      "reason": "contains v1 state and verifier classifications; regenerate only after review"
+    },
+    {
+      "path": "AGENTS.md",
+      "reason": "immutable contract-v2 control file"
+    },
+    {
+      "path": "CODEX_START.txt",
+      "reason": "immutable contract-v2 control file"
+    },
+    {
+      "path": "CODEX_TASKS.json",
+      "reason": "immutable contract-v2 control file"
+    },
+    {
+      "path": "CONTRACT_VERSION.json",
+      "reason": "immutable contract-v2 identity"
+    },
+    {
+      "path": "GATE_REGISTRY.json",
+      "reason": "immutable contract-v2 control file"
+    },
+    {
+      "path": "MANUAL_REQUIRED.json",
+      "reason": "retain empty contract-v2 mutable state"
+    },
+    {
+      "path": "PROGRESS.json",
+      "reason": "retain all-pending contract-v2 mutable state"
+    },
+    {
+      "path": "STATUS.md",
+      "reason": "v1 blocker status is stale; write a v2 status after verification"
+    },
+    {
+      "path": "WORKLOG.md",
+      "reason": "retain the fresh contract-v2 work log"
+    },
+    {
+      "path": "docs/AUTONOMOUS_LOOP.md",
+      "reason": "immutable contract-v2 control file"
+    },
+    {
+      "path": "docs/CONTROL_PLANE.md",
+      "reason": "immutable contract-v2 control file"
+    },
+    {
+      "path": "docs/EVIDENCE_CONTRACT.md",
+      "reason": "immutable contract-v2 control file"
+    },
+    {
+      "path": "docs/PRODUCT_CONTRACT.md",
+      "reason": "immutable contract-v2 control file"
+    },
+    {
+      "path": "docs/PROOF_GATES.md",
+      "reason": "immutable contract-v2 control file"
+    },
+    {
+      "path": "docs/RELEASE_STANDARD.md",
+      "reason": "immutable contract-v2 control file"
+    },
+    {
+      "path": "scripts/bootstrap.py",
+      "reason": "immutable contract-v2 control file"
+    },
+    {
+      "path": "scripts/contract.py",
+      "reason": "immutable contract-v2 control file"
+    },
+    {
+      "path": "scripts/contract_self_test.py",
+      "reason": "immutable contract-v2 control file"
+    },
+    {
+      "path": "scripts/next_task.py",
+      "reason": "immutable contract-v2 control file"
+    },
+    {
+      "path": "scripts/release_gate.py",
+      "reason": "immutable contract-v2 control file"
+    },
+    {
+      "path": "scripts/verify.py",
+      "reason": "immutable contract-v2 control file"
+    }
+  ]
+}

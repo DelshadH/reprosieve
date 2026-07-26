@@ -13,3 +13,4 @@ build/
 .hypothesis/
 htmlcov/
 .coverage.*
+.test-env/

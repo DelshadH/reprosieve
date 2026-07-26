@@ -3,6 +3,9 @@ on:
   pull_request:
   push:
     branches: [main]
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
@@ -12,14 +15,169 @@ jobs:
       matrix:
         python: ["3.11", "3.12", "3.13"]
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      RUNSIEVE_EVIDENCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-python@v5
+          ref: ${{ env.RUNSIEVE_EVIDENCE_COMMIT }}
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: ${{ matrix.python }}
       - run: python -m pip install --upgrade pip
-      - run: python -m pip install -e .
-      - run: python -m scripts.verify
-      # RS-000 must pin action SHAs and lock development tooling before release.
+      - run: python -m pip install -e ".[dev]"
+      - run: python -m pytest
+      - run: python -m ruff check .
+      - run: python -m mypy
+      - run: python -m build
+      - name: Smoke-test wheel without source tree
+        run: |
+          python -m venv .test-env/smoke
+          .test-env/smoke/bin/python -m pip install --no-deps dist/*.whl
+          cd .test-env
+          smoke/bin/runsieve --help
+      - name: Produce measured package proof
+        run: >-
+          python -m scripts.package_matrix_proof
+          --output "${{ runner.temp }}/rs-g13-proof"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: rs-g13-py${{ matrix.python }}
+          path: ${{ runner.temp }}/rs-g13-proof
+          if-no-files-found: error
+          retention-days: 7
+  security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      RUNSIEVE_EVIDENCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ env.RUNSIEVE_EVIDENCE_COMMIT }}
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install ".[dev]"
+      - run: python -m pip_audit --strict --requirement requirements-audit.txt
+      - run: python -m bandit -q -r src -lll
+      - run: python scripts/security_check.py
+      - run: python scripts/detect_secrets_check.py
+      - run: pip-licenses --format=markdown --with-urls
+  portable-reproduction:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+          - os: macos-latest
+            platform: macos
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    env:
+      RUNSIEVE_EVIDENCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ env.RUNSIEVE_EVIDENCE_COMMIT }}
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - run: python -m pip install -e ".[dev]"
+      - run: >-
+          python -m pytest -q
+          tests/test_cli_e2e.py::test_minimize_verify_replay_and_one_command_export
+          tests/test_export_security.py::test_standalone_reproducer_restores_declared_environment
+      - name: Produce measured portable-reproduction proof
+        run: >-
+          python -m scripts.portable_reproduction_proof
+          --output "${{ runner.temp }}/rs-g10-proof"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: rs-g10-${{ matrix.platform }}
+          path: ${{ runner.temp }}/rs-g10-proof
+          if-no-files-found: error
+          retention-days: 7
+  rs-g10-evidence:
+    needs: portable-reproduction
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      RUNSIEVE_EVIDENCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ env.RUNSIEVE_EVIDENCE_COMMIT }}
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - run: python -m pip install -e ".[dev]"
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: rs-g10-linux
+          path: ${{ runner.temp }}/proofs/linux
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: rs-g10-macos
+          path: ${{ runner.temp }}/proofs/macos
+      - name: Validate and aggregate RS-G10 evidence
+        run: >-
+          python -m scripts.generate_gate_evidence
+          RS-G10 "github-${{ github.run_id }}-${{ github.run_attempt }}"
+          --proof-input "${{ runner.temp }}/proofs/linux"
+          --proof-input "${{ runner.temp }}/proofs/macos"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: rs-g10-evidence
+          path: .evidence/RS-G10/github-${{ github.run_id }}-${{ github.run_attempt }}
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+  rs-g13-evidence:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      RUNSIEVE_EVIDENCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ env.RUNSIEVE_EVIDENCE_COMMIT }}
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - run: python -m pip install -e ".[dev]"
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: rs-g13-py3.11
+          path: ${{ runner.temp }}/proofs/py311
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: rs-g13-py3.12
+          path: ${{ runner.temp }}/proofs/py312
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: rs-g13-py3.13
+          path: ${{ runner.temp }}/proofs/py313
+      - name: Validate and aggregate RS-G13 evidence
+        run: >-
+          python -m scripts.generate_gate_evidence
+          RS-G13 "github-${{ github.run_id }}-${{ github.run_attempt }}"
+          --proof-input "${{ runner.temp }}/proofs/py311"
+          --proof-input "${{ runner.temp }}/proofs/py312"
+          --proof-input "${{ runner.temp }}/proofs/py313"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: rs-g13-evidence
+          path: .evidence/RS-G13/github-${{ github.run_id }}-${{ github.run_attempt }}
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7

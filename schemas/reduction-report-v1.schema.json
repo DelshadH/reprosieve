@@ -1,0 +1,29 @@
+{
+  "$id": "https://github.com/DelshadH/runsieve/schemas/reduction-report-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "artifact_bytes": {"minimum": 1, "type": "integer"},
+    "artifact_sha256": {"pattern": "^[a-f0-9]{64}$", "type": "string"},
+    "final_predicate": {"type": "object"},
+    "format": {"const": "runsieve-reduction-report"},
+    "format_version": {"const": 1},
+    "minimality": {"type": "object"},
+    "predicate": {"type": "object"},
+    "reduction": {"type": "object"},
+    "source_sha256": {"pattern": "^[a-f0-9]{64}$", "type": "string"}
+  },
+  "required": [
+    "artifact_bytes",
+    "artifact_sha256",
+    "final_predicate",
+    "format",
+    "format_version",
+    "minimality",
+    "predicate",
+    "reduction",
+    "source_sha256"
+  ],
+  "title": "RunSieve reduction report version 1",
+  "type": "object"
+}

@@ -1,0 +1,35 @@
+{
+  "$id": "https://github.com/DelshadH/runsieve/schemas/predicate-report-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "attempts": {
+      "items": {
+        "properties": {
+          "reason": {"type": "string"},
+          "result": {"enum": ["reproduces", "absent", "invalid"]},
+          "trial": {"minimum": 0, "type": "integer"},
+          "workspace_id": {"type": "string"}
+        },
+        "required": ["reason", "result", "trial", "workspace_id"],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "cache_key": {"pattern": "^[a-f0-9]{64}$", "type": "string"},
+    "mode": {"enum": ["deterministic", "probabilistic"]},
+    "required_reproductions": {"minimum": 1, "type": "integer"},
+    "result": {"enum": ["reproduces", "absent", "invalid"]},
+    "trials": {"minimum": 1, "type": "integer"}
+  },
+  "required": [
+    "attempts",
+    "cache_key",
+    "mode",
+    "required_reproductions",
+    "result",
+    "trials"
+  ],
+  "title": "RunSieve predicate report version 1",
+  "type": "object"
+}
