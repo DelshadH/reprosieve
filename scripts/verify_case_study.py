@@ -296,7 +296,9 @@ def verify_case_study_package(directory: Path) -> dict[str, Any]:
             raise ValueError("case-study package contains a symbolic link")
         if path.is_file():
             actual_paths.add(path.relative_to(root).as_posix())
-        elif not path.is_dir():
+        elif path.is_dir():
+            ensure_real_directory(path, label="case-study package directory")
+        else:
             raise ValueError("case-study package contains an unsupported entry")
     if actual_paths != declared_paths:
         raise ValueError("case-study package file inventory is incomplete")

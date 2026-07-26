@@ -151,6 +151,31 @@ def test_case_study_rejects_uninventoried_file(tmp_path: Path) -> None:
         verify_case_study_package(root)
 
 
+def test_case_study_rejects_link_like_directory_when_is_symlink_is_false(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = _case_study(tmp_path)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    linked = root / "unreviewed-directory"
+    try:
+        linked.symlink_to(outside, target_is_directory=True)
+    except OSError:
+        pytest.skip("directory symlink creation is unavailable")
+    original_is_symlink = Path.is_symlink
+
+    def junction_like(path: Path) -> bool:
+        if path == linked:
+            return False
+        return original_is_symlink(path)
+
+    monkeypatch.setattr(Path, "is_symlink", junction_like)
+
+    with pytest.raises(ValueError, match="symlink|junction"):
+        verify_case_study_package(root)
+
+
 def test_application_replay_case_requires_application_artifacts(
     tmp_path: Path,
 ) -> None:
