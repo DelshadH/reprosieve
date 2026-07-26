@@ -17,20 +17,49 @@ EXCLUDED = (
 _BATCH_SIZE = 50
 
 
-def _reviewed_baseline() -> None:
+FindingIdentity = tuple[str, str, str]
+
+
+def _normalize_path(path: str) -> str:
+    return path.replace("\\", "/")
+
+
+def _reviewed_findings(baseline: object) -> set[FindingIdentity]:
+    if not isinstance(baseline, dict):
+        raise ValueError("detect-secrets baseline is missing or invalid")
+    results = baseline.get("results")
+    if not isinstance(results, dict) or not results:
+        raise ValueError("detect-secrets baseline has no reviewed findings")
+    reviewed: set[FindingIdentity] = set()
+    for path, findings in results.items():
+        if not isinstance(path, str) or not isinstance(findings, list):
+            raise ValueError("detect-secrets baseline contains unaudited findings")
+        for finding in findings:
+            if (
+                not isinstance(finding, dict)
+                or finding.get("is_secret") is not False
+                or not isinstance(finding.get("type"), str)
+                or not isinstance(finding.get("hashed_secret"), str)
+            ):
+                raise ValueError(
+                    "detect-secrets baseline contains unaudited findings"
+                )
+            reviewed.add(
+                (
+                    _normalize_path(path),
+                    finding["type"],
+                    finding["hashed_secret"],
+                )
+            )
+    return reviewed
+
+
+def _reviewed_baseline() -> set[FindingIdentity]:
     try:
         baseline = json.loads(BASELINE.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
         raise ValueError("detect-secrets baseline is missing or invalid") from error
-    results = baseline.get("results") if isinstance(baseline, dict) else None
-    if not isinstance(results, dict) or not results:
-        raise ValueError("detect-secrets baseline has no reviewed findings")
-    for findings in results.values():
-        if not isinstance(findings, list) or any(
-            not isinstance(finding, dict) or finding.get("is_secret") is not False
-            for finding in findings
-        ):
-            raise ValueError("detect-secrets baseline contains unaudited findings")
+    return _reviewed_findings(baseline)
 
 
 def _hook_command() -> list[str]:
@@ -40,8 +69,6 @@ def _hook_command() -> list[str]:
         raise ValueError("detect-secrets-hook is not installed beside this Python")
     return [
         str(executable),
-        "--baseline",
-        BASELINE.relative_to(ROOT).as_posix(),
         "--no-verify",
         "--json",
         "--exclude-files",
@@ -51,7 +78,7 @@ def _hook_command() -> list[str]:
 
 def check_files(files: list[str]) -> int:
     try:
-        _reviewed_baseline()
+        reviewed = _reviewed_baseline()
         command = _hook_command()
     except ValueError as error:
         print(str(error), file=sys.stderr)
@@ -76,9 +103,33 @@ def check_files(files: list[str]) -> int:
             if not isinstance(results, dict) or not results:
                 print("detect-secrets-hook failed without findings", file=sys.stderr)
                 return 1
-            for path in sorted(results):
-                print(f"{path}: new detect-secrets finding", file=sys.stderr)
-            return 1
+            unreviewed: set[str] = set()
+            for path, findings in results.items():
+                if not isinstance(path, str) or not isinstance(findings, list):
+                    print(
+                        "detect-secrets-hook returned an invalid report",
+                        file=sys.stderr,
+                    )
+                    return 1
+                for finding in findings:
+                    identity = (
+                        _normalize_path(path),
+                        finding.get("type") if isinstance(finding, dict) else "",
+                        (
+                            finding.get("hashed_secret")
+                            if isinstance(finding, dict)
+                            else ""
+                        ),
+                    )
+                    if identity not in reviewed:
+                        unreviewed.add(path)
+            if unreviewed:
+                for path in sorted(unreviewed):
+                    print(
+                        f"{path}: new detect-secrets finding",
+                        file=sys.stderr,
+                    )
+                return 1
     return 0
 
 
