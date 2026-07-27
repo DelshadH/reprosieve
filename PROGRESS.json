@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "project": "runsieve",
-  "updated_at": "2026-07-27T10:52:41.671884Z",
+  "updated_at": "2026-07-27T11:01:32.482451Z",
   "tasks": {
     "RS-000": {
       "status": "passed",
@@ -18,8 +18,8 @@
       "status": "passed",
       "evidence": [
         {
-          "path": ".evidence/RS-G01/local-a660531-g01/manifest.json",
-          "sha256": "ebf349c7e3e6e8078a1fc91d1890fed13d48a2435012090fd1591668cc5f8a34"
+          "path": ".evidence/RS-G01/security-7945654-g01/manifest.json",
+          "sha256": "27d7cc5224109dfc763da2081faeea515d590eb09fd7be5ccd4258b49f8eaeee"
         }
       ],
       "notes": "Public SDK capture and deterministic recorded-output materialization feasibility are measured.",
@@ -133,8 +133,8 @@
       "status": "passed",
       "evidence": [
         {
-          "path": ".evidence/RS-G01/local-a660531-g01/manifest.json",
-          "sha256": "ebf349c7e3e6e8078a1fc91d1890fed13d48a2435012090fd1591668cc5f8a34"
+          "path": ".evidence/RS-G01/security-7945654-g01/manifest.json",
+          "sha256": "27d7cc5224109dfc763da2081faeea515d590eb09fd7be5ccd4258b49f8eaeee"
         }
       ]
     },

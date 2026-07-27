@@ -32,6 +32,18 @@ Decision: commit the implementation port before generating any contract-v2 evide
 Ending commit: pending implementation-port commit
 Manual item: none
 
+## 2026-07-27T11:01:32Z — RS-010 — verifier refresh proof
+Objective: Refresh RS-G01 after its independent verifier changed on public main.
+Starting commit: 79456541ed75a7789a8306f6de7ce4b51c619873
+Deadline state: autonomous release remediation; within scope
+Approach: Execute every registered RS-G01 measurement from a clean exact commit and verify the resulting manifest.
+Commands: `.evidence/RS-G01/security-7945654-g01/manifest.json`
+Result: passed
+Observed facts: Public processor capture, exporter replacement, duplicate-export prevention, private-import scanning, and synthetic trace capture all passed.
+Decision: replace the stale ancestor proof with exact-verifier evidence.
+Ending commit: pending evidence-registration commit
+Manual item: none
+
 ## 2026-07-25T19:16:00Z — RS-010 — attempt 1
 Objective: Measure public SDK capture without private imports, duplicate export, or unstated replay.
 Starting commit: a660531a0fec1479545227a248fc68448ca9646a
