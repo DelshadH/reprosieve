@@ -144,7 +144,7 @@ def _execute_measurements(
 ) -> tuple[tuple[dict[str, object], ...], tuple[dict[str, object], ...]]:
     commands: list[dict[str, object]] = []
     for index, measurement in enumerate(spec.measurements):
-        if measurement.kind not in {"pytest", "command"}:
+        if measurement.kind not in {"pytest", "command", "minimality-oracle"}:
             raise RuntimeError(
                 f"{spec.gate} requires externally produced proof inputs"
             )
