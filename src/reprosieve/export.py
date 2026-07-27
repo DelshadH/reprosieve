@@ -80,7 +80,7 @@ def strict_json(payload: bytes) -> object:
         return result
 
     return json.loads(
-        payload,
+        payload.decode("utf-8"),
         object_pairs_hook=reject_pairs,
         parse_constant=lambda _value: (_ for _ in ()).throw(ValueError("non-finite JSON")),
     )

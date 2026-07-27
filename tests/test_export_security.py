@@ -11,7 +11,12 @@ from pathlib import Path
 import pytest
 
 import reprosieve.export as export_module
-from reprosieve.capsule import capsule_bytes, load_capsule, write_capsule
+from reprosieve.capsule import (
+    capsule_bytes,
+    load_capsule,
+    read_capsule_document,
+    write_capsule,
+)
 from reprosieve.export import export_reproduction
 from reprosieve.fixtures import killer_capsule
 from reprosieve.predicate import PredicateSpec
@@ -239,6 +244,73 @@ def test_standalone_reproducer_rejects_json_rejected_by_the_main_loader(
     )
     assert result.returncode == 2
     assert result.stderr.strip() == "reproduction capsule invalid"
+
+
+def test_standalone_reproducer_rejects_non_utf8_json_like_the_main_loader(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "source.reprosieve"
+    spec = PredicateSpec(("python", "verify_failure.py")).to_json()
+    write_capsule(killer_capsule(), source, predicate=spec)
+    output = export_reproduction(source, tmp_path / "repro")
+    capsule_path = output / "capsule.reprosieve"
+    valid_data = capsule_path.read_bytes()
+    canonical_predicate = (
+        json.dumps(spec, separators=(",", ":"), sort_keys=True) + "\n"
+    )
+
+    for hostile_predicate in (
+        canonical_predicate.encode("utf-16"),
+        b"\xef\xbb\xbf" + canonical_predicate.encode("utf-8"),
+    ):
+        capsule_path.write_bytes(
+            rewrite_capsule_members(
+                valid_data,
+                {"predicate.json": hostile_predicate},
+            )
+        )
+        with pytest.raises(ValueError):
+            read_capsule_document(capsule_path, "predicate.json")
+        result = subprocess.run(
+            [sys.executable, "reproduce.py", "--trust-embedded-predicate"],
+            cwd=output,
+            env={
+                "PATH": os.environ.get("PATH", ""),
+                "SYSTEMROOT": os.environ.get("SYSTEMROOT", ""),
+            },
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+        assert result.returncode == 2
+        assert result.stderr.strip() == "reproduction capsule invalid"
+
+
+def test_main_loader_and_export_reject_duplicate_workspace_index_paths(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "duplicate-workspace-index.reprosieve"
+    write_capsule(
+        killer_capsule(),
+        source,
+        predicate=PredicateSpec(("python", "verify_failure.py")).to_json(),
+    )
+    source.write_bytes(
+        rewrite_capsule_members(
+            source.read_bytes(),
+            {
+                "workspace/index.json": (
+                    b'["verify_failure.py","verify_failure.py"]\n'
+                )
+            },
+        )
+    )
+
+    with pytest.raises(ValueError, match="workspace path collision"):
+        load_capsule(source)
+    with pytest.raises(ValueError, match="workspace path collision"):
+        export_reproduction(source, tmp_path / "repro")
 
 
 def test_standalone_reproducer_rejects_members_outside_the_public_schema(

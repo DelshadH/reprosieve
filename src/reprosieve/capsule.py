@@ -7,7 +7,7 @@ import stat
 import zipfile
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from types import MappingProxyType
 from typing import Any, Literal, cast
 
@@ -316,10 +316,18 @@ def _capsule_from_members(
     if not isinstance(events_raw, list) or not isinstance(workspace_index, list):
         raise ValueError("capsule event or workspace index is invalid")
     workspace: dict[str, str] = {}
+    workspace_identities: set[str] = set()
     for path_value in workspace_index:
         if not isinstance(path_value, str):
             raise ValueError("workspace index paths must be strings")
         path_name = safe_relative_path(path_value, label="workspace path")
+        portable_identity = "/".join(
+            component.casefold()
+            for component in PurePosixPath(path_name).parts
+        )
+        if portable_identity in workspace_identities:
+            raise ValueError("workspace path collision")
+        workspace_identities.add(portable_identity)
         member_name = f"workspace/files/{path_name}"
         if member_name not in members:
             raise ValueError("workspace file is missing")
