@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "project": "runsieve",
-  "updated_at": "2026-07-27T11:01:32.482451Z",
+  "updated_at": "2026-07-27T11:03:08.969248Z",
   "tasks": {
     "RS-000": {
       "status": "passed",
@@ -55,8 +55,8 @@
       "status": "passed",
       "evidence": [
         {
-          "path": ".evidence/RS-G06/local-a660531-g06/manifest.json",
-          "sha256": "720dd93c0f420f79523f98ecb0457da0fd69c74a547b56b8c81de6917a79714b"
+          "path": ".evidence/RS-G06/security-16dac1f-g06/manifest.json",
+          "sha256": "df73947e1d5f51bcea8dac70d74c2e636b322450bd66c90486cc1c0eacd7d5a6"
         },
         {
           "path": ".evidence/RS-G07/local-a660531-g07/manifest.json",
@@ -178,8 +178,8 @@
       "status": "passed",
       "evidence": [
         {
-          "path": ".evidence/RS-G06/local-a660531-g06/manifest.json",
-          "sha256": "720dd93c0f420f79523f98ecb0457da0fd69c74a547b56b8c81de6917a79714b"
+          "path": ".evidence/RS-G06/security-16dac1f-g06/manifest.json",
+          "sha256": "df73947e1d5f51bcea8dac70d74c2e636b322450bd66c90486cc1c0eacd7d5a6"
         }
       ]
     },

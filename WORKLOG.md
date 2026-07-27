@@ -211,3 +211,15 @@ Observed facts: Both fresh-directory standalone reproductions used `python repro
 Decision: replace the stale RS-G10 reference whose recorded command omitted the required trust flag.
 Ending commit: pending evidence-registration commit
 Manual item: none
+
+## 2026-07-27T11:03:08Z — RS-050 — minimality-oracle proof refresh
+Objective: Refresh RS-G06 against its current independent minimality oracle.
+Starting commit: 16dac1f444370b1fc7373df019fc98516921d28a
+Deadline state: autonomous release remediation; within scope
+Approach: Collect the registered oracle command and invalid-reason regression from a clean exact commit, then verify their structured evidence.
+Commands: `.evidence/RS-G06/security-16dac1f-g06/manifest.json`
+Result: passed
+Observed facts: Every declared final unit was enumerated, no unit was removable, and invalid candidate reasons were retained.
+Decision: replace stale pre-oracle evidence and keep the oracle as a first-class locally executable measurement.
+Ending commit: pending evidence-registration commit
+Manual item: none
