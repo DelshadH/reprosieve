@@ -135,7 +135,7 @@ def run_installed_flows(distribution: Path, *, with_openai: bool) -> tuple[str, 
         )
         flows.append("export")
         _run(
-            [str(python), "reproduce.py"],
+            [str(python), "reproduce.py", "--trust-embedded-predicate"],
             cwd=exported,
             environment=environment,
         )

@@ -174,6 +174,28 @@ def test_offline_guard_rejects_socket_audit_events_without_opening_a_connection(
     assert report.result is PredicateResult.REPRODUCES
 
 
+@pytest.mark.parametrize(
+    "event",
+    ["os.exec", "os.forkpty", "os.startfile", "os.add_dll_directory"],
+)
+def test_offline_guard_rejects_process_and_native_loading_audit_events(
+    event: str,
+) -> None:
+    capsule = _capsule_with_script(
+        "import sys\n"
+        "try:\n"
+        f"    sys.audit({event!r})\n"
+        "except PermissionError:\n"
+        "    raise SystemExit(0)\n"
+        "raise SystemExit(1)\n"
+    )
+    report = run_predicate(
+        capsule,
+        PredicateSpec(("python", "predicate.py"), timeout_seconds=2),
+    )
+    assert report.result is PredicateResult.REPRODUCES
+
+
 def test_offline_guard_blocks_host_files_and_child_processes(tmp_path: Path) -> None:
     host_file = tmp_path / "host-secret.txt"
     host_file.write_text("host secret", encoding="utf-8")

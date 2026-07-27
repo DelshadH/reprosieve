@@ -51,7 +51,7 @@ def run() -> int:
         if main(["export", str(artifact), "--output", str(export)]):
             return 1
         proof = subprocess.run(
-            [sys.executable, "reproduce.py"],
+            [sys.executable, "reproduce.py", "--trust-embedded-predicate"],
             cwd=export,
             stdin=subprocess.DEVNULL,
             capture_output=True,

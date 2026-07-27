@@ -5,8 +5,10 @@ import io
 import json
 import stat
 import zipfile
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
+from types import MappingProxyType
 from typing import Any, Literal, cast
 
 from .safeio import ensure_new_path, read_regular_file_bounded
@@ -49,6 +51,24 @@ class CapsuleInfo:
     sha256: str
     size: int
     content_sha256: str
+
+
+@dataclass(frozen=True, slots=True)
+class CapsuleSnapshot:
+    data: bytes
+    capsule: Capsule
+    _members: Mapping[str, bytes] = field(repr=False)
+
+    @property
+    def sha256(self) -> str:
+        return hashlib.sha256(self.data).hexdigest()
+
+    def document(self, name: str) -> dict[str, Any]:
+        if name not in {"redaction.json", "predicate.json"}:
+            raise ValueError("unsupported capsule document")
+        if name not in self._members:
+            raise ValueError("capsule document is missing")
+        return _require_dict(_load_json(self._members[name], label=name), label=name)
 
 
 def canonical_json(value: object) -> bytes:
@@ -269,16 +289,23 @@ def _require_dict(value: Any, *, label: str) -> dict[str, Any]:
     return value
 
 
-def load_capsule(path: str | Path, *, limits: CapsuleLimits | None = None) -> Capsule:
-    selected_limits = limits or CapsuleLimits()
-    data = read_regular_file_bounded(
-        path,
-        max_bytes=selected_limits.max_archive_bytes,
-        label="capsule archive",
-    )
-    members, manifest = _validated_members(data, selected_limits)
+def _capsule_from_members(
+    members: Mapping[str, bytes],
+    manifest: Mapping[str, Any],
+    *,
+    limits: CapsuleLimits,
+) -> Capsule:
     if not _REQUIRED_MEMBERS.issubset(members):
         raise ValueError("capsule is missing required members")
+    unsupported_members = {
+        name
+        for name in members
+        if name not in _REQUIRED_MEMBERS
+        and name != "manifest.json"
+        and not name.startswith("workspace/files/")
+    }
+    if unsupported_members:
+        raise ValueError("capsule contains an unsupported capsule member")
     events_raw = _load_json(members["events/v1.json"], label="events")
     metadata = _require_dict(_load_json(members["metadata.json"], label="metadata"), label="metadata")
     environment = _require_dict(
@@ -344,8 +371,32 @@ def load_capsule(path: str | Path, *, limits: CapsuleLimits | None = None) -> Ca
         workspace={key: workspace[key] for key in sorted(workspace)},
         environment={str(key): value for key, value in environment.items()},
     )
-    validate_capsule(capsule, limits=selected_limits.schema)
+    validate_capsule(capsule, limits=limits.schema)
     return capsule
+
+
+def load_capsule_snapshot(
+    path: str | Path,
+    *,
+    limits: CapsuleLimits | None = None,
+) -> CapsuleSnapshot:
+    selected_limits = limits or CapsuleLimits()
+    data = read_regular_file_bounded(
+        path,
+        max_bytes=selected_limits.max_archive_bytes,
+        label="capsule archive",
+    )
+    members, manifest = _validated_members(data, selected_limits)
+    capsule = _capsule_from_members(members, manifest, limits=selected_limits)
+    return CapsuleSnapshot(
+        data=data,
+        capsule=capsule,
+        _members=MappingProxyType(members),
+    )
+
+
+def load_capsule(path: str | Path, *, limits: CapsuleLimits | None = None) -> Capsule:
+    return load_capsule_snapshot(path, limits=limits).capsule
 
 
 def capsule_file_sha256(path: str | Path) -> str:
@@ -363,15 +414,4 @@ def read_capsule_document(
     *,
     limits: CapsuleLimits | None = None,
 ) -> dict[str, Any]:
-    if name not in {"redaction.json", "predicate.json"}:
-        raise ValueError("unsupported capsule document")
-    selected_limits = limits or CapsuleLimits()
-    data = read_regular_file_bounded(
-        path,
-        max_bytes=selected_limits.max_archive_bytes,
-        label="capsule archive",
-    )
-    members, _manifest = _validated_members(data, selected_limits)
-    if name not in members:
-        raise ValueError("capsule document is missing")
-    return _require_dict(_load_json(members[name], label=name), label=name)
+    return load_capsule_snapshot(path, limits=limits).document(name)

@@ -45,3 +45,8 @@ All notable changes will be recorded here.
 - Completed the non-destructive contract-v2 canonical migration, required CI
   and tag protections, independent AI technical review, and public-default
   fresh-clone proof.
+- Required explicit authorization before exported capsules execute embedded
+  Python; denied `os.exec` as defense in depth.
+- Made export, reduction, and verification consume one immutable validated
+  capsule snapshot; aligned standalone and package validation; rejected
+  undefined archive members and environment-selected temporary symlink roots.

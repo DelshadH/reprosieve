@@ -61,7 +61,7 @@ def portable_measurement(
 ) -> Measurement:
     return Measurement(
         assertions=assertions,
-        argv=("python", "reproduce.py"),
+        argv=("python", "reproduce.py", "--trust-embedded-predicate"),
         kind="portable-reproduction",
         platform=platform,
     )

@@ -53,7 +53,7 @@ def build_portable_proof(
 ) -> dict[str, Any]:
     return {
         "command": {
-            "argv": ["python", "reproduce.py"],
+            "argv": ["python", "reproduce.py", "--trust-embedded-predicate"],
             "exit_code": exit_code,
             "output_limit_bytes": output_limit_bytes,
             "stderr": _digest(stderr),
@@ -180,7 +180,7 @@ def collect(output: Path) -> dict[str, Any]:
                 )
             )
             completed = subprocess.run(
-                [sys.executable, "reproduce.py"],
+                [sys.executable, "reproduce.py", "--trust-embedded-predicate"],
                 cwd=clean_export,
                 env=environment,
                 stdin=subprocess.DEVNULL,

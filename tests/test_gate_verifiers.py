@@ -90,7 +90,7 @@ def test_rs_g10_portable_proof_requires_measured_platform_execution() -> None:
         "source_tree_present": False,
         "provider_keys_present": [],
         "command": {
-            "argv": ["python", "reproduce.py"],
+            "argv": ["python", "reproduce.py", "--trust-embedded-predicate"],
             "exit_code": 0,
             "output_limit_bytes": 65536,
             "stdout": {"bytes": 35, "sha256": "a" * 64},

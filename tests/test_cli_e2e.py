@@ -7,6 +7,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
+import reprosieve.capsule as capsule_module
 from reprosieve.capsule import load_capsule, write_capsule
 from reprosieve.cli import main
 from reprosieve.fixtures import killer_capsule
@@ -154,7 +157,7 @@ def test_minimize_verify_replay_and_one_command_export(tmp_path: Path, capfd: ob
         "SYSTEMROOT": os.environ.get("SYSTEMROOT", ""),
     }
     proof = subprocess.run(
-        [sys.executable, "reproduce.py"],
+        [sys.executable, "reproduce.py", "--trust-embedded-predicate"],
         cwd=export_directory,
         env=environment,
         stdin=subprocess.DEVNULL,
@@ -168,6 +171,51 @@ def test_minimize_verify_replay_and_one_command_export(tmp_path: Path, capfd: ob
     assert "OPENAI_API_KEY" not in proof.stdout + proof.stderr
     assert not any("__pycache__" in str(path) for path in export_directory.rglob("*"))
     capfd.readouterr()  # type: ignore[attr-defined]
+
+
+def test_reduce_uses_one_immutable_source_capsule_snapshot(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source = tmp_path / "source.reprosieve"
+    write_capsule(killer_capsule(), source)
+    original_read = capsule_module.read_regular_file_bounded
+    source_reads = 0
+
+    def count_source_reads(
+        path: str | Path,
+        *,
+        max_bytes: int,
+        label: str,
+    ) -> bytes:
+        nonlocal source_reads
+        if Path(path) == source:
+            source_reads += 1
+        return original_read(path, max_bytes=max_bytes, label=label)
+
+    monkeypatch.setattr(
+        capsule_module,
+        "read_regular_file_bounded",
+        count_source_reads,
+    )
+
+    assert (
+        main(
+            [
+                "reduce",
+                str(source),
+                "--output-dir",
+                str(tmp_path / "reduced"),
+                "--timeout",
+                "3",
+                "--predicate",
+                "python",
+                "verify_failure.py",
+            ]
+        )
+        == 0
+    )
+    assert source_reads == 1
 
 
 def test_reproduce_predicate_runs_the_declared_offline_predicate(tmp_path: Path) -> None:

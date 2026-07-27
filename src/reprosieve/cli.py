@@ -16,9 +16,8 @@ from pathlib import Path
 from .capsule import (
     canonical_json,
     capsule_bytes,
-    capsule_file_sha256,
     load_capsule,
-    read_capsule_document,
+    load_capsule_snapshot,
     write_capsule,
 )
 from .ddmin import PredicateResult
@@ -224,8 +223,9 @@ def _capture(args: argparse.Namespace) -> int:
 
 def _reduce(args: argparse.Namespace) -> int:
     source_path = Path(args.source)
-    source = load_capsule(source_path)
-    source_sha256 = capsule_file_sha256(source_path)
+    source_snapshot = load_capsule_snapshot(source_path)
+    source = source_snapshot.capsule
+    source_sha256 = source_snapshot.sha256
     spec = _spec(args)
     predicate_hash = hashlib.sha256(canonical_json(spec.to_json())).hexdigest()
     working = replace(
@@ -276,7 +276,7 @@ def _reduce(args: argparse.Namespace) -> int:
     else:
         ensure_new_path(output_directory, label="minimize output")
         output_directory.mkdir()
-    redaction = read_capsule_document(source_path, "redaction.json")
+    redaction = source_snapshot.document("redaction.json")
     data = capsule_bytes(final, redaction_report=redaction, predicate=spec.to_json())
     digest = hashlib.sha256(data).hexdigest()
     destination = output_directory / f"{digest}.reprosieve"
@@ -352,9 +352,10 @@ def _reproduce_predicate(args: argparse.Namespace) -> int:
 
 def _verify(args: argparse.Namespace) -> int:
     source_path = Path(args.source)
-    capsule = load_capsule(source_path)
+    source_snapshot = load_capsule_snapshot(source_path)
+    capsule = source_snapshot.capsule
     spec = _spec(args)
-    stored = read_capsule_document(source_path, "predicate.json")
+    stored = source_snapshot.document("predicate.json")
     if stored and stored != spec.to_json():
         raise ValueError("predicate does not match the capsule's recorded predicate")
 

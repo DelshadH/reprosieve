@@ -18,13 +18,35 @@ def is_link_like(path: Path) -> bool:
     )
 
 
+def _is_stable_system_temp_link(candidate: Path, temp_root: Path) -> bool:
+    if os.name != "posix" or (
+        candidate != temp_root and candidate not in temp_root.parents
+    ):
+        return False
+    if candidate not in {Path("/tmp"), Path("/var"), Path("/usr/tmp")}:
+        return False
+    try:
+        link_metadata = candidate.lstat()
+        parent_metadata = candidate.parent.stat()
+    except OSError:
+        return False
+    return (
+        link_metadata.st_uid == 0
+        and parent_metadata.st_uid == 0
+        and not parent_metadata.st_mode & (stat.S_IWGRP | stat.S_IWOTH)
+    )
+
+
 def _reject_link_ancestors(path: Path, *, label: str) -> Path:
     absolute = Path(os.path.abspath(path))
     temp_root = Path(os.path.abspath(tempfile.gettempdir()))
     candidates = (absolute, *absolute.parents)
     for candidate in candidates:
-        trusted_temp_prefix = candidate == temp_root or candidate in temp_root.parents
-        if candidate.exists() and is_link_like(candidate) and not trusted_temp_prefix:
+        if (
+            candidate.exists()
+            and is_link_like(candidate)
+            and not _is_stable_system_temp_link(candidate, temp_root)
+        ):
             raise ValueError(f"{label} must not use symlink or junction components")
     return absolute
 

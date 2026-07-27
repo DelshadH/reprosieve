@@ -14,7 +14,7 @@ import pytest
 
 from reprosieve.capsule import CapsuleLimits, capsule_bytes, load_capsule, write_capsule
 from reprosieve.safeio import read_regular_file_bounded
-from tests.helpers import sample_capsule
+from tests.helpers import rewrite_capsule_members, sample_capsule
 
 
 def test_capsule_is_deterministic_validated_and_immutable(tmp_path: Path) -> None:
@@ -51,6 +51,21 @@ def test_manifest_covers_every_payload_and_corruption_is_rejected(tmp_path: Path
     bad.write_bytes(corrupted)
     with pytest.raises(ValueError, match="corrupt|hash|archive"):
         load_capsule(bad)
+
+
+def test_manifest_covered_members_outside_the_public_schema_are_rejected(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "unknown-member.reprosieve"
+    source.write_bytes(
+        rewrite_capsule_members(
+            capsule_bytes(sample_capsule()),
+            {"unexpected/opaque.bin": b"manifest-covered but undefined"},
+        )
+    )
+
+    with pytest.raises(ValueError, match="unsupported capsule member"):
+        load_capsule(source)
 
 
 @pytest.mark.parametrize("member", ["../escape", "/absolute", "C:/drive", "a/../../b"])
@@ -188,7 +203,7 @@ def test_capsule_paths_reject_symlink_ancestors(tmp_path: Path) -> None:
         write_capsule(sample_capsule(), linked / "escape.reprosieve")
 
 
-def test_capsule_paths_allow_only_a_symlinked_system_temp_prefix(
+def test_capsule_paths_reject_an_environment_selected_symlinked_temp_root(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -196,20 +211,12 @@ def test_capsule_paths_allow_only_a_symlinked_system_temp_prefix(
 
     temp_root = tmp_path / "system-temp"
     temp_root.mkdir()
-    safe_directory = temp_root / "pytest-run"
-    safe_directory.mkdir()
-    user_link = safe_directory / "user-link"
-    user_link.mkdir()
     monkeypatch.setattr(tempfile, "gettempdir", lambda: str(temp_root))
     monkeypatch.setattr(
         safeio,
         "is_link_like",
-        lambda path: path in {temp_root, user_link},
+        lambda path: path == temp_root,
     )
 
-    output = safe_directory / "portable.reprosieve"
-    write_capsule(sample_capsule(), output)
-    assert output.is_file()
-
     with pytest.raises(ValueError, match="symlink|junction"):
-        write_capsule(sample_capsule(), user_link / "escape.reprosieve")
+        write_capsule(sample_capsule(), temp_root / "escape.reprosieve")

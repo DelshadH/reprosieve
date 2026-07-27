@@ -3,7 +3,7 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
-from .capsule import load_capsule, read_capsule_document
+from .capsule import load_capsule_snapshot
 from .predicate import predicate_spec_from_json
 from .safeio import ensure_new_path, ensure_regular_file
 from .schema import safe_relative_path
@@ -14,6 +14,7 @@ import hashlib
 import json
 import math
 import os
+import re
 import signal
 import stat
 import subprocess
@@ -83,6 +84,141 @@ def strict_json(payload: bytes) -> object:
         object_pairs_hook=reject_pairs,
         parse_constant=lambda _value: (_ for _ in ()).throw(ValueError("non-finite JSON")),
     )
+
+
+def validate_json(value: object) -> None:
+    nodes = 0
+    stack = [(value, 0)]
+    while stack:
+        current, depth = stack.pop()
+        nodes += 1
+        if nodes > 250_000 or depth > 64:
+            raise ValueError("JSON limit exceeded")
+        if current is None or isinstance(current, (bool, int)):
+            continue
+        if isinstance(current, float):
+            if not math.isfinite(current):
+                raise ValueError("non-finite JSON")
+            continue
+        if isinstance(current, str):
+            if len(current.encode("utf-8")) > 4 * 1024 * 1024:
+                raise ValueError("JSON string limit exceeded")
+            continue
+        if isinstance(current, list):
+            stack.extend((child, depth + 1) for child in current)
+            continue
+        if isinstance(current, dict):
+            stack.extend((child, depth + 1) for child in current.values())
+            continue
+        raise ValueError("non-JSON value")
+
+
+def validate_capsule_documents(
+    members: dict[str, bytes],
+    manifest: dict[str, object],
+) -> None:
+    identity = re.compile(r"^[A-Za-z0-9_.:-]{1,160}$")
+    environment_name = re.compile(r"^[A-Za-z_][A-Za-z0-9_]{0,127}$")
+    schema_version = manifest.get("schema_version")
+    trace_id = manifest.get("trace_id")
+    if schema_version != "1" or not isinstance(trace_id, str) or not identity.fullmatch(trace_id):
+        raise ValueError("invalid capsule identity")
+
+    events = strict_json(members["events/v1.json"])
+    if not isinstance(events, list) or not events or len(events) > 10_000:
+        raise ValueError("invalid events")
+    required_fields = {"id", "kind", "parent_id", "sequence", "payload", "dependencies"}
+    allowed_kinds = {
+        "run", "message", "model_request", "model_response", "tool_call",
+        "tool_result", "handoff", "guardrail", "error", "unknown",
+    }
+    seen: set[str] = set()
+    kinds: dict[str, str] = {}
+    last_sequence = -1
+    for event in events:
+        if not isinstance(event, dict) or set(event) != required_fields:
+            raise ValueError("invalid event fields")
+        event_id = event["id"]
+        kind = event["kind"]
+        parent_id = event["parent_id"]
+        sequence = event["sequence"]
+        dependencies = event["dependencies"]
+        if (
+            not isinstance(event_id, str)
+            or not identity.fullmatch(event_id)
+            or event_id in seen
+            or not isinstance(kind, str)
+            or kind not in allowed_kinds
+            or isinstance(sequence, bool)
+            or not isinstance(sequence, int)
+            or sequence <= last_sequence
+            or (parent_id is not None and (not isinstance(parent_id, str) or parent_id not in seen))
+            or not isinstance(dependencies, list)
+            or not all(isinstance(item, str) for item in dependencies)
+            or len(dependencies) != len(set(dependencies))
+            or any(item not in seen for item in dependencies)
+            or event_id in dependencies
+        ):
+            raise ValueError("invalid event")
+        if kind == "tool_result" and sum(kinds[item] == "tool_call" for item in dependencies) != 1:
+            raise ValueError("invalid tool result")
+        if (
+            kind == "model_response"
+            and sum(kinds[item] == "model_request" for item in dependencies) != 1
+        ):
+            raise ValueError("invalid model response")
+        validate_json(event["payload"])
+        seen.add(event_id)
+        kinds[event_id] = kind
+        last_sequence = sequence
+
+    metadata = strict_json(members["metadata.json"])
+    environment = strict_json(members["environment.json"])
+    workspace_index = strict_json(members["workspace/index.json"])
+    if not isinstance(metadata, dict):
+        raise ValueError("invalid metadata")
+    validate_json(metadata)
+    if (
+        not isinstance(environment, dict)
+        or len(environment) > 256
+        or any(
+            not isinstance(name, str)
+            or not environment_name.fullmatch(name)
+            or not isinstance(value, str)
+            or len(value.encode("utf-8")) > 4 * 1024 * 1024
+            for name, value in environment.items()
+        )
+    ):
+        raise ValueError("invalid environment")
+    if not isinstance(workspace_index, list) or len(workspace_index) > 256:
+        raise ValueError("invalid workspace index")
+    workspace_identities: set[str] = set()
+    expected_workspace: set[str] = set()
+    workspace_bytes = 0
+    for raw_path in workspace_index:
+        if not isinstance(raw_path, str):
+            raise ValueError("invalid workspace path")
+        path = safe_path(raw_path)
+        portable_identity = path_identity(path)
+        if portable_identity in workspace_identities:
+            raise ValueError("workspace path collision")
+        workspace_identities.add(portable_identity)
+        member_name = f"workspace/files/{path}"
+        if member_name not in members:
+            raise ValueError("workspace file is missing")
+        try:
+            members[member_name].decode("utf-8")
+        except UnicodeDecodeError as error:
+            raise ValueError("workspace file is not UTF-8") from error
+        workspace_bytes += len(members[member_name])
+        if workspace_bytes > 16 * 1024 * 1024:
+            raise ValueError("workspace size limit exceeded")
+        expected_workspace.add(member_name)
+    actual_workspace = {
+        name for name in members if name.startswith("workspace/files/")
+    }
+    if actual_workspace != expected_workspace:
+        raise ValueError("undeclared workspace file")
 
 
 def predicate_spec(value: object) -> dict[str, object]:
@@ -176,11 +312,31 @@ def load() -> tuple[dict[str, bytes], dict[str, object]]:
         content.update(bytes.fromhex(digest))
     if manifest.get("content_sha256") != content.hexdigest():
         raise ValueError("content hash mismatch")
+    required = {
+        "events/v1.json",
+        "metadata.json",
+        "environment.json",
+        "workspace/index.json",
+        "redaction.json",
+        "predicate.json",
+    }
+    if not required.issubset(members):
+        raise ValueError("missing required member")
+    if any(
+        name not in required
+        and name != "manifest.json"
+        and not name.startswith("workspace/files/")
+        for name in members
+    ):
+        raise ValueError("unsupported capsule member")
+    validate_capsule_documents(members, manifest)
     return members, manifest
 
 
 def replay(members: dict[str, bytes], trace_id: str) -> dict[str, object]:
-    events = json.loads(members["events/v1.json"])
+    events = strict_json(members["events/v1.json"])
+    if not isinstance(events, list):
+        raise ValueError("invalid events")
     kinds = {event["id"]: event["kind"] for event in events}
     models: list[dict[str, object]] = []
     tools: list[dict[str, object]] = []
@@ -252,7 +408,8 @@ def guard_source(timeout: float, output_limit: int, process_limit: int) -> str:
         "  roots=(_root,) if writing else (_root,_capsule,*_prefixes)\n"
         "  if not inside(args[0],roots): raise PermissionError('filesystem access denied')\n"
         " if event.startswith('subprocess.') or event in "
-        "{'os.system','os.spawn','os.posix_spawn','os.fork','pty.spawn','ctypes.dlopen'}:\n"
+        "{'os.exec','os.system','os.spawn','os.posix_spawn','os.fork','os.forkpty',"
+        "'os.startfile','os.add_dll_directory','pty.spawn','ctypes.dlopen'}:\n"
         "  raise PermissionError('child processes and native loading disabled')\n"
         " if event in {'os.remove','os.rmdir','os.mkdir','os.chdir'} "
         "and args and not inside(args[0],(_root,)):\n"
@@ -458,6 +615,11 @@ def trial(
 
 
 def main() -> int:
+    if sys.argv[1:] != ["--trust-embedded-predicate"]:
+        return fail(
+            "refusing to execute untrusted embedded Python; inspect the capsule and rerun "
+            "with --trust-embedded-predicate only if you accept arbitrary code execution"
+        )
     try:
         members, manifest = load()
         predicate = predicate_spec(strict_json(members["predicate.json"]))
@@ -481,10 +643,11 @@ if __name__ == "__main__":
 
 def export_reproduction(source: str | Path, output: str | Path) -> Path:
     source_path = ensure_regular_file(source, label="export source")
-    capsule = load_capsule(source_path)
+    snapshot = load_capsule_snapshot(source_path)
+    capsule = snapshot.capsule
     if "application_replay" in capsule.metadata:
         raise ValueError("application replay is not supported in the seed release")
-    predicate_document = read_capsule_document(source_path, "predicate.json")
+    predicate_document = snapshot.document("predicate.json")
     spec = predicate_spec_from_json(predicate_document)
     if len(spec.argv) < 2 or Path(spec.argv[0]).name.casefold() not in {
         "python",
@@ -500,15 +663,20 @@ def export_reproduction(source: str | Path, output: str | Path) -> Path:
     destination = ensure_new_path(output, label="export output")
     destination.mkdir(mode=0o700)
     try:
-        (destination / "capsule.reprosieve").write_bytes(source_path.read_bytes())
+        (destination / "capsule.reprosieve").write_bytes(snapshot.data)
         (destination / "reproduce.py").write_text(_REPRODUCER, encoding="utf-8", newline="\n")
         (destination / "README.md").write_text(
             "# ReproSieve issue reproduction\n\n"
-            "Run the redacted, offline reproduction with:\n\n"
-            "```bash\npython reproduce.py\n```\n\n"
+            "> **Security warning:** This capsule contains an embedded Python predicate. "
+            "It can execute arbitrary code with your user account's permissions. The "
+            "runtime controls are defense in depth, not an OS sandbox. Inspect and trust "
+            "the capsule before opting in.\n\n"
+            "After inspection, explicitly authorize the embedded predicate with:\n\n"
+            "```bash\npython reproduce.py --trust-embedded-predicate\n```\n\n"
             "The command validates the capsule, reconstructs recorded model and tool outputs, "
-            "runs the declared embedded predicate, denies outbound network, and never calls "
-            "the original provider or tools.\n",
+            "runs the declared embedded predicate in a fresh constrained directory, and never "
+            "calls the original provider or tools. Without the trust flag, it refuses to "
+            "execute the predicate.\n",
             encoding="utf-8",
             newline="\n",
         )

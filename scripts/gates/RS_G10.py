@@ -98,7 +98,7 @@ def validate_portable_proof(
         raise ValueError("portable proof command fields are invalid")
     output_limit = command.get("output_limit_bytes")
     if (
-        command.get("argv") != ["python", "reproduce.py"]
+        command.get("argv") != ["python", "reproduce.py", "--trust-embedded-predicate"]
         or command.get("exit_code") != 0
         or isinstance(output_limit, bool)
         or not isinstance(output_limit, int)
@@ -214,7 +214,7 @@ SPEC = GateSpec(
             assertions=("macos-one-command",),
         ),
     ),
-    expected_support_sha256="c61b33ff9852dcde50c1204e083426b3b52e17fb922a4b7b8317c0f16a7c698d",
+    expected_support_sha256="9367e4e2453ac18c465b11ac35fb31ac45df71383d6e84b7bf3b184b58c7a21d",
     extra_validator=_validate_rs_g10,
 )
 

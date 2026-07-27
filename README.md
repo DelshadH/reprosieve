@@ -19,7 +19,8 @@ hash-addressed capsule with an independent 1-minimality proof.
 - Embedded Python predicates. ReproSieve invokes them with a direct argument vector,
   a clean temporary directory, provider keys removed, bounded time/output/process
   resources, and Python audit hooks that deny outbound network, child processes,
-  native loading, and host-file access.
+  native loading, and host-file access. These controls are defense in depth, not
+  an OS sandbox; embedded predicates are arbitrary code.
 - Deterministic recorded-output materialization and offline predicate
   reproduction. These paths reconstruct retained values and execute only the
   declared predicate; they do not rerun application or orchestration code.
@@ -74,8 +75,12 @@ reprosieve export reduced/<sha256>.reprosieve \
   --output issue-repro
 
 cd issue-repro
-python reproduce.py
+python reproduce.py --trust-embedded-predicate
 ```
+
+Exported reproductions refuse to execute without that explicit flag. Use it only
+after inspecting and accepting the embedded Python predicate as arbitrary code
+running with your user account's permissions.
 
 `materialize` writes recorded values as deterministic JSON.
 `reproduce-predicate` evaluates the embedded predicate in a fresh constrained

@@ -67,7 +67,7 @@ K-of-N in 0.1 repeats only the declared predicate in fresh trials. Store every t
 
 ## Operating boundary
 
-The 0.1 proof boundary is the documented Python runner and its child-process controls: minimal environment, fresh directory, direct argument vector, filesystem policy, output/time/process limits, and outbound-network denial where the platform proof supports it. Python audit hooks are defense-in-depth, not a universal sandbox. Capsule-supplied commands or entry points never execute silently.
+The 0.1 proof boundary is the documented Python runner and its child-process controls: minimal environment, fresh directory, direct argument vector, filesystem policy, output/time/process limits, and outbound-network denial where the platform proof supports it. Python audit hooks are defense-in-depth, not a universal sandbox. Exported capsule predicates require the conspicuous `--trust-embedded-predicate` authorization and never execute silently.
 
 ## Capsule
 
