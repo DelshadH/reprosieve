@@ -31,6 +31,22 @@ jobs:
           python-version: "3.11"
       - name: Verify exact annotated release ref and canonical head
         run: python -m scripts.release_preflight "${{ github.ref_name }}"
+      - name: Require exact-head CI and CodeQL
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for WORKFLOW in ci.yml codeql.yml; do
+            RUN_ID="$(gh run list \
+              --workflow "$WORKFLOW" \
+              --branch main \
+              --commit "$RUNSIEVE_EVIDENCE_COMMIT" \
+              --event push \
+              --status success \
+              --limit 1 \
+              --json databaseId \
+              --jq '.[0].databaseId // empty')"
+            test -n "$RUN_ID"
+          done
       - name: Require attested final-evidence receipt for this exact commit
         env:
           GH_TOKEN: ${{ github.token }}

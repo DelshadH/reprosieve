@@ -313,6 +313,65 @@ def test_main_loader_and_export_reject_duplicate_workspace_index_paths(
         export_reproduction(source, tmp_path / "repro")
 
 
+def test_standalone_rejects_oversized_metadata_keys_like_the_main_loader(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "oversized-metadata-key.reprosieve"
+    write_capsule(
+        killer_capsule(),
+        source,
+        predicate=PredicateSpec(("python", "verify_failure.py")).to_json(),
+    )
+    output = export_reproduction(source, tmp_path / "repro")
+    capsule_path = output / "capsule.reprosieve"
+    hostile_metadata = json.dumps({"x" * (4 * 1024 * 1024 + 1): True}).encode()
+    capsule_path.write_bytes(
+        rewrite_capsule_members(
+            capsule_path.read_bytes(),
+            {"metadata.json": hostile_metadata},
+        )
+    )
+
+    with pytest.raises(ValueError, match="key limit"):
+        load_capsule(capsule_path)
+    result = subprocess.run(
+        [sys.executable, "reproduce.py", "--trust-embedded-predicate"],
+        cwd=output,
+        env={
+            "PATH": os.environ.get("PATH", ""),
+            "SYSTEMROOT": os.environ.get("SYSTEMROOT", ""),
+        },
+        capture_output=True,
+        text=True,
+        timeout=10,
+        check=False,
+    )
+    assert result.returncode == 2
+    assert result.stderr.strip() == "reproduction capsule invalid"
+
+
+def test_loader_and_export_eagerly_reject_malformed_required_json(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "malformed-redaction.reprosieve"
+    write_capsule(
+        killer_capsule(),
+        source,
+        predicate=PredicateSpec(("python", "verify_failure.py")).to_json(),
+    )
+    source.write_bytes(
+        rewrite_capsule_members(
+            source.read_bytes(),
+            {"redaction.json": b"\xff"},
+        )
+    )
+
+    with pytest.raises(ValueError, match="redaction"):
+        load_capsule(source)
+    with pytest.raises(ValueError, match="redaction"):
+        export_reproduction(source, tmp_path / "repro")
+
+
 def test_standalone_reproducer_rejects_members_outside_the_public_schema(
     tmp_path: Path,
 ) -> None:

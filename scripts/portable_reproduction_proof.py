@@ -149,6 +149,7 @@ def collect(output: Path) -> dict[str, Any]:
                 str(reduced),
                 "--timeout",
                 "3",
+                "--trust-embedded-predicate",
                 "--predicate",
                 "python",
                 "verify_failure.py",

@@ -95,6 +95,7 @@ def build_parser() -> argparse.ArgumentParser:
     export.add_argument("source")
     export.add_argument("--format", choices=("repro-dir",), default="repro-dir")
     export.add_argument("--output", required=True)
+    _trust_argument(export)
     return parser
 
 
@@ -104,7 +105,20 @@ def _predicate_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--trials", type=int, default=1)
     parser.add_argument("--required", type=int, default=1)
     parser.add_argument("--process-limit", type=int, default=16)
+    _trust_argument(parser)
     parser.add_argument("--predicate", nargs=argparse.REMAINDER, required=True)
+
+
+def _trust_argument(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--trust-embedded-predicate",
+        action="store_true",
+        required=True,
+        help=(
+            "authorize arbitrary capsule-provided Python; audit hooks are "
+            "defense-in-depth, not a sandbox"
+        ),
+    )
 
 
 def _strip_separator(values: Sequence[str]) -> tuple[str, ...]:

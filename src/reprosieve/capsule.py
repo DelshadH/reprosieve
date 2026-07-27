@@ -20,6 +20,7 @@ from .schema import (
     SchemaLimits,
     safe_relative_path,
     validate_capsule,
+    validate_json_document,
 )
 
 _FORMAT = "reprosieve-capsule"
@@ -311,6 +312,24 @@ def _capsule_from_members(
     environment = _require_dict(
         _load_json(members["environment.json"], label="environment"),
         label="environment",
+    )
+    redaction = _require_dict(
+        _load_json(members["redaction.json"], label="redaction report"),
+        label="redaction report",
+    )
+    predicate = _require_dict(
+        _load_json(members["predicate.json"], label="predicate"),
+        label="predicate",
+    )
+    validate_json_document(
+        redaction,
+        limits=limits.schema,
+        label="redaction report",
+    )
+    validate_json_document(
+        predicate,
+        limits=limits.schema,
+        label="predicate",
     )
     workspace_index = _load_json(members["workspace/index.json"], label="workspace index")
     if not isinstance(events_raw, list) or not isinstance(workspace_index, list):

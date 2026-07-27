@@ -11,8 +11,44 @@ import pytest
 
 import reprosieve.capsule as capsule_module
 from reprosieve.capsule import load_capsule, write_capsule
-from reprosieve.cli import main
+from reprosieve.cli import build_parser, main
 from reprosieve.fixtures import killer_capsule
+
+
+@pytest.mark.parametrize(
+    "arguments",
+    [
+        [
+            "reduce",
+            "capsule.reprosieve",
+            "--output-dir",
+            "out",
+            "--predicate",
+            "python",
+            "predicate.py",
+        ],
+        [
+            "reproduce-predicate",
+            "capsule.reprosieve",
+            "--predicate",
+            "python",
+            "predicate.py",
+        ],
+        [
+            "verify-minimal",
+            "capsule.reprosieve",
+            "--predicate",
+            "python",
+            "predicate.py",
+        ],
+        ["export", "capsule.reprosieve", "--output", "out"],
+    ],
+)
+def test_capsule_predicate_commands_require_explicit_trust(
+    arguments: list[str],
+) -> None:
+    with pytest.raises(SystemExit):
+        build_parser().parse_args(arguments)
 
 
 def test_capture_runs_real_sdk_target_and_redacts_process_output(
@@ -73,6 +109,7 @@ def test_minimize_verify_replay_and_one_command_export(tmp_path: Path, capfd: ob
                 str(output_directory),
                 "--timeout",
                 "3",
+                "--trust-embedded-predicate",
                 "--predicate",
                 "python",
                 "verify_failure.py",
@@ -110,6 +147,7 @@ def test_minimize_verify_replay_and_one_command_export(tmp_path: Path, capfd: ob
                 str(output_directory),
                 "--timeout",
                 "3",
+                "--trust-embedded-predicate",
                 "--predicate",
                 "python",
                 "verify_failure.py",
@@ -132,6 +170,7 @@ def test_minimize_verify_replay_and_one_command_export(tmp_path: Path, capfd: ob
                 str(reduced_path),
                 "--timeout",
                 "3",
+                "--trust-embedded-predicate",
                 "--predicate",
                 "python",
                 "verify_failure.py",
@@ -148,6 +187,7 @@ def test_minimize_verify_replay_and_one_command_export(tmp_path: Path, capfd: ob
                 str(reduced_path),
                 "--output",
                 str(export_directory),
+                "--trust-embedded-predicate",
             ]
         )
         == 0
@@ -208,6 +248,7 @@ def test_reduce_uses_one_immutable_source_capsule_snapshot(
                 str(tmp_path / "reduced"),
                 "--timeout",
                 "3",
+                "--trust-embedded-predicate",
                 "--predicate",
                 "python",
                 "verify_failure.py",
@@ -229,6 +270,7 @@ def test_reproduce_predicate_runs_the_declared_offline_predicate(tmp_path: Path)
             "reprosieve.cli",
             "reproduce-predicate",
             str(source),
+            "--trust-embedded-predicate",
             "--predicate",
             "python",
             "verify_failure.py",
@@ -282,6 +324,7 @@ def test_minimize_alias_is_explicitly_deprecated(tmp_path: Path) -> None:
             str(source),
             "--output-dir",
             str(output_directory),
+            "--trust-embedded-predicate",
             "--predicate",
             "python",
             "verify_failure.py",
@@ -308,6 +351,7 @@ def test_cli_rejects_shell_strings_and_does_not_overwrite_outputs(tmp_path: Path
                 str(source),
                 "--output-dir",
                 str(output_directory),
+                "--trust-embedded-predicate",
                 "--predicate",
                 "python verify_failure.py",
             ]
@@ -317,5 +361,16 @@ def test_cli_rejects_shell_strings_and_does_not_overwrite_outputs(tmp_path: Path
     occupied = tmp_path / "occupied"
     occupied.mkdir()
     (occupied / "user.txt").write_text("keep", encoding="utf-8")
-    assert main(["export", str(source), "--output", str(occupied)]) == 2
+    assert (
+        main(
+            [
+                "export",
+                str(source),
+                "--output",
+                str(occupied),
+                "--trust-embedded-predicate",
+            ]
+        )
+        == 2
+    )
     assert (occupied / "user.txt").read_text(encoding="utf-8") == "keep"

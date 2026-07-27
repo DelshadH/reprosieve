@@ -48,8 +48,10 @@ python -m pip install "reprosieve[openai]"
 
 ## Workflow
 
-The predicate script must be included in the capsule and `--predicate` must be
-the final option because everything after it is an argument vector.
+The predicate script is arbitrary capsule-provided Python and is not sandboxed.
+It must be included in the capsule, and every command that can execute or export
+it requires `--trust-embedded-predicate`. `--predicate` must be the final option
+because everything after it is an argument vector.
 
 ```bash
 reprosieve capture \
@@ -60,18 +62,22 @@ reprosieve capture \
 
 reprosieve reduce failed.reprosieve \
   --output-dir reduced \
+  --trust-embedded-predicate \
   --predicate python verify_failure.py
 
 reprosieve materialize reduced/<sha256>.reprosieve \
   --output materialized.json
 
 reprosieve reproduce-predicate reduced/<sha256>.reprosieve \
+  --trust-embedded-predicate \
   --predicate python verify_failure.py
 
 reprosieve verify-minimal reduced/<sha256>.reprosieve \
+  --trust-embedded-predicate \
   --predicate python verify_failure.py
 
 reprosieve export reduced/<sha256>.reprosieve \
+  --trust-embedded-predicate \
   --output issue-repro
 
 cd issue-repro

@@ -27,6 +27,7 @@ def run() -> int:
                 str(reduced),
                 "--timeout",
                 "3",
+                "--trust-embedded-predicate",
                 "--predicate",
                 "python",
                 "verify_failure.py",
@@ -41,6 +42,7 @@ def run() -> int:
             [
                 "reproduce-predicate",
                 str(artifact),
+                "--trust-embedded-predicate",
                 "--predicate",
                 "python",
                 "verify_failure.py",
@@ -48,7 +50,15 @@ def run() -> int:
         ):
             return 1
         export = root / "issue-repro"
-        if main(["export", str(artifact), "--output", str(export)]):
+        if main(
+            [
+                "export",
+                str(artifact),
+                "--output",
+                str(export),
+                "--trust-embedded-predicate",
+            ]
+        ):
             return 1
         proof = subprocess.run(
             [sys.executable, "reproduce.py", "--trust-embedded-predicate"],

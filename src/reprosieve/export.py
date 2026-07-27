@@ -108,7 +108,10 @@ def validate_json(value: object) -> None:
             stack.extend((child, depth + 1) for child in current)
             continue
         if isinstance(current, dict):
-            stack.extend((child, depth + 1) for child in current.values())
+            for key, child in current.items():
+                if len(key.encode("utf-8")) > 4 * 1024 * 1024:
+                    raise ValueError("JSON key limit exceeded")
+                stack.append((child, depth + 1))
             continue
         raise ValueError("non-JSON value")
 
@@ -174,10 +177,18 @@ def validate_capsule_documents(
 
     metadata = strict_json(members["metadata.json"])
     environment = strict_json(members["environment.json"])
+    redaction = strict_json(members["redaction.json"])
+    predicate = strict_json(members["predicate.json"])
     workspace_index = strict_json(members["workspace/index.json"])
-    if not isinstance(metadata, dict):
+    if (
+        not isinstance(metadata, dict)
+        or not isinstance(redaction, dict)
+        or not isinstance(predicate, dict)
+    ):
         raise ValueError("invalid metadata")
     validate_json(metadata)
+    validate_json(redaction)
+    validate_json(predicate)
     if (
         not isinstance(environment, dict)
         or len(environment) > 256
