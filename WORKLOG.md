@@ -223,3 +223,15 @@ Observed facts: Every declared final unit was enumerated, no unit was removable,
 Decision: replace stale pre-oracle evidence and keep the oracle as a first-class locally executable measurement.
 Ending commit: pending evidence-registration commit
 Manual item: none
+
+## 2026-07-27T11:08:25Z — RS-060 — final portable security proof
+Objective: Bind the trust-gated standalone reproduction proof to the final remediated implementation head.
+Starting commit: f57f4f20d2c8ef7baa1fe51fd3664b29981367e3
+Deadline state: 40.6/58 hours; within budget
+Approach: Re-run and aggregate fresh Linux and macOS standalone exports after all code and evidence-tooling changes.
+Commands: `.evidence/RS-G10/github-30260692980-1/manifest.json`; CI run 30260692980
+Result: passed
+Observed facts: Both platform jobs executed the explicit trust command from clean temporary directories without source checkout or API credentials.
+Decision: accept the exact-head RS-G10 proof and supersede the earlier remediation proof.
+Ending commit: pending evidence-registration commit
+Manual item: none

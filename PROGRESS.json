@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "project": "runsieve",
-  "updated_at": "2026-07-27T11:03:08.969248Z",
+  "updated_at": "2026-07-27T11:08:25.487132Z",
   "tasks": {
     "RS-000": {
       "status": "passed",
@@ -89,8 +89,8 @@
           "sha256": "fe3d26ad65e4b486b5d9766bafb26184257da3bc7dbd0e9eada098dddac39494"
         },
         {
-          "path": ".evidence/RS-G10/github-30259678085-1/manifest.json",
-          "sha256": "7c7868e1443b79f9add2b1724a8e0bece8f6b8a3bce43398b4b63092a224f5f1"
+          "path": ".evidence/RS-G10/github-30260692980-1/manifest.json",
+          "sha256": "dd9ab73930e20fbde3324fa43df269a3e77ffeefc7656900ae0c543d29be598f"
         }
       ],
       "notes": "Repeated predicate trials and Linux/macOS portable export proofs are measured without application-replay claims.",
@@ -214,8 +214,8 @@
       "status": "passed",
       "evidence": [
         {
-          "path": ".evidence/RS-G10/github-30259678085-1/manifest.json",
-          "sha256": "7c7868e1443b79f9add2b1724a8e0bece8f6b8a3bce43398b4b63092a224f5f1"
+          "path": ".evidence/RS-G10/github-30260692980-1/manifest.json",
+          "sha256": "dd9ab73930e20fbde3324fa43df269a3e77ffeefc7656900ae0c543d29be598f"
         }
       ]
     },
