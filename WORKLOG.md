@@ -187,3 +187,15 @@ Observed facts: All registered evidence was present in HEAD; contract self-tests
 Decision: accept this proof and supersede the proof produced while immutable files differed from their root.
 Ending commit: pending release-evidence registration commit
 Manual item: none
+
+## 2026-07-27T10:52:41Z — RS-060 — security remediation proof
+Objective: Re-prove the portable standalone reproduction after requiring explicit embedded-predicate trust and strict capsule validation parity.
+Starting commit: a86da4ac60a2f100255011cd4199ef6695c23a15
+Deadline state: autonomous security remediation; within scope
+Approach: Run the exact clean implementation commit on GitHub-hosted Linux and macOS runners, aggregate both measured proofs, and independently verify the resulting RS-G10 manifest.
+Commands: `.evidence/RS-G10/github-30259678085-1/manifest.json`; CI run 30259678085
+Result: passed
+Observed facts: Both fresh-directory standalone reproductions used `python reproduce.py --trust-embedded-predicate`, exited 0, needed no source checkout or API key, and were bound to the exact implementation commit.
+Decision: replace the stale RS-G10 reference whose recorded command omitted the required trust flag.
+Ending commit: pending evidence-registration commit
+Manual item: none
