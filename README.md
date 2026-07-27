@@ -124,11 +124,13 @@ Two additional copy-paste checks:
 
 ```bash
 python -m scripts.verify
-python -m scripts.release_gate
+python -m scripts.final_release_gate
 ```
 
-The first runs tests, lint, typing, and contract self-tests. The second verifies
-the clean Git state and every registered evidence manifest.
+The first runs tests, lint, typing, and contract self-tests. The second runs the
+current exact-head security, secrets, killer-demo, and minimality checks from a
+clean Git state. The immutable contract-v2 release gate remains historical
+evidence, as documented in `RELEASING.md`.
 
 ## Scope and comparison
 

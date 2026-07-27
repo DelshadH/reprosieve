@@ -119,6 +119,13 @@ def test_final_release_gate_declares_current_exact_head_checks() -> None:
     ]
 
 
+def test_readme_uses_the_current_final_release_gate() -> None:
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+    assert "python -m scripts.final_release_gate" in readme
+    assert "python -m scripts.release_gate" not in readme
+
+
 def test_final_receipt_rejects_a_different_commit(tmp_path: Path) -> None:
     from scripts.verify_final_receipt import verify_receipt
 
