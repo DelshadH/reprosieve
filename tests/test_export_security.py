@@ -350,6 +350,43 @@ def test_standalone_rejects_oversized_metadata_keys_like_the_main_loader(
     assert result.stderr.strip() == "reproduction capsule invalid"
 
 
+def test_standalone_matches_the_main_json_node_limit(tmp_path: Path) -> None:
+    source = tmp_path / "metadata-node-limit.reprosieve"
+    write_capsule(
+        killer_capsule(),
+        source,
+        predicate=PredicateSpec(("python", "verify_failure.py")).to_json(),
+    )
+    output = export_reproduction(source, tmp_path / "repro")
+    capsule_path = output / "capsule.reprosieve"
+    hostile_metadata = json.dumps(
+        {"items": [[] for _ in range(125_000)]}
+    ).encode()
+    capsule_path.write_bytes(
+        rewrite_capsule_members(
+            capsule_path.read_bytes(),
+            {"metadata.json": hostile_metadata},
+        )
+    )
+
+    with pytest.raises(ValueError, match="node limit"):
+        load_capsule(capsule_path)
+    result = subprocess.run(
+        [sys.executable, "reproduce.py", "--trust-embedded-predicate"],
+        cwd=output,
+        env={
+            "PATH": os.environ.get("PATH", ""),
+            "SYSTEMROOT": os.environ.get("SYSTEMROOT", ""),
+        },
+        capture_output=True,
+        text=True,
+        timeout=10,
+        check=False,
+    )
+    assert result.returncode == 2
+    assert result.stderr.strip() == "reproduction capsule invalid"
+
+
 def test_loader_and_export_eagerly_reject_malformed_required_json(
     tmp_path: Path,
 ) -> None:

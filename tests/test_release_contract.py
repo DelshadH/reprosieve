@@ -84,8 +84,9 @@ def test_release_workflow_attests_the_reproducibility_checked_artifacts() -> Non
     assert "--commit \"$RUNSIEVE_EVIDENCE_COMMIT\"" in build
     assert "final-decision-receipt" in build
     assert "scripts.verify_final_receipt" in build
-    assert "for WORKFLOW in ci.yml codeql.yml" in build
-    assert '--workflow "$WORKFLOW"' in build
+    assert "--workflow ci.yml" in build
+    assert '.workflowName == "CodeQL"' in build
+    assert '.event == "dynamic"' in build
     assert build.count('--commit "$RUNSIEVE_EVIDENCE_COMMIT"') >= 2
 
 

@@ -105,9 +105,15 @@ def validate_json(value: object) -> None:
                 raise ValueError("JSON string limit exceeded")
             continue
         if isinstance(current, list):
+            nodes += 1
+            if nodes > 250_000:
+                raise ValueError("JSON limit exceeded")
             stack.extend((child, depth + 1) for child in current)
             continue
         if isinstance(current, dict):
+            nodes += 1
+            if nodes > 250_000:
+                raise ValueError("JSON limit exceeded")
             for key, child in current.items():
                 if len(key.encode("utf-8")) > 4 * 1024 * 1024:
                     raise ValueError("JSON key limit exceeded")

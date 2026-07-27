@@ -160,7 +160,15 @@ def collect(output: Path) -> dict[str, Any]:
         if len(reduced_capsules) != 1:
             raise RuntimeError("portable proof did not produce exactly one capsule")
         export = build_root / "issue-repro"
-        if reprosieve_main(["export", str(reduced_capsules[0]), "--output", str(export)]):
+        if reprosieve_main(
+            [
+                "export",
+                str(reduced_capsules[0]),
+                "--output",
+                str(export),
+                "--trust-embedded-predicate",
+            ]
+        ):
             raise RuntimeError("portable proof export failed")
 
         with tempfile.TemporaryDirectory(prefix="reprosieve-clean-room-") as clean_temporary:

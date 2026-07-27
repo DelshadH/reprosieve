@@ -35,18 +35,25 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          for WORKFLOW in ci.yml codeql.yml; do
-            RUN_ID="$(gh run list \
-              --workflow "$WORKFLOW" \
-              --branch main \
-              --commit "$RUNSIEVE_EVIDENCE_COMMIT" \
-              --event push \
-              --status success \
-              --limit 1 \
-              --json databaseId \
-              --jq '.[0].databaseId // empty')"
-            test -n "$RUN_ID"
-          done
+          CI_RUN="$(gh run list \
+            --workflow ci.yml \
+            --branch main \
+            --commit "$RUNSIEVE_EVIDENCE_COMMIT" \
+            --event push \
+            --status success \
+            --limit 1 \
+            --json databaseId \
+            --jq '.[0].databaseId // empty')"
+          CODEQL_RUN="$(gh run list \
+            --commit "$RUNSIEVE_EVIDENCE_COMMIT" \
+            --status success \
+            --limit 100 \
+            --json databaseId,event,workflowName \
+            --jq '[.[] | select(
+              .workflowName == "CodeQL" and .event == "dynamic"
+            )][0].databaseId // empty')"
+          test -n "$CI_RUN"
+          test -n "$CODEQL_RUN"
       - name: Require attested final-evidence receipt for this exact commit
         env:
           GH_TOKEN: ${{ github.token }}
