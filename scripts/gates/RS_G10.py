@@ -9,7 +9,7 @@ from typing import Any
 
 from scripts.gates._verify import (
     GateSpec,
-    portable_measurement,
+    Measurement,
     verify_gate,
 )
 
@@ -18,6 +18,19 @@ GIT_SHA = re.compile(r"^[a-f0-9]{40}$")
 PLATFORMS = ("linux", "macos")
 ROOT = Path(__file__).resolve().parents[2]
 COLLECTOR_PATH = "scripts/portable_reproduction_proof.py"
+
+
+def trusted_portable_measurement(
+    *,
+    platform: str,
+    assertions: tuple[str, ...],
+) -> Measurement:
+    return Measurement(
+        assertions=assertions,
+        argv=("python", "reproduce.py", "--trust-embedded-predicate"),
+        kind="portable-reproduction",
+        platform=platform,
+    )
 
 
 def _digest_reference(value: object, *, label: str, allow_empty: bool = True) -> None:
@@ -200,7 +213,7 @@ def _validate_rs_g10(
 SPEC = GateSpec(
     gate="RS-G10",
     measurements=(
-        portable_measurement(
+        trusted_portable_measurement(
             platform="linux",
             assertions=(
                 "fresh-temp-run",
@@ -209,12 +222,12 @@ SPEC = GateSpec(
                 "no-api-key",
             ),
         ),
-        portable_measurement(
+        trusted_portable_measurement(
             platform="macos",
             assertions=("macos-one-command",),
         ),
     ),
-    expected_support_sha256="9367e4e2453ac18c465b11ac35fb31ac45df71383d6e84b7bf3b184b58c7a21d",
+    expected_support_sha256="c61b33ff9852dcde50c1204e083426b3b52e17fb922a4b7b8317c0f16a7c698d",
     extra_validator=_validate_rs_g10,
 )
 

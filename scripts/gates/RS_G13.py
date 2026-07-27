@@ -373,7 +373,7 @@ SPEC = GateSpec(
             platform="python3.13",
         ),
     ),
-    expected_support_sha256="9367e4e2453ac18c465b11ac35fb31ac45df71383d6e84b7bf3b184b58c7a21d",
+    expected_support_sha256="c61b33ff9852dcde50c1204e083426b3b52e17fb922a4b7b8317c0f16a7c698d",
     extra_validator=_validate_rs_g13,
 )
 
