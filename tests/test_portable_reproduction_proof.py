@@ -26,7 +26,11 @@ def test_portable_proof_records_exact_runner_command_and_artifact_identity() -> 
     )
 
     assert proof["runner"] == {"os": "macos", "arch": "arm64"}
-    assert proof["command"]["argv"] == ["python", "reproduce.py"]
+    assert proof["command"]["argv"] == [
+        "python",
+        "reproduce.py",
+        "--trust-embedded-predicate",
+    ]
     assert proof["command"]["exit_code"] == 0
     assert proof["command"]["stdout"]["bytes"] == 34
     assert proof["collector"]["sha256"] == "e" * 64

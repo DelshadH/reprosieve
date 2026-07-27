@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "project": "runsieve",
-  "updated_at": "2026-07-25T20:18:00.319695Z",
+  "updated_at": "2026-07-27T11:08:25.487132Z",
   "tasks": {
     "RS-000": {
       "status": "passed",
@@ -18,8 +18,8 @@
       "status": "passed",
       "evidence": [
         {
-          "path": ".evidence/RS-G01/local-a660531-g01/manifest.json",
-          "sha256": "ebf349c7e3e6e8078a1fc91d1890fed13d48a2435012090fd1591668cc5f8a34"
+          "path": ".evidence/RS-G01/security-7945654-g01/manifest.json",
+          "sha256": "27d7cc5224109dfc763da2081faeea515d590eb09fd7be5ccd4258b49f8eaeee"
         }
       ],
       "notes": "Public SDK capture and deterministic recorded-output materialization feasibility are measured.",
@@ -55,8 +55,8 @@
       "status": "passed",
       "evidence": [
         {
-          "path": ".evidence/RS-G06/local-a660531-g06/manifest.json",
-          "sha256": "720dd93c0f420f79523f98ecb0457da0fd69c74a547b56b8c81de6917a79714b"
+          "path": ".evidence/RS-G06/security-16dac1f-g06/manifest.json",
+          "sha256": "df73947e1d5f51bcea8dac70d74c2e636b322450bd66c90486cc1c0eacd7d5a6"
         },
         {
           "path": ".evidence/RS-G07/local-a660531-g07/manifest.json",
@@ -89,8 +89,8 @@
           "sha256": "fe3d26ad65e4b486b5d9766bafb26184257da3bc7dbd0e9eada098dddac39494"
         },
         {
-          "path": ".evidence/RS-G10/github-30171123965-1/manifest.json",
-          "sha256": "f1ca9bfa30dffaa294f4372b1e764318f8b1fc5814604f0df5d3e5e082a61449"
+          "path": ".evidence/RS-G10/github-30260692980-1/manifest.json",
+          "sha256": "dd9ab73930e20fbde3324fa43df269a3e77ffeefc7656900ae0c543d29be598f"
         }
       ],
       "notes": "Repeated predicate trials and Linux/macOS portable export proofs are measured without application-replay claims.",
@@ -133,8 +133,8 @@
       "status": "passed",
       "evidence": [
         {
-          "path": ".evidence/RS-G01/local-a660531-g01/manifest.json",
-          "sha256": "ebf349c7e3e6e8078a1fc91d1890fed13d48a2435012090fd1591668cc5f8a34"
+          "path": ".evidence/RS-G01/security-7945654-g01/manifest.json",
+          "sha256": "27d7cc5224109dfc763da2081faeea515d590eb09fd7be5ccd4258b49f8eaeee"
         }
       ]
     },
@@ -178,8 +178,8 @@
       "status": "passed",
       "evidence": [
         {
-          "path": ".evidence/RS-G06/local-a660531-g06/manifest.json",
-          "sha256": "720dd93c0f420f79523f98ecb0457da0fd69c74a547b56b8c81de6917a79714b"
+          "path": ".evidence/RS-G06/security-16dac1f-g06/manifest.json",
+          "sha256": "df73947e1d5f51bcea8dac70d74c2e636b322450bd66c90486cc1c0eacd7d5a6"
         }
       ]
     },
@@ -214,8 +214,8 @@
       "status": "passed",
       "evidence": [
         {
-          "path": ".evidence/RS-G10/github-30171123965-1/manifest.json",
-          "sha256": "f1ca9bfa30dffaa294f4372b1e764318f8b1fc5814604f0df5d3e5e082a61449"
+          "path": ".evidence/RS-G10/github-30260692980-1/manifest.json",
+          "sha256": "dd9ab73930e20fbde3324fa43df269a3e77ffeefc7656900ae0c543d29be598f"
         }
       ]
     },

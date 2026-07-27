@@ -51,7 +51,9 @@ It remains synthetic-only and outside the 0.1 release claim; see
 Predicates run in fresh directories with copied declared files, provider keys
 removed, proxy variables emptied, direct argument vectors, time/output/process
 limits, and Python audit hooks for network, process, native-loading, and
-host-filesystem denial. K-of-N runs use a fresh directory for every trial and are
+host-filesystem denial. These controls are defense in depth, not an OS sandbox;
+embedded predicates remain arbitrary Python code. K-of-N runs use a fresh
+directory for every trial and are
 reported as probabilistic predicate evidence. They still use recorded outputs;
 live model or application replay is outside the 0.1 seed release.
 
@@ -93,8 +95,9 @@ reduction evidence and an independent minimality proof. Construction-only mode
 properties are not represented as measured call counters.
 
 Export copies the exact capsule plus a standard-library `reproduce.py` and a
-short README. `python reproduce.py` validates all hashes and safety limits,
-reconstructs recorded outputs, and runs the embedded predicate.
+short README. `python reproduce.py --trust-embedded-predicate` validates all
+hashes and safety limits, reconstructs recorded outputs, and runs the embedded
+predicate. Without the explicit trust flag, it refuses execution.
 
 ## Non-goals
 

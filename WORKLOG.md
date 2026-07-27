@@ -32,6 +32,18 @@ Decision: commit the implementation port before generating any contract-v2 evide
 Ending commit: pending implementation-port commit
 Manual item: none
 
+## 2026-07-27T11:01:32Z — RS-010 — verifier refresh proof
+Objective: Refresh RS-G01 after its independent verifier changed on public main.
+Starting commit: 79456541ed75a7789a8306f6de7ce4b51c619873
+Deadline state: autonomous release remediation; within scope
+Approach: Execute every registered RS-G01 measurement from a clean exact commit and verify the resulting manifest.
+Commands: `.evidence/RS-G01/security-7945654-g01/manifest.json`
+Result: passed
+Observed facts: Public processor capture, exporter replacement, duplicate-export prevention, private-import scanning, and synthetic trace capture all passed.
+Decision: replace the stale ancestor proof with exact-verifier evidence.
+Ending commit: pending evidence-registration commit
+Manual item: none
+
 ## 2026-07-25T19:16:00Z — RS-010 — attempt 1
 Objective: Measure public SDK capture without private imports, duplicate export, or unstated replay.
 Starting commit: a660531a0fec1479545227a248fc68448ca9646a
@@ -186,4 +198,40 @@ Result: passed
 Observed facts: All registered evidence was present in HEAD; contract self-tests, 100 tests plus 2 subtests, Ruff, strict mypy, and the complete killer demo passed.
 Decision: accept this proof and supersede the proof produced while immutable files differed from their root.
 Ending commit: pending release-evidence registration commit
+Manual item: none
+
+## 2026-07-27T10:52:41Z — RS-060 — security remediation proof
+Objective: Re-prove the portable standalone reproduction after requiring explicit embedded-predicate trust and strict capsule validation parity.
+Starting commit: a86da4ac60a2f100255011cd4199ef6695c23a15
+Deadline state: autonomous security remediation; within scope
+Approach: Run the exact clean implementation commit on GitHub-hosted Linux and macOS runners, aggregate both measured proofs, and independently verify the resulting RS-G10 manifest.
+Commands: `.evidence/RS-G10/github-30259678085-1/manifest.json`; CI run 30259678085
+Result: passed
+Observed facts: Both fresh-directory standalone reproductions used `python reproduce.py --trust-embedded-predicate`, exited 0, needed no source checkout or API key, and were bound to the exact implementation commit.
+Decision: replace the stale RS-G10 reference whose recorded command omitted the required trust flag.
+Ending commit: pending evidence-registration commit
+Manual item: none
+
+## 2026-07-27T11:03:08Z — RS-050 — minimality-oracle proof refresh
+Objective: Refresh RS-G06 against its current independent minimality oracle.
+Starting commit: 16dac1f444370b1fc7373df019fc98516921d28a
+Deadline state: autonomous release remediation; within scope
+Approach: Collect the registered oracle command and invalid-reason regression from a clean exact commit, then verify their structured evidence.
+Commands: `.evidence/RS-G06/security-16dac1f-g06/manifest.json`
+Result: passed
+Observed facts: Every declared final unit was enumerated, no unit was removable, and invalid candidate reasons were retained.
+Decision: replace stale pre-oracle evidence and keep the oracle as a first-class locally executable measurement.
+Ending commit: pending evidence-registration commit
+Manual item: none
+
+## 2026-07-27T11:08:25Z — RS-060 — final portable security proof
+Objective: Bind the trust-gated standalone reproduction proof to the final remediated implementation head.
+Starting commit: f57f4f20d2c8ef7baa1fe51fd3664b29981367e3
+Deadline state: 40.6/58 hours; within budget
+Approach: Re-run and aggregate fresh Linux and macOS standalone exports after all code and evidence-tooling changes.
+Commands: `.evidence/RS-G10/github-30260692980-1/manifest.json`; CI run 30260692980
+Result: passed
+Observed facts: Both platform jobs executed the explicit trust command from clean temporary directories without source checkout or API credentials.
+Decision: accept the exact-head RS-G10 proof and supersede the earlier remediation proof.
+Ending commit: pending evidence-registration commit
 Manual item: none

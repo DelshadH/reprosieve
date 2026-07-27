@@ -1,0 +1,630 @@
+from __future__ import annotations
+
+import hashlib
+import json
+import math
+import os
+import re
+import signal
+import stat
+import subprocess
+import sys
+import tempfile
+import threading
+import time
+import unicodedata
+import zipfile
+from pathlib import Path, PurePosixPath
+
+CAPSULE = Path(__file__).with_name("capsule.reprosieve")
+MAX_ARCHIVE = 32 * 1024 * 1024
+MAX_MEMBER = 16 * 1024 * 1024
+MAX_TOTAL = 64 * 1024 * 1024
+MAX_MEMBERS = 512
+MAX_RATIO = 20
+WINDOWS_DEVICES = {
+    "aux", "con", "nul", "prn",
+    *(f"com{index}" for index in range(1, 10)),
+    *(f"lpt{index}" for index in range(1, 10)),
+}
+
+
+def fail(message: str, code: int = 2) -> int:
+    print(message, file=sys.stderr)
+    return code
+
+
+def safe_path(value: str) -> str:
+    if not value or "\\" in value or "\x00" in value:
+        raise ValueError("unsafe path")
+    path = PurePosixPath(value)
+    if path.is_absolute() or any(part in {"", ".", ".."} for part in path.parts):
+        raise ValueError("unsafe path")
+    if path.parts[0].startswith("~") or path.as_posix() != value:
+        raise ValueError("unsafe path")
+    for part in path.parts:
+        normalized = unicodedata.normalize("NFC", part)
+        portable = normalized.rstrip(" .")
+        if (
+            normalized != part
+            or portable != part
+            or not portable
+            or ":" in portable
+            or portable.split(".", 1)[0].casefold() in WINDOWS_DEVICES
+        ):
+            raise ValueError("unsafe path")
+    return value
+
+
+def path_identity(value: str) -> str:
+    return "/".join(part.casefold() for part in PurePosixPath(safe_path(value)).parts)
+
+
+def strict_json(payload: bytes) -> object:
+    def reject_pairs(pairs: list[tuple[str, object]]) -> dict[str, object]:
+        result: dict[str, object] = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("duplicate JSON key")
+            result[key] = value
+        return result
+
+    return json.loads(
+        payload.decode("utf-8"),
+        object_pairs_hook=reject_pairs,
+        parse_constant=lambda _value: (_ for _ in ()).throw(ValueError("non-finite JSON")),
+    )
+
+
+def validate_json(value: object) -> None:
+    nodes = 0
+    stack = [(value, 0)]
+    while stack:
+        current, depth = stack.pop()
+        nodes += 1
+        if nodes > 250_000 or depth > 64:
+            raise ValueError("JSON limit exceeded")
+        if current is None or isinstance(current, (bool, int)):
+            continue
+        if isinstance(current, float):
+            if not math.isfinite(current):
+                raise ValueError("non-finite JSON")
+            continue
+        if isinstance(current, str):
+            if len(current.encode("utf-8")) > 4 * 1024 * 1024:
+                raise ValueError("JSON string limit exceeded")
+            continue
+        if isinstance(current, list):
+            stack.extend((child, depth + 1) for child in current)
+            continue
+        if isinstance(current, dict):
+            stack.extend((child, depth + 1) for child in current.values())
+            continue
+        raise ValueError("non-JSON value")
+
+
+def validate_capsule_documents(
+    members: dict[str, bytes],
+    manifest: dict[str, object],
+) -> None:
+    identity = re.compile(r"^[A-Za-z0-9_.:-]{1,160}$")
+    environment_name = re.compile(r"^[A-Za-z_][A-Za-z0-9_]{0,127}$")
+    schema_version = manifest.get("schema_version")
+    trace_id = manifest.get("trace_id")
+    if schema_version != "1" or not isinstance(trace_id, str) or not identity.fullmatch(trace_id):
+        raise ValueError("invalid capsule identity")
+
+    events = strict_json(members["events/v1.json"])
+    if not isinstance(events, list) or not events or len(events) > 10_000:
+        raise ValueError("invalid events")
+    required_fields = {"id", "kind", "parent_id", "sequence", "payload", "dependencies"}
+    allowed_kinds = {
+        "run", "message", "model_request", "model_response", "tool_call",
+        "tool_result", "handoff", "guardrail", "error", "unknown",
+    }
+    seen: set[str] = set()
+    kinds: dict[str, str] = {}
+    last_sequence = -1
+    for event in events:
+        if not isinstance(event, dict) or set(event) != required_fields:
+            raise ValueError("invalid event fields")
+        event_id = event["id"]
+        kind = event["kind"]
+        parent_id = event["parent_id"]
+        sequence = event["sequence"]
+        dependencies = event["dependencies"]
+        if (
+            not isinstance(event_id, str)
+            or not identity.fullmatch(event_id)
+            or event_id in seen
+            or not isinstance(kind, str)
+            or kind not in allowed_kinds
+            or isinstance(sequence, bool)
+            or not isinstance(sequence, int)
+            or sequence <= last_sequence
+            or (parent_id is not None and (not isinstance(parent_id, str) or parent_id not in seen))
+            or not isinstance(dependencies, list)
+            or not all(isinstance(item, str) for item in dependencies)
+            or len(dependencies) != len(set(dependencies))
+            or any(item not in seen for item in dependencies)
+            or event_id in dependencies
+        ):
+            raise ValueError("invalid event")
+        if kind == "tool_result" and sum(kinds[item] == "tool_call" for item in dependencies) != 1:
+            raise ValueError("invalid tool result")
+        if (
+            kind == "model_response"
+            and sum(kinds[item] == "model_request" for item in dependencies) != 1
+        ):
+            raise ValueError("invalid model response")
+        validate_json(event["payload"])
+        seen.add(event_id)
+        kinds[event_id] = kind
+        last_sequence = sequence
+
+    metadata = strict_json(members["metadata.json"])
+    environment = strict_json(members["environment.json"])
+    workspace_index = strict_json(members["workspace/index.json"])
+    if not isinstance(metadata, dict):
+        raise ValueError("invalid metadata")
+    validate_json(metadata)
+    if (
+        not isinstance(environment, dict)
+        or len(environment) > 256
+        or any(
+            not isinstance(name, str)
+            or not environment_name.fullmatch(name)
+            or not isinstance(value, str)
+            or len(value.encode("utf-8")) > 4 * 1024 * 1024
+            for name, value in environment.items()
+        )
+    ):
+        raise ValueError("invalid environment")
+    if not isinstance(workspace_index, list) or len(workspace_index) > 256:
+        raise ValueError("invalid workspace index")
+    workspace_identities: set[str] = set()
+    expected_workspace: set[str] = set()
+    workspace_bytes = 0
+    for raw_path in workspace_index:
+        if not isinstance(raw_path, str):
+            raise ValueError("invalid workspace path")
+        path = safe_path(raw_path)
+        portable_identity = path_identity(path)
+        if portable_identity in workspace_identities:
+            raise ValueError("workspace path collision")
+        workspace_identities.add(portable_identity)
+        member_name = f"workspace/files/{path}"
+        if member_name not in members:
+            raise ValueError("workspace file is missing")
+        try:
+            members[member_name].decode("utf-8")
+        except UnicodeDecodeError as error:
+            raise ValueError("workspace file is not UTF-8") from error
+        workspace_bytes += len(members[member_name])
+        if workspace_bytes > 16 * 1024 * 1024:
+            raise ValueError("workspace size limit exceeded")
+        expected_workspace.add(member_name)
+    actual_workspace = {
+        name for name in members if name.startswith("workspace/files/")
+    }
+    if actual_workspace != expected_workspace:
+        raise ValueError("undeclared workspace file")
+
+
+def predicate_spec(value: object) -> dict[str, object]:
+    fields = {
+        "argv",
+        "output_limit_bytes",
+        "process_limit",
+        "required_reproductions",
+        "timeout_seconds",
+        "trials",
+    }
+    if not isinstance(value, dict) or set(value) != fields:
+        raise ValueError("invalid predicate")
+    argv = value["argv"]
+    integers = ("output_limit_bytes", "process_limit", "required_reproductions", "trials")
+    if (
+        not isinstance(argv, list)
+        or not argv
+        or any(
+            not isinstance(item, str)
+            or not item
+            or "\x00" in item
+            or len(item.encode("utf-8")) > 16 * 1024
+            for item in argv
+        )
+        or any(isinstance(value[name], bool) or not isinstance(value[name], int) for name in integers)
+    ):
+        raise ValueError("invalid predicate")
+    timeout = value["timeout_seconds"]
+    if (
+        isinstance(timeout, bool)
+        or not isinstance(timeout, (int, float))
+        or not math.isfinite(timeout)
+        or not 0 < timeout <= 3600
+        or not 256 <= value["output_limit_bytes"] <= 16 * 1024 * 1024
+        or not 1 <= value["trials"] <= 100
+        or not 1 <= value["required_reproductions"] <= value["trials"]
+        or not 1 <= value["process_limit"] <= 128
+        or len(argv) < 2
+        or Path(argv[0]).name.casefold() not in {"python", "python3", "python.exe", "py"}
+    ):
+        raise ValueError("invalid predicate")
+    safe_path(argv[1])
+    return value
+
+
+def load() -> tuple[dict[str, bytes], dict[str, object]]:
+    if CAPSULE.is_symlink() or not CAPSULE.is_file() or CAPSULE.stat().st_size > MAX_ARCHIVE:
+        raise ValueError("invalid capsule")
+    with zipfile.ZipFile(CAPSULE) as archive:
+        infos = archive.infolist()
+        if len(infos) > MAX_MEMBERS:
+            raise ValueError("too many members")
+        names: set[str] = set()
+        identities: set[str] = set()
+        total = 0
+        for info in infos:
+            safe_path(info.filename)
+            identity = path_identity(info.filename)
+            if info.filename in names or identity in identities:
+                raise ValueError("duplicate member")
+            names.add(info.filename)
+            identities.add(identity)
+            if stat.S_ISLNK(info.external_attr >> 16):
+                raise ValueError("symlink member")
+            if info.file_size > MAX_MEMBER:
+                raise ValueError("member too large")
+            total += info.file_size
+            if total > MAX_TOTAL:
+                raise ValueError("capsule too large")
+            if info.file_size / max(1, info.compress_size) > MAX_RATIO:
+                raise ValueError("expansion ratio")
+        members = {info.filename: archive.read(info) for info in infos}
+    manifest = strict_json(members["manifest.json"])
+    if manifest.get("format") != "reprosieve-capsule" or manifest.get("format_version") != 1:
+        raise ValueError("unsupported capsule")
+    entries = manifest.get("entries")
+    if not isinstance(entries, dict) or set(entries) != set(members) - {"manifest.json"}:
+        raise ValueError("invalid manifest")
+    content = hashlib.sha256()
+    for name in sorted(entries):
+        descriptor = entries[name]
+        payload = members[name]
+        digest = hashlib.sha256(payload).hexdigest()
+        if not isinstance(descriptor, dict):
+            raise ValueError("invalid manifest entry")
+        if descriptor.get("sha256") != digest or descriptor.get("size") != len(payload):
+            raise ValueError("hash mismatch")
+        content.update(name.encode())
+        content.update(b"\0")
+        content.update(bytes.fromhex(digest))
+    if manifest.get("content_sha256") != content.hexdigest():
+        raise ValueError("content hash mismatch")
+    required = {
+        "events/v1.json",
+        "metadata.json",
+        "environment.json",
+        "workspace/index.json",
+        "redaction.json",
+        "predicate.json",
+    }
+    if not required.issubset(members):
+        raise ValueError("missing required member")
+    if any(
+        name not in required
+        and name != "manifest.json"
+        and not name.startswith("workspace/files/")
+        for name in members
+    ):
+        raise ValueError("unsupported capsule member")
+    validate_capsule_documents(members, manifest)
+    return members, manifest
+
+
+def replay(members: dict[str, bytes], trace_id: str) -> dict[str, object]:
+    events = strict_json(members["events/v1.json"])
+    if not isinstance(events, list):
+        raise ValueError("invalid events")
+    kinds = {event["id"]: event["kind"] for event in events}
+    models: list[dict[str, object]] = []
+    tools: list[dict[str, object]] = []
+    for event in events:
+        if event["kind"] == "model_response":
+            request = next(item for item in event["dependencies"] if kinds[item] == "model_request")
+            payload = event["payload"]
+            models.append({
+                "event_id": event["id"],
+                "request_id": request,
+                "output": payload.get("output") if isinstance(payload, dict) else payload,
+            })
+        elif event["kind"] == "tool_result":
+            call = next(item for item in event["dependencies"] if kinds[item] == "tool_call")
+            payload = event["payload"]
+            item = {"call_id": call, "event_id": event["id"]}
+            if isinstance(payload, dict):
+                for key in ("name", "output", "error"):
+                    if key in payload:
+                        item[key] = payload[key]
+            else:
+                item["output"] = payload
+            tools.append(item)
+    return {
+        "events_replayed": len(events),
+        "mode": "recorded-output-materialization",
+        "model_outputs": models,
+        "tool_outputs": tools,
+        "trace_id": trace_id,
+    }
+
+
+def guard_source(timeout: float, output_limit: int, process_limit: int) -> str:
+    cpu = max(1, int(timeout) + 2)
+    return (
+        "import socket,sys\n"
+        "def denied(*a,**k): raise PermissionError('network disabled')\n"
+        "socket.create_connection=denied\n"
+        "socket.getaddrinfo=denied\n"
+        "socket.socket.connect=denied\n"
+        "socket.socket.connect_ex=denied\n"
+        "try:\n"
+        " import _winapi\n"
+        " for name in ('CreateProcess','CreateProcessAsUser','CreateProcessWithLogonW'):\n"
+        "  if hasattr(_winapi,name): setattr(_winapi,name,denied)\n"
+        "except ImportError: pass\n"
+        "sys.setrecursionlimit(min(sys.getrecursionlimit(),1000))\n"
+        "try:\n"
+        " import resource\n"
+        f" resource.setrlimit(resource.RLIMIT_CPU,({cpu},{cpu}))\n"
+        f" resource.setrlimit(resource.RLIMIT_FSIZE,({output_limit},{output_limit}))\n"
+        f" resource.setrlimit(resource.RLIMIT_NPROC,({process_limit},{process_limit}))\n"
+        " resource.setrlimit(resource.RLIMIT_NOFILE,(64,64))\n"
+        "except (ImportError,ValueError,OSError): pass\n"
+        "_root=__import__('os').path.realpath(__import__('os').environ['RUNSIEVE_WORKSPACE'])\n"
+        "_capsule=__import__('os').path.realpath(__import__('os').environ['RUNSIEVE_CAPSULE'])\n"
+        "_prefixes=tuple(__import__('os').path.realpath(p) for p in {sys.prefix,sys.base_prefix})\n"
+        "def inside(path,roots):\n"
+        " try: resolved=__import__('os').path.realpath(__import__('os').fspath(path))\n"
+        " except TypeError: return True\n"
+        " return any(resolved==root or resolved.startswith(root+__import__('os').sep) for root in roots)\n"
+        "def audit(event,args):\n"
+        " if event.startswith('socket.'):\n"
+        "  raise PermissionError('network disabled')\n"
+        " if event=='open' and args:\n"
+        "  mode=args[1] if len(args)>1 and isinstance(args[1],str) else ''\n"
+        "  flags=args[2] if len(args)>2 and isinstance(args[2],int) else 0\n"
+        "  writing=any(c in mode for c in 'wax+') or bool(flags&3)\n"
+        "  roots=(_root,) if writing else (_root,_capsule,*_prefixes)\n"
+        "  if not inside(args[0],roots): raise PermissionError('filesystem access denied')\n"
+        " if event.startswith('subprocess.') or event in "
+        "{'os.exec','os.system','os.spawn','os.posix_spawn','os.fork','os.forkpty',"
+        "'os.startfile','os.add_dll_directory','pty.spawn','ctypes.dlopen'}:\n"
+        "  raise PermissionError('child processes and native loading disabled')\n"
+        " if event in {'os.remove','os.rmdir','os.mkdir','os.chdir'} "
+        "and args and not inside(args[0],(_root,)):\n"
+        "  raise PermissionError('filesystem access denied')\n"
+        " if event in {'os.listdir','os.scandir'} and args and "
+        "not inside(args[0],(_root,*_prefixes)):\n"
+        "  raise PermissionError('filesystem access denied')\n"
+        " if event in {'os.rename','os.replace'} and any(not inside(p,(_root,)) for p in args[:2]):\n"
+        "  raise PermissionError('filesystem access denied')\n"
+        "sys.addaudithook(audit)\n"
+        "def uncaught(_kind,_value,_traceback): __import__('os')._exit(2)\n"
+        "sys.excepthook=uncaught\n"
+    )
+
+
+def terminate(process: subprocess.Popen[bytes]) -> None:
+    try:
+        if os.name == "posix":
+            os.killpg(process.pid, signal.SIGKILL)
+        else:
+            completed = subprocess.run(
+                ["taskkill", "/PID", str(process.pid), "/T", "/F"],
+                check=False,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                timeout=2,
+            )
+            if completed.returncode != 0 and process.poll() is None:
+                process.kill()
+    except OSError:
+        pass
+
+
+def run_command(
+    command: list[str],
+    *,
+    root: Path,
+    environment: dict[str, str],
+    deadline: float,
+    output_limit: int,
+    label: str,
+) -> tuple[int | None, int]:
+    creationflags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0) if os.name == "nt" else 0
+    process = subprocess.Popen(
+        command,
+        cwd=root,
+        env=environment,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        shell=False,
+        start_new_session=os.name == "posix",
+        creationflags=creationflags,
+    )
+    counts = [0, 0]
+    exceeded = threading.Event()
+    lock = threading.Lock()
+
+    def drain(stream: object, index: int) -> None:
+        while True:
+            try:
+                chunk = stream.read(4096)
+            except OSError:
+                return
+            if not chunk:
+                return
+            with lock:
+                counts[index] += len(chunk)
+                if sum(counts) > output_limit:
+                    exceeded.set()
+                    return
+
+    threads = [
+        threading.Thread(target=drain, args=(process.stdout, 0), daemon=True),
+        threading.Thread(target=drain, args=(process.stderr, 1), daemon=True),
+    ]
+    for thread in threads:
+        thread.start()
+    while process.poll() is None:
+        if exceeded.is_set() or time.monotonic() >= deadline:
+            terminate(process)
+            process.wait()
+            for thread in threads:
+                thread.join(timeout=1)
+            return None, sum(counts)
+        time.sleep(0.01)
+    for thread in threads:
+        thread.join(timeout=1)
+    output_bytes = sum(counts)
+    if exceeded.is_set() or output_bytes > output_limit:
+        return None, output_bytes
+    return process.returncode, output_bytes
+
+
+def trial(
+    members: dict[str, bytes],
+    manifest: dict[str, object],
+    predicate: dict[str, object],
+    index: int,
+) -> int | None:
+    with tempfile.TemporaryDirectory(prefix="reprosieve-repro-") as temporary:
+        root = Path(temporary)
+        workspace_index = strict_json(members["workspace/index.json"])
+        if not isinstance(workspace_index, list):
+            return None
+        workspace_identities: set[str] = set()
+        for raw_path in workspace_index:
+            if not isinstance(raw_path, str):
+                return None
+            path = safe_path(raw_path)
+            identity = path_identity(path)
+            if identity in workspace_identities:
+                return None
+            workspace_identities.add(identity)
+            target = root.joinpath(*PurePosixPath(path).parts)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(members[f"workspace/files/{path}"])
+        replay_path = root / "replay.json"
+        replay_path.write_text(
+            json.dumps(replay(members, str(manifest["trace_id"])), sort_keys=True, separators=(",", ":")) + "\n",
+            encoding="utf-8",
+        )
+        guard = root / ".guard"
+        guard.mkdir()
+        timeout = float(predicate["timeout_seconds"])
+        output_limit = int(predicate["output_limit_bytes"])
+        process_limit = int(predicate["process_limit"])
+        (guard / "sitecustomize.py").write_text(
+            guard_source(timeout, output_limit, process_limit),
+            encoding="utf-8",
+        )
+        argv = predicate["argv"]
+        if not isinstance(argv, list) or len(argv) < 2 or not all(isinstance(item, str) for item in argv):
+            return None
+        if Path(argv[0]).name.lower() not in {"python", "python3", "python.exe", "py"}:
+            return None
+        script = safe_path(argv[1])
+        if script not in workspace_index:
+            return None
+        command = [sys.executable, script, *argv[2:]]
+        environment: dict[str, str] = {}
+        captured_environment = strict_json(members["environment.json"])
+        if not isinstance(captured_environment, dict) or any(
+            not isinstance(name, str) or not isinstance(value, str)
+            for name, value in captured_environment.items()
+        ):
+            return None
+        provider_prefixes = (
+            "OPENAI_", "ANTHROPIC_", "AZURE_", "AWS_ACCESS", "AWS_SECRET",
+            "GOOGLE_API", "GEMINI_", "COHERE_", "MISTRAL_",
+        )
+        proxy_names = {"HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY"}
+        for name, value in captured_environment.items():
+            upper = name.upper()
+            if upper not in proxy_names and not any(
+                upper.startswith(prefix) for prefix in provider_prefixes
+            ):
+                environment[name] = value
+        for name in ("SYSTEMROOT", "WINDIR", "COMSPEC", "PATHEXT", "LANG", "LC_ALL"):
+            if os.environ.get(name):
+                environment[name] = os.environ[name]
+        environment.update({
+            "HOME": str(root),
+            "USERPROFILE": str(root),
+            "TMP": str(root),
+            "TEMP": str(root),
+            "HTTP_PROXY": "",
+            "HTTPS_PROXY": "",
+            "ALL_PROXY": "",
+            "NO_PROXY": "",
+            "PYTHONPATH": str(guard),
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONNOUSERSITE": "1",
+            "RUNSIEVE_CAPSULE": str(CAPSULE),
+            "RUNSIEVE_MODE": "offline",
+            "RUNSIEVE_REPLAY": str(replay_path),
+            "RUNSIEVE_TRIAL": str(index),
+            "RUNSIEVE_WORKSPACE": str(root),
+        })
+        deadline = time.monotonic() + timeout
+        metadata = strict_json(members["metadata.json"])
+        if not isinstance(metadata, dict):
+            return None
+        if "application_replay" in metadata:
+            return None
+        consumed_output = 0
+        remaining_output = output_limit
+        if remaining_output < 1:
+            return None
+        predicate_exit, predicate_output = run_command(
+            command,
+            root=root,
+            environment=environment,
+            deadline=deadline,
+            output_limit=remaining_output,
+            label="predicate",
+        )
+        if consumed_output + predicate_output > output_limit:
+            return None
+        return predicate_exit
+
+
+def main() -> int:
+    if sys.argv[1:] != ["--trust-embedded-predicate"]:
+        return fail(
+            "refusing to execute untrusted embedded Python; inspect the capsule and rerun "
+            "with --trust-embedded-predicate only if you accept arbitrary code execution"
+        )
+    try:
+        members, manifest = load()
+        predicate = predicate_spec(strict_json(members["predicate.json"]))
+        trials = predicate["trials"]
+        required = predicate["required_reproductions"]
+        results = [trial(members, manifest, predicate, index) for index in range(trials)]
+        if any(result not in {0, 1} for result in results):
+            return fail("reproduction harness invalid")
+        if sum(result == 0 for result in results) >= required:
+            print("target failure reproduced offline")
+            return 0
+        return fail("target failure absent", 1)
+    except Exception:  # noqa: BLE001 - reject untrusted capsules without a traceback.
+        return fail("reproduction capsule invalid")
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

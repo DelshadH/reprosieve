@@ -149,6 +149,15 @@ def _validate_json(value: JsonValue, *, limits: SchemaLimits, label: str) -> Non
         raise ValueError(f"{label} JSON size limit exceeded")
 
 
+def validate_json_document(
+    value: JsonValue,
+    *,
+    limits: SchemaLimits | None = None,
+    label: str = "JSON document",
+) -> None:
+    _validate_json(value, limits=limits or SchemaLimits(), label=label)
+
+
 @dataclass(frozen=True, slots=True)
 class _Leave:
     identity: int

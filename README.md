@@ -19,7 +19,8 @@ hash-addressed capsule with an independent 1-minimality proof.
 - Embedded Python predicates. ReproSieve invokes them with a direct argument vector,
   a clean temporary directory, provider keys removed, bounded time/output/process
   resources, and Python audit hooks that deny outbound network, child processes,
-  native loading, and host-file access.
+  native loading, and host-file access. These controls are defense in depth, not
+  an OS sandbox; embedded predicates are arbitrary code.
 - Deterministic recorded-output materialization and offline predicate
   reproduction. These paths reconstruct retained values and execute only the
   declared predicate; they do not rerun application or orchestration code.
@@ -47,8 +48,10 @@ python -m pip install "reprosieve[openai]"
 
 ## Workflow
 
-The predicate script must be included in the capsule and `--predicate` must be
-the final option because everything after it is an argument vector.
+The predicate script is arbitrary capsule-provided Python and is not sandboxed.
+It must be included in the capsule, and every command that can execute or export
+it requires `--trust-embedded-predicate`. `--predicate` must be the final option
+because everything after it is an argument vector.
 
 ```bash
 reprosieve capture \
@@ -59,23 +62,31 @@ reprosieve capture \
 
 reprosieve reduce failed.reprosieve \
   --output-dir reduced \
+  --trust-embedded-predicate \
   --predicate python verify_failure.py
 
 reprosieve materialize reduced/<sha256>.reprosieve \
   --output materialized.json
 
 reprosieve reproduce-predicate reduced/<sha256>.reprosieve \
+  --trust-embedded-predicate \
   --predicate python verify_failure.py
 
 reprosieve verify-minimal reduced/<sha256>.reprosieve \
+  --trust-embedded-predicate \
   --predicate python verify_failure.py
 
 reprosieve export reduced/<sha256>.reprosieve \
+  --trust-embedded-predicate \
   --output issue-repro
 
 cd issue-repro
-python reproduce.py
+python reproduce.py --trust-embedded-predicate
 ```
+
+Exported reproductions refuse to execute without that explicit flag. Use it only
+after inspecting and accepting the embedded Python predicate as arbitrary code
+running with your user account's permissions.
 
 `materialize` writes recorded values as deterministic JSON.
 `reproduce-predicate` evaluates the embedded predicate in a fresh constrained
@@ -119,11 +130,13 @@ Two additional copy-paste checks:
 
 ```bash
 python -m scripts.verify
-python -m scripts.release_gate
+python -m scripts.final_release_gate
 ```
 
-The first runs tests, lint, typing, and contract self-tests. The second verifies
-the clean Git state and every registered evidence manifest.
+The first runs tests, lint, typing, and contract self-tests. The second runs the
+current exact-head security, secrets, killer-demo, and minimality checks from a
+clean Git state. The immutable contract-v2 release gate remains historical
+evidence, as documented in `RELEASING.md`.
 
 ## Scope and comparison
 

@@ -9,7 +9,7 @@ from typing import Any
 
 from scripts.gates._verify import (
     GateSpec,
-    portable_measurement,
+    Measurement,
     verify_gate,
 )
 
@@ -18,6 +18,19 @@ GIT_SHA = re.compile(r"^[a-f0-9]{40}$")
 PLATFORMS = ("linux", "macos")
 ROOT = Path(__file__).resolve().parents[2]
 COLLECTOR_PATH = "scripts/portable_reproduction_proof.py"
+
+
+def trusted_portable_measurement(
+    *,
+    platform: str,
+    assertions: tuple[str, ...],
+) -> Measurement:
+    return Measurement(
+        assertions=assertions,
+        argv=("python", "reproduce.py", "--trust-embedded-predicate"),
+        kind="portable-reproduction",
+        platform=platform,
+    )
 
 
 def _digest_reference(value: object, *, label: str, allow_empty: bool = True) -> None:
@@ -98,7 +111,7 @@ def validate_portable_proof(
         raise ValueError("portable proof command fields are invalid")
     output_limit = command.get("output_limit_bytes")
     if (
-        command.get("argv") != ["python", "reproduce.py"]
+        command.get("argv") != ["python", "reproduce.py", "--trust-embedded-predicate"]
         or command.get("exit_code") != 0
         or isinstance(output_limit, bool)
         or not isinstance(output_limit, int)
@@ -200,7 +213,7 @@ def _validate_rs_g10(
 SPEC = GateSpec(
     gate="RS-G10",
     measurements=(
-        portable_measurement(
+        trusted_portable_measurement(
             platform="linux",
             assertions=(
                 "fresh-temp-run",
@@ -209,7 +222,7 @@ SPEC = GateSpec(
                 "no-api-key",
             ),
         ),
-        portable_measurement(
+        trusted_portable_measurement(
             platform="macos",
             assertions=("macos-one-command",),
         ),

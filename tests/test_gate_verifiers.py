@@ -90,7 +90,7 @@ def test_rs_g10_portable_proof_requires_measured_platform_execution() -> None:
         "source_tree_present": False,
         "provider_keys_present": [],
         "command": {
-            "argv": ["python", "reproduce.py"],
+            "argv": ["python", "reproduce.py", "--trust-embedded-predicate"],
             "exit_code": 0,
             "output_limit_bytes": 65536,
             "stdout": {"bytes": 35, "sha256": "a" * 64},
@@ -653,3 +653,45 @@ def test_evidence_generator_derives_proof_records_from_gate_measurements() -> No
             "stderr_sha256": "b" * 64,
             "stdout_sha256": "a" * 64,
         }
+
+
+def test_evidence_generator_executes_the_registered_minimality_oracle(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    generator = importlib.import_module("scripts.generate_gate_evidence")
+    support = importlib.import_module("scripts.gates._verify")
+    spec = support.GateSpec(
+        gate="RS-G06",
+        measurements=(
+            support.Measurement(
+                assertions=("every-unit-removal-checked",),
+                argv=("python", "-m", "scripts.minimality_oracle_proof"),
+                kind="minimality-oracle",
+            ),
+        ),
+        expected_support_sha256="a" * 64,
+    )
+    monkeypatch.setattr(
+        generator.subprocess,
+        "run",
+        lambda *args, **kwargs: subprocess.CompletedProcess(
+            args[0],
+            0,
+            stdout=b'{"passed":true}\n',
+            stderr=b"",
+        ),
+    )
+
+    commands, artifacts = generator._execute_measurements(
+        spec,
+        directory=tmp_path,
+        timeout_seconds=30,
+    )
+
+    assert commands[0]["argv"] == [
+        "python",
+        "-m",
+        "scripts.minimality_oracle_proof",
+    ]
+    assert artifacts == ()

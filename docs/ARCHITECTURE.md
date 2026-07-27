@@ -69,8 +69,9 @@ CPU, descriptor, and process limits where the platform exposes them.
 `sitecustomize.py` patches network entry points and installs a Python audit hook
 that denies host-file access, child processes, native loading, and destructive
 operations outside the trial directory. This is meaningful defense in depth,
-not an operating-system or virtual-machine sandbox; see the residual risks in
-`docs/security-review.md`.
+not an operating-system or virtual-machine sandbox. Exported reproductions
+require `--trust-embedded-predicate` before any capsule-supplied Python executes;
+see the residual risks in `docs/security-review.md`.
 
 The isolated 0.1 trial writes deterministic recorded values to
 `RUNSIEVE_REPLAY` and runs only the embedded predicate. `application_replay`

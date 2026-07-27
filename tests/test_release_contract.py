@@ -84,6 +84,10 @@ def test_release_workflow_attests_the_reproducibility_checked_artifacts() -> Non
     assert "--commit \"$RUNSIEVE_EVIDENCE_COMMIT\"" in build
     assert "final-decision-receipt" in build
     assert "scripts.verify_final_receipt" in build
+    assert "--workflow ci.yml" in build
+    assert '.workflowName == "CodeQL"' in build
+    assert '.event == "dynamic"' in build
+    assert build.count('--commit "$RUNSIEVE_EVIDENCE_COMMIT"') >= 2
 
 
 def test_release_preflight_tag_matches_project_version() -> None:
@@ -117,6 +121,13 @@ def test_final_release_gate_declares_current_exact_head_checks() -> None:
         "killer-demo",
         "minimality-oracle",
     ]
+
+
+def test_readme_uses_the_current_final_release_gate() -> None:
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+    assert "python -m scripts.final_release_gate" in readme
+    assert "python -m scripts.release_gate" not in readme
 
 
 def test_final_receipt_rejects_a_different_commit(tmp_path: Path) -> None:

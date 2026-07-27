@@ -53,7 +53,7 @@ def build_portable_proof(
 ) -> dict[str, Any]:
     return {
         "command": {
-            "argv": ["python", "reproduce.py"],
+            "argv": ["python", "reproduce.py", "--trust-embedded-predicate"],
             "exit_code": exit_code,
             "output_limit_bytes": output_limit_bytes,
             "stderr": _digest(stderr),
@@ -149,6 +149,7 @@ def collect(output: Path) -> dict[str, Any]:
                 str(reduced),
                 "--timeout",
                 "3",
+                "--trust-embedded-predicate",
                 "--predicate",
                 "python",
                 "verify_failure.py",
@@ -159,7 +160,15 @@ def collect(output: Path) -> dict[str, Any]:
         if len(reduced_capsules) != 1:
             raise RuntimeError("portable proof did not produce exactly one capsule")
         export = build_root / "issue-repro"
-        if reprosieve_main(["export", str(reduced_capsules[0]), "--output", str(export)]):
+        if reprosieve_main(
+            [
+                "export",
+                str(reduced_capsules[0]),
+                "--output",
+                str(export),
+                "--trust-embedded-predicate",
+            ]
+        ):
             raise RuntimeError("portable proof export failed")
 
         with tempfile.TemporaryDirectory(prefix="reprosieve-clean-room-") as clean_temporary:
@@ -180,7 +189,7 @@ def collect(output: Path) -> dict[str, Any]:
                 )
             )
             completed = subprocess.run(
-                [sys.executable, "reproduce.py"],
+                [sys.executable, "reproduce.py", "--trust-embedded-predicate"],
                 cwd=clean_export,
                 env=environment,
                 stdin=subprocess.DEVNULL,

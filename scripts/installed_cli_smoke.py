@@ -96,7 +96,12 @@ def run_installed_flows(distribution: Path, *, with_openai: bool) -> tuple[str, 
             environment=environment,
         )
         flows.append("materialize")
-        predicate_args = ["--predicate", "python", "verify_failure.py"]
+        predicate_args = [
+            "--trust-embedded-predicate",
+            "--predicate",
+            "python",
+            "verify_failure.py",
+        ]
         _run(
             [str(cli), "reproduce-predicate", str(source), *predicate_args],
             cwd=root,
@@ -129,13 +134,20 @@ def run_installed_flows(distribution: Path, *, with_openai: bool) -> tuple[str, 
         flows.append("verify-minimal")
         exported = root / "export"
         _run(
-            [str(cli), "export", str(artifact), "--output", str(exported)],
+            [
+                str(cli),
+                "export",
+                str(artifact),
+                "--output",
+                str(exported),
+                "--trust-embedded-predicate",
+            ],
             cwd=root,
             environment=environment,
         )
         flows.append("export")
         _run(
-            [str(python), "reproduce.py"],
+            [str(python), "reproduce.py", "--trust-embedded-predicate"],
             cwd=exported,
             environment=environment,
         )
