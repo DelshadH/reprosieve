@@ -21,7 +21,7 @@ from scripts.evidence import write_canonical_json
 ROOT = Path(__file__).resolve().parents[1]
 GIT_SHA = re.compile(r"^[a-f0-9]{40}$")
 MAX_OUTPUT_BYTES = 1_000_000
-VERSION = "0.1.0a1"
+VERSION = "0.1.0a2"
 
 
 def _sha256(path: Path) -> str:

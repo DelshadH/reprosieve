@@ -15,14 +15,11 @@ def test_maturity_status_records_alpha_candidate_and_external_blockers() -> None
 
     assert canonical_json(status) == raw
     assert status["schema_version"] == 1
-    assert (
-        status["recommendation"]
-        == "ready-for-0.1.0a1-publication-decision"
-    )
+    assert status["recommendation"] == "ready-for-0.1.0a2-publication"
     assert set(status["levels"]) == {"0.1", "0.5", "1.0"}
     assert (
         status["levels"]["0.1"]["status"]
-        == "release-candidate-awaiting-owner-decision"
+        == "publication-authorized"
     )
     assert status["levels"]["0.5"]["status"] == "not-ready"
     assert status["levels"]["1.0"]["status"] == "not-ready"
@@ -30,10 +27,7 @@ def test_maturity_status_records_alpha_candidate_and_external_blockers() -> None
     alpha_remaining = {
         item["id"] for item in status["levels"]["0.1"]["remaining"]
     }
-    assert alpha_remaining == {
-        "publication-authorization",
-        "registry-authentication",
-    }
+    assert alpha_remaining == set()
 
     half_blockers = {
         item["id"] for item in status["levels"]["0.5"]["remaining"]
