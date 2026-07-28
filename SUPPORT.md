@@ -1,8 +1,8 @@
 # Support policy
 
-ReproSieve is a pre-0.1 project. Only the behavior documented for the current
-repository version is supported; there is no long-term support branch or
-backward-compatibility guarantee yet.
+ReproSieve 0.1.0a4 is an experimental technical alpha. Only the behavior
+documented for the current repository version is supported; there is no
+long-term support branch or backward-compatibility guarantee yet.
 
 Supported runtime combinations:
 

@@ -14,7 +14,7 @@ or failing release gate.
    immutable contract-v2 `scripts.release_gate` remains historical evidence;
    it is not rewritten to bless descendant implementation changes.
 5. After the owner answers `PUBLISH? YES`, create the annotated tag
-   `v0.1.0a3` on the exact canonical `main` head. Never move an existing tag.
+   `v0.1.0a4` on the exact canonical `main` head. Never move an existing tag.
    The unpublished `v0.1.0a1` and `v0.1.0a2` tags are retained as immutable
    records of release-workflow failures that occurred before any registry
    upload.

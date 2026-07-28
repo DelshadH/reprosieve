@@ -2,7 +2,18 @@
 
 All notable changes will be recorded here.
 
-## 0.1.0a3 - release candidate
+## 0.1.0a4 - launch polish
+
+- Added `reprosieve demo`, a core-only, zero-input synthetic demonstration that
+  reduces the package-owned 247-event fixture to 5 events, independently
+  verifies 1-minimality, materializes recorded values, exports a standalone
+  reproduction, and executes it without network or provider credentials.
+- Added create-only `--output-dir` retention and automatic temporary cleanup.
+- Corrected the public alpha status, quick start, predicate warning, and
+  feedback boundary without changing reducer, capsule, predicate, security,
+  capture, application-replay, minimality, or public-format semantics.
+
+## 0.1.0a3 - published
 
 - Made the tag-bound package proof pass an absolute output path so its
   clean-checkout install smoke tests can resolve the candidate artifacts.

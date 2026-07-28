@@ -5,6 +5,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -13,6 +14,73 @@ import reprosieve.capsule as capsule_module
 from reprosieve.capsule import load_capsule, write_capsule
 from reprosieve.cli import build_parser, main
 from reprosieve.fixtures import killer_capsule
+
+
+def test_demo_runs_full_synthetic_flow_without_user_trust_flag(
+    tmp_path: Path,
+    capfd: object,
+) -> None:
+    output = tmp_path / "demo"
+
+    assert main(["demo", "--output-dir", str(output)]) == 0
+
+    captured = capfd.readouterr()  # type: ignore[attr-defined]
+    assert "synthetic fixture: killer-247" in captured.out
+    assert "events: 247 -> 5" in captured.out
+    assert "predicate: reproduces" in captured.out
+    assert "minimality: 1-minimal" in captured.out
+    assert "elapsed:" in captured.out
+    assert (output / "source.reprosieve").is_file()
+    reduced = tuple((output / "reduced").glob("*.reprosieve"))
+    reports = tuple((output / "reduced").glob("*.report.json"))
+    assert len(reduced) == 1
+    assert len(reports) == 1
+    assert (output / "materialized.json").is_file()
+    assert (output / "issue-repro" / "reproduce.py").is_file()
+    summary = json.loads((output / "demo-summary.json").read_text(encoding="utf-8"))
+    assert summary == {
+        "elapsed_seconds": summary["elapsed_seconds"],
+        "exported_reproduction_exit_code": 0,
+        "final_events": 5,
+        "format": "reprosieve-demo-summary",
+        "format_version": 1,
+        "minimality": "1-minimal",
+        "original_events": 247,
+        "predicate_result": "reproduces",
+        "synthetic": True,
+    }
+
+
+def test_demo_never_overwrites_an_existing_output_directory(tmp_path: Path) -> None:
+    output = tmp_path / "occupied"
+    output.mkdir()
+    sentinel = output / "keep.txt"
+    sentinel.write_text("keep", encoding="utf-8")
+
+    assert main(["demo", "--output-dir", str(output)]) == 2
+    assert sentinel.read_text(encoding="utf-8") == "keep"
+    assert tuple(output.iterdir()) == (sentinel,)
+
+
+def test_demo_without_output_directory_cleans_its_workspace(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(tempfile, "tempdir", str(tmp_path))
+
+    assert main(["demo"]) == 0
+
+    assert not tuple(tmp_path.glob("reprosieve-demo-*"))
+
+
+def test_demo_help_explains_why_user_trust_is_not_required(capfd: object) -> None:
+    with pytest.raises(SystemExit) as stopped:
+        build_parser().parse_args(["demo", "--help"])
+
+    assert stopped.value.code == 0
+    output = " ".join(capfd.readouterr().out.split())  # type: ignore[attr-defined]
+    assert "accepts no external capsule or predicate" in output
+    assert "does not require --trust-embedded-predicate" in output
 
 
 @pytest.mark.parametrize(

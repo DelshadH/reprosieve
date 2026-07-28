@@ -46,16 +46,35 @@ def test_package_identifies_as_the_replacement_0_1_alpha_without_broad_replay_cl
 
     assert metadata["project"]["name"] == "reprosieve"
     assert metadata["project"]["scripts"] == {"reprosieve": "reprosieve.cli:main"}
-    assert metadata["project"]["version"] == "0.1.0a3"
+    assert metadata["project"]["version"] == "0.1.0a4"
     assert metadata["tool"]["hatch"]["build"]["targets"]["wheel"]["packages"] == [
         "src/reprosieve"
     ]
     assert metadata["tool"]["hatch"]["build"]["targets"]["sdist"]["include"][0] == (
         "/src/reprosieve"
     )
-    assert reprosieve.__version__ == "0.1.0a3"
+    assert reprosieve.__version__ == "0.1.0a4"
     assert "hermetic" not in changelog
     assert "recorded-output replay" not in changelog
+
+
+def test_public_readme_has_the_a4_launch_contract() -> None:
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+    assert (
+        "ReproSieve turns one failed agent trace into a smaller, redacted, deterministic\n"
+        "capsule that preserves the failure condition expressed by your predicate."
+        in readme
+    )
+    assert (
+        "ReproSieve preserves what the predicate recognizes. A weak or\n"
+        "> overly broad predicate can preserve the wrong failure."
+        in readme
+    )
+    assert "ReproSieve 0.1.0a4 is an experimental technical alpha." in readme
+    assert "python -m pip install reprosieve==0.1.0a4\nreprosieve demo" in readme
+    assert "Do not submit real traces, credentials, private source," in readme
+    assert "Neither command is application replay." in readme
 
 
 def test_release_workflow_attests_the_reproducibility_checked_artifacts() -> None:
@@ -65,7 +84,7 @@ def test_release_workflow_attests_the_reproducibility_checked_artifacts() -> Non
 
     assert "RUNSIEVE_EVIDENCE_COMMIT: ${{ github.sha }}" in workflow
     assert "ref: ${{ env.RUNSIEVE_EVIDENCE_COMMIT }}" in workflow
-    assert 'tags:\n      - "v0.1.0a3"' in workflow
+    assert 'tags:\n      - "v0.1.0a4"' in workflow
     assert "scripts.release_preflight" in workflow
     assert "python -m scripts.package_matrix_proof" in workflow
     assert "release-proof/reprosieve-*.whl" in workflow
@@ -147,7 +166,7 @@ def test_github_release_rerun_repairs_only_missing_verified_assets() -> None:
 def test_release_preflight_tag_matches_project_version() -> None:
     from scripts.release_preflight import expected_tag
 
-    assert expected_tag() == "v0.1.0a3"
+    assert expected_tag() == "v0.1.0a4"
 
 
 def test_final_evidence_workflow_is_exact_head_and_attestation_bound() -> None:
@@ -220,10 +239,10 @@ def test_killer_demo_completes_the_full_claim_within_twenty_seconds() -> None:
     )
     duration = time.monotonic() - started
     assert completed.returncode == 0, completed.stderr
-    assert "reduced 247 events to 5; 1-minimal" in completed.stdout
-    assert "wrote deterministic recorded-output materialization" in completed.stdout
-    assert '"result":"reproduces"' in completed.stdout
-    assert "exported one-command offline issue reproduction" in completed.stdout
+    assert "synthetic fixture: killer-247" in completed.stdout
+    assert "events: 247 -> 5" in completed.stdout
+    assert "predicate: reproduces" in completed.stdout
+    assert "minimality: 1-minimal" in completed.stdout
     assert duration <= 20
 
 
@@ -238,6 +257,7 @@ def test_cli_help_starts_without_the_optional_sdk_imported() -> None:
     )
     assert completed.returncode == 0, completed.stderr
     assert "capture" in completed.stdout
+    assert "demo" in completed.stdout
     assert "reduce" in completed.stdout
     assert "materialize" in completed.stdout
     assert "reproduce-predicate" in completed.stdout

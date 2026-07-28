@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - "v0.1.0a3"
+      - "v0.1.0a4"
 
 permissions: {}
 
@@ -192,7 +192,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.ref_name }}
-          RELEASE_TITLE: ReproSieve 0.1.0a3
+          RELEASE_TITLE: ReproSieve 0.1.0a4
         run: |
           RELEASES_JSON="$RUNNER_TEMP/releases.json"
           RELEASE_STATE_FILE="$RUNNER_TEMP/release-state.txt"

@@ -1,15 +1,39 @@
 # ReproSieve
 
-**Turn a large failed agent run into a small, redacted, offline reproduction.**
+[![PyPI](https://img.shields.io/pypi/v/reprosieve)](https://pypi.org/project/reprosieve/)
+[![Python](https://img.shields.io/pypi/pyversions/reprosieve)](https://pypi.org/project/reprosieve/)
+[![CI](https://github.com/DelshadH/reprosieve/actions/workflows/ci.yml/badge.svg)](https://github.com/DelshadH/reprosieve/actions/workflows/ci.yml)
 
-ReproSieve captures one supported OpenAI Agents SDK trace, removes secrets before
-persistence, replaces model and tool calls with recorded outputs, and reduces the
-trace against an executable failure predicate. The result is a deterministic,
+ReproSieve turns one failed agent trace into a smaller, redacted, deterministic
+capsule that preserves the failure condition expressed by your predicate.
+
+> **Important:** ReproSieve preserves what the predicate recognizes. A weak or
+> overly broad predicate can preserve the wrong failure.
+
+> **Status:** ReproSieve 0.1.0a4 is an experimental technical alpha. Use
+> synthetic or disposable inputs, inspect capsules before sharing, and treat
+> embedded predicates as arbitrary Python.
+
+Try the complete package-owned synthetic demonstration:
+
+```bash
+python -m pip install reprosieve==0.1.0a4
+reprosieve demo
+```
+
+It needs only the core package: no OpenAI extra, API key, agent application, or
+network access. It reduces the synthetic 247-event fixture, independently
+verifies 1-minimality, materializes retained recorded values, exports an offline
+predicate reproduction, and executes that export.
+
+ReproSieve captures one supported OpenAI Agents SDK trace, removes configured
+secrets before persistence, replaces model and tool calls with recorded outputs,
+and reduces the trace against an executable failure predicate. The result is a
 hash-addressed capsule with an independent 1-minimality proof.
 
-> **Status:** honest pre-0.1 seed. The end-to-end path works and has synthetic
-> security fixtures, but it has not been proven safe for real credentials,
-> private source, or personal data. Use synthetic or disposable inputs.
+> **Feedback boundary:** Do not submit real traces, credentials, private source,
+> personal data, or confidential capsules. Submit synthetic/disposable
+> reproductions or a prose description of the unsupported failure shape.
 
 ## Supported path
 
@@ -33,12 +57,6 @@ hash-addressed capsule with an independent 1-minimality proof.
 | Capture SDK | `openai-agents>=0.18.3,<0.19` |
 | Standalone reproduction | Linux and macOS |
 | Input safety claim | Synthetic or disposable data only |
-
-Install the core:
-
-```bash
-python -m pip install reprosieve
-```
 
 Install capture support:
 
@@ -112,11 +130,31 @@ Predicate exit codes are strict:
 
 Invalid is never treated as absent and is never accepted as a reduction.
 
+## Zero-setup synthetic demo
+
+The installed package includes a synthetic 247-event mechanical fixture:
+
+```bash
+reprosieve demo
+```
+
+The demo accepts no external capsule, predicate, command, or executable.
+Therefore, unlike commands that consume user-controlled capsules, it does not
+require `--trust-embedded-predicate`. To retain the source capsule, reduced
+capsule and report, materialized JSON, standalone export, and summary JSON, pass
+a path that does not already exist:
+
+```bash
+reprosieve demo --output-dir reprosieve-demo-output
+```
+
+Without `--output-dir`, the temporary workspace is cleaned automatically. The
+demo never overwrites an existing path.
+
 ## Reproducible proof
 
-The repository includes a synthetic 247-event mechanical fixture. This command builds it,
-reduces it to at most 10 events, verifies 1-minimality independently, exports a
-standalone reproduction, and runs it without an API key:
+The repository release gate runs the same installed CLI demo through its
+historical source entry point:
 
 ```bash
 python scripts/killer_demo.py
