@@ -150,10 +150,11 @@ def test_rs_g13_requires_real_clean_install_proof_for_each_python() -> None:
     validate = getattr(module, "validate_package_proof", None)
     assert callable(validate)
     commit = "c" * 40
-    wheel = "reprosieve-0.1.0a3-py3-none-any.whl"
-    sdist = "reprosieve-0.1.0a3.tar.gz"
+    wheel = "reprosieve-0.1.0a4-py3-none-any.whl"
+    sdist = "reprosieve-0.1.0a4.tar.gz"
     core_flows = [
         "help",
+        "demo",
         "materialize",
         "reproduce-predicate",
         "reduce",
@@ -234,12 +235,12 @@ def test_rs_g13_requires_real_clean_install_proof_for_each_python() -> None:
         },
         "members": {
             "sdist": [
-                "reprosieve-0.1.0a3/README.md",
-                "reprosieve-0.1.0a3/pyproject.toml",
-                "reprosieve-0.1.0a3/src/reprosieve/__init__.py",
+                "reprosieve-0.1.0a4/README.md",
+                "reprosieve-0.1.0a4/pyproject.toml",
+                "reprosieve-0.1.0a4/src/reprosieve/__init__.py",
             ],
             "wheel": [
-                "reprosieve-0.1.0a3.dist-info/METADATA",
+                "reprosieve-0.1.0a4.dist-info/METADATA",
                 "reprosieve/__init__.py",
             ],
         },
@@ -263,7 +264,7 @@ def test_rs_g13_requires_real_clean_install_proof_for_each_python() -> None:
                 "reduction-report-v1.schema.json",
             ],
             "sdist_schema_parity": True,
-            "version": "0.1.0a3",
+            "version": "0.1.0a4",
             "wheel_schema_parity": True,
         },
         "source_date_epoch": "1753460000",
@@ -334,7 +335,7 @@ def test_rs_g13_requires_real_clean_install_proof_for_each_python() -> None:
             **proof["members"],
             "sdist": [
                 *proof["members"]["sdist"],
-                "reprosieve-0.1.0a3/.evidence/RS-G13/proof.json",
+                "reprosieve-0.1.0a4/.evidence/RS-G13/proof.json",
             ],
         },
     }
@@ -388,8 +389,8 @@ def test_evidence_generator_consumes_three_distinct_package_proofs(
     for minor in ("3.11", "3.12", "3.13"):
         source = tmp_path / f"input-{minor}"
         source.mkdir()
-        wheel = "reprosieve-0.1.0a3-py3-none-any.whl"
-        sdist = "reprosieve-0.1.0a3.tar.gz"
+        wheel = "reprosieve-0.1.0a4-py3-none-any.whl"
+        sdist = "reprosieve-0.1.0a4.tar.gz"
         rebuilt_wheel = f"rebuild-{wheel}"
         rebuilt_sdist = f"rebuild-{sdist}"
         commands = []
@@ -430,6 +431,7 @@ def test_evidence_generator_consumes_three_distinct_package_proofs(
         (source / "reprosieve.spdx.json").write_bytes(b"sbom")
         core_flows = [
             "help",
+            "demo",
             "materialize",
             "reproduce-predicate",
             "reduce",
@@ -474,11 +476,11 @@ def test_evidence_generator_consumes_three_distinct_package_proofs(
             },
             "members": {
                 "sdist": [
-                    "reprosieve-0.1.0a3/README.md",
-                    "reprosieve-0.1.0a3/pyproject.toml",
+                    "reprosieve-0.1.0a4/README.md",
+                    "reprosieve-0.1.0a4/pyproject.toml",
                 ],
                 "wheel": [
-                    "reprosieve-0.1.0a3.dist-info/METADATA",
+                    "reprosieve-0.1.0a4.dist-info/METADATA",
                     "reprosieve/__init__.py",
                 ],
             },
@@ -502,7 +504,7 @@ def test_evidence_generator_consumes_three_distinct_package_proofs(
                     "reduction-report-v1.schema.json",
                 ],
                 "sdist_schema_parity": True,
-                "version": "0.1.0a3",
+                "version": "0.1.0a4",
                 "wheel_schema_parity": True,
             },
             "source_date_epoch": "1753460000",

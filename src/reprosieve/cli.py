@@ -2,13 +2,16 @@ from __future__ import annotations
 
 import argparse
 import base64
+import contextlib
 import hashlib
+import io
 import os
 import shutil
 import signal
 import subprocess
 import sys
 import tempfile
+import time
 from collections.abc import Sequence
 from dataclasses import replace
 from pathlib import Path
@@ -22,6 +25,7 @@ from .capsule import (
 )
 from .ddmin import PredicateResult
 from .export import export_reproduction
+from .fixtures import killer_capsule
 from .hierarchy import minimize_capsule
 from .predicate import (
     PredicateSpec,
@@ -96,6 +100,21 @@ def build_parser() -> argparse.ArgumentParser:
     export.add_argument("--format", choices=("repro-dir",), default="repro-dir")
     export.add_argument("--output", required=True)
     _trust_argument(export)
+
+    demo = subparsers.add_parser(
+        "demo",
+        help="run the package-owned 247-event synthetic demonstration",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        description=(
+            "Run the package-owned synthetic fixture end to end.\n"
+            "It accepts no external capsule or predicate, so it does not require "
+            "--trust-embedded-predicate."
+        ),
+    )
+    demo.add_argument(
+        "--output-dir",
+        help="create and retain the demo artifacts at this new path",
+    )
     return parser
 
 
@@ -390,6 +409,101 @@ def _export(args: argparse.Namespace) -> int:
     return 0
 
 
+def _run_demo(root: Path) -> tuple[dict[str, object], float]:
+    started = time.monotonic()
+    source = root / "source.reprosieve"
+    reduced_directory = root / "reduced"
+    materialized = root / "materialized.json"
+    exported = root / "issue-repro"
+    source_capsule = killer_capsule()
+    if len(source_capsule.events) != 247:
+        raise RuntimeError("package-owned demo fixture no longer has 247 events")
+    write_capsule(source_capsule, source)
+    predicate = (sys.executable, "verify_failure.py")
+    predicate_args = argparse.Namespace(
+        source=str(source),
+        output_dir=str(reduced_directory),
+        timeout=3.0,
+        output_limit=64 * 1024,
+        trials=1,
+        required=1,
+        process_limit=16,
+        predicate=predicate,
+    )
+    with contextlib.redirect_stdout(io.StringIO()):
+        if _reduce(predicate_args) != 0:
+            raise RuntimeError("synthetic reduction failed")
+    artifacts = tuple(reduced_directory.glob("*.reprosieve"))
+    reports = tuple(reduced_directory.glob("*.report.json"))
+    if len(artifacts) != 1 or len(reports) != 1:
+        raise RuntimeError("synthetic reduction produced an unexpected artifact set")
+    reduced_path = artifacts[0]
+    reduced = load_capsule(reduced_path)
+    spec = _spec(predicate_args)
+
+    def evaluate(candidate: object) -> PredicateResult:
+        return run_predicate(candidate, spec).result  # type: ignore[arg-type]
+
+    predicate_report = run_predicate(reduced, spec)
+    minimality = verify_one_minimal(reduced, evaluate)
+    if (
+        len(reduced.events) != 5
+        or predicate_report.result is not PredicateResult.REPRODUCES
+        or not minimality.is_one_minimal
+    ):
+        raise RuntimeError("synthetic reduction did not satisfy the demo contract")
+    write_replay(offline_replay(reduced), materialized)
+    export_reproduction(reduced_path, exported)
+    reproduction = subprocess.run(
+        [sys.executable, "reproduce.py", "--trust-embedded-predicate"],
+        cwd=exported,
+        env={
+            "PATH": os.environ.get("PATH", ""),
+            "SYSTEMROOT": os.environ.get("SYSTEMROOT", ""),
+        },
+        stdin=subprocess.DEVNULL,
+        capture_output=True,
+        timeout=10,
+        check=False,
+    )
+    if (
+        reproduction.returncode != 0
+        or reproduction.stdout.strip() != b"target failure reproduced offline"
+    ):
+        raise RuntimeError("exported synthetic reproduction failed")
+    elapsed = time.monotonic() - started
+    summary: dict[str, object] = {
+        "elapsed_seconds": round(elapsed, 6),
+        "exported_reproduction_exit_code": reproduction.returncode,
+        "final_events": len(reduced.events),
+        "format": "reprosieve-demo-summary",
+        "format_version": 1,
+        "minimality": "1-minimal",
+        "original_events": len(source_capsule.events),
+        "predicate_result": predicate_report.result.value,
+        "synthetic": True,
+    }
+    with (root / "demo-summary.json").open("xb") as stream:
+        stream.write(canonical_json(summary))
+    return summary, elapsed
+
+
+def _demo(args: argparse.Namespace) -> int:
+    if args.output_dir:
+        root = ensure_new_path(args.output_dir, label="demo output")
+        root.mkdir()
+        summary, elapsed = _run_demo(root)
+    else:
+        with tempfile.TemporaryDirectory(prefix="reprosieve-demo-") as temporary:
+            summary, elapsed = _run_demo(Path(temporary))
+    print("synthetic fixture: killer-247")
+    print(f"events: {summary['original_events']} -> {summary['final_events']}")
+    print(f"predicate: {summary['predicate_result']}")
+    print(f"minimality: {summary['minimality']}")
+    print(f"elapsed: {elapsed:.3f}s")
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     try:
@@ -403,6 +517,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             "reproduce-predicate": _reproduce_predicate,
             "verify-minimal": _verify,
             "export": _export,
+            "demo": _demo,
         }
         return handlers[args.command](args)
     except (FileExistsError, OSError, RuntimeError, ValueError) as error:

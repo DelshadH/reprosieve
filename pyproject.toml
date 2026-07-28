@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "reprosieve"
-version = "0.1.0a3"
+version = "0.1.0a4"
 description = "Reduce failed agent traces into redacted offline predicate reproductions"
 readme = "README.md"
 requires-python = ">=3.11,<3.14"

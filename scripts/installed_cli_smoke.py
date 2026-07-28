@@ -21,7 +21,12 @@ _PROVIDER_PREFIXES = (
 _MAX_OUTPUT = 1_000_000
 
 
-def _run(argv: list[str], *, cwd: Path, environment: dict[str, str]) -> None:
+def _run(
+    argv: list[str],
+    *,
+    cwd: Path,
+    environment: dict[str, str],
+) -> subprocess.CompletedProcess[bytes]:
     completed = subprocess.run(
         argv,
         cwd=cwd,
@@ -39,6 +44,7 @@ def _run(argv: list[str], *, cwd: Path, environment: dict[str, str]) -> None:
         raise RuntimeError(
             f"installed CLI flow failed: {argv[0]} {argv[1] if len(argv) > 1 else ''}"
         )
+    return completed
 
 
 def run_installed_flows(distribution: Path, *, with_openai: bool) -> tuple[str, ...]:
@@ -81,6 +87,78 @@ def run_installed_flows(distribution: Path, *, with_openai: bool) -> tuple[str, 
 
         _run([str(cli), "--help"], cwd=root, environment=environment)
         flows.append("help")
+        if not with_openai:
+            _run(
+                [
+                    str(python),
+                    "-c",
+                    "import importlib.util; assert importlib.util.find_spec('agents') is None",
+                ],
+                cwd=root,
+                environment=environment,
+            )
+        network_guard = root / "network-deny"
+        network_guard.mkdir()
+        (network_guard / "sitecustomize.py").write_text(
+            "import socket\n"
+            "def denied(*args, **kwargs):\n"
+            "    raise RuntimeError('installed demo attempted network access')\n"
+            "socket.create_connection = denied\n"
+            "socket.getaddrinfo = denied\n"
+            "socket.socket.connect = denied\n"
+            "socket.socket.connect_ex = denied\n",
+            encoding="utf-8",
+            newline="\n",
+        )
+        demo_environment = dict(environment)
+        demo_environment["PYTHONPATH"] = str(network_guard)
+        demo_environment["HTTP_PROXY"] = "http://127.0.0.1:1"
+        demo_environment["HTTPS_PROXY"] = "http://127.0.0.1:1"
+        demo_environment["ALL_PROXY"] = "http://127.0.0.1:1"
+        demo = root / "demo"
+        demo_run = _run(
+            [str(cli), "demo", "--output-dir", str(demo)],
+            cwd=root,
+            environment=demo_environment,
+        )
+        demo_stdout = demo_run.stdout.decode("utf-8")
+        if (
+            "synthetic fixture: killer-247" not in demo_stdout
+            or "events: 247 -> 5" not in demo_stdout
+            or "predicate: reproduces" not in demo_stdout
+            or "minimality: 1-minimal" not in demo_stdout
+        ):
+            raise RuntimeError("installed demo output is incomplete")
+        summary = json.loads((demo / "demo-summary.json").read_text(encoding="utf-8"))
+        if (
+            summary.get("original_events") != 247
+            or summary.get("final_events") != 5
+            or summary.get("predicate_result") != "reproduces"
+            or summary.get("minimality") != "1-minimal"
+            or summary.get("exported_reproduction_exit_code") != 0
+        ):
+            raise RuntimeError("installed demo summary is invalid")
+        occupied = subprocess.run(
+            [str(cli), "demo", "--output-dir", str(demo)],
+            cwd=root,
+            env=demo_environment,
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            check=False,
+            timeout=30,
+        )
+        if occupied.returncode != 2:
+            raise RuntimeError("installed demo overwrote an existing output directory")
+        temporary_root = root / "demo-temporary"
+        temporary_root.mkdir()
+        temporary_environment = dict(demo_environment)
+        temporary_environment.update(
+            {"TEMP": str(temporary_root), "TMP": str(temporary_root), "TMPDIR": str(temporary_root)}
+        )
+        _run([str(cli), "demo"], cwd=root, environment=temporary_environment)
+        if tuple(temporary_root.glob("reprosieve-demo-*")):
+            raise RuntimeError("installed demo did not clean its temporary workspace")
+        flows.append("demo")
         source = root / "source.reprosieve"
         create_fixture = (
             "from reprosieve.capsule import write_capsule;"

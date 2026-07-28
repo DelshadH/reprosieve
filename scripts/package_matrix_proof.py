@@ -21,7 +21,7 @@ from scripts.evidence import write_canonical_json
 ROOT = Path(__file__).resolve().parents[1]
 GIT_SHA = re.compile(r"^[a-f0-9]{40}$")
 MAX_OUTPUT_BYTES = 1_000_000
-VERSION = "0.1.0a3"
+VERSION = "0.1.0a4"
 
 
 def _sha256(path: Path) -> str:
@@ -225,6 +225,7 @@ def _smoke_flows(path: Path, *, require_capture: bool) -> list[str]:
         raise RuntimeError("installed CLI smoke output is invalid") from error
     expected = [
         "help",
+        "demo",
         "materialize",
         "reproduce-predicate",
         "reduce",

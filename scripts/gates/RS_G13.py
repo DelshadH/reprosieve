@@ -143,7 +143,7 @@ def validate_package_proof(
                 "reduction-report-v1.schema.json",
             ],
             "sdist_schema_parity": True,
-            "version": "0.1.0a3",
+            "version": "0.1.0a4",
             "wheel_schema_parity": True,
         }
         or not isinstance(flows, dict)
@@ -234,6 +234,7 @@ def validate_package_proof(
         _output_reference(command.get("stderr"), label=f"RS-G13 command {index} stderr")
     core_flows = [
         "help",
+        "demo",
         "materialize",
         "reproduce-predicate",
         "reduce",

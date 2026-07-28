@@ -9,6 +9,6 @@ synthetic and proves reducer mechanics only.
 - Application code rerun: none.
 - Required result: at most 10 events and an independent 1-minimal report.
 
-Run `python scripts/killer_demo.py` to create, reduce, verify, export, and
-execute the temporary fixture. The generated artifacts are intentionally not
-committed as a real case study.
+Run `reprosieve demo` to create, reduce, verify, export, and execute the
+temporary fixture. Pass `--output-dir PATH` to retain every artifact. The
+generated artifacts are intentionally not committed as a real case study.

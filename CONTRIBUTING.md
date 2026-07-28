@@ -26,7 +26,7 @@ python -m scripts.killer_demo
 ```
 
 Additional adapters, arbitrary predicate languages, a server, a hosted trace
-store, and a browser UI remain out of scope for this pre-0.1 seed.
+store, and a browser UI remain out of scope for this experimental alpha.
 
 Format changes follow `docs/format-compatibility.md`. Release changes follow
 `RELEASING.md` and require an architecture decision when they affect a public
