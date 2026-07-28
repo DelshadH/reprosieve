@@ -32,10 +32,10 @@ resolution but zero human approvals. Force pushes and deletion are disabled;
 linear history is not required because the preserved migration uses merge
 commits.
 
-The exact `v0.1.0a1` tag is protected against deletion and non-fast-forward
-updates. The `pypi` environment has no manual reviewer. Publication is instead
-bound to the exact tag, canonical commit, final-evidence receipt, immutable
-artifacts, and job-scoped OIDC permissions.
+The exact `v0.1.0a1` and `v0.1.0a2` tags are protected against deletion and
+non-fast-forward updates. The `pypi` environment has no manual reviewer.
+Publication is instead bound to the exact tag, canonical commit, final-evidence
+receipt, immutable artifacts, and job-scoped OIDC permissions.
 
 ## Evidence and recovery
 

@@ -40,20 +40,20 @@ def test_every_ci_checkout_uses_the_exact_evidence_commit() -> None:
     assert workflow.count(exact_ref) == workflow.count(checkout)
 
 
-def test_package_identifies_as_the_first_0_1_alpha_without_broad_replay_claims() -> None:
+def test_package_identifies_as_the_replacement_0_1_alpha_without_broad_replay_claims() -> None:
     metadata = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8").lower()
 
     assert metadata["project"]["name"] == "reprosieve"
     assert metadata["project"]["scripts"] == {"reprosieve": "reprosieve.cli:main"}
-    assert metadata["project"]["version"] == "0.1.0a1"
+    assert metadata["project"]["version"] == "0.1.0a2"
     assert metadata["tool"]["hatch"]["build"]["targets"]["wheel"]["packages"] == [
         "src/reprosieve"
     ]
     assert metadata["tool"]["hatch"]["build"]["targets"]["sdist"]["include"][0] == (
         "/src/reprosieve"
     )
-    assert reprosieve.__version__ == "0.1.0a1"
+    assert reprosieve.__version__ == "0.1.0a2"
     assert "hermetic" not in changelog
     assert "recorded-output replay" not in changelog
 
@@ -65,7 +65,7 @@ def test_release_workflow_attests_the_reproducibility_checked_artifacts() -> Non
 
     assert "RUNSIEVE_EVIDENCE_COMMIT: ${{ github.sha }}" in workflow
     assert "ref: ${{ env.RUNSIEVE_EVIDENCE_COMMIT }}" in workflow
-    assert 'tags:\n      - "v0.1.0a1"' in workflow
+    assert 'tags:\n      - "v0.1.0a2"' in workflow
     assert "scripts.release_preflight" in workflow
     assert "python -m scripts.package_matrix_proof" in workflow
     assert "release-proof/reprosieve-*.whl" in workflow
@@ -90,10 +90,54 @@ def test_release_workflow_attests_the_reproducibility_checked_artifacts() -> Non
     assert build.count('--commit "$RUNSIEVE_EVIDENCE_COMMIT"') >= 2
 
 
+def test_release_receipt_does_not_dirty_the_package_proof_checkout() -> None:
+    workflow = (ROOT / ".github" / "workflows" / "release.yml").read_text(
+        encoding="utf-8"
+    )
+    build = workflow.split("build-and-attest:", 1)[1].split("publish-pypi:", 1)[0]
+
+    assert 'FINAL_EVIDENCE_DIR="$RUNNER_TEMP/final-evidence"' in build
+    assert '--dir "$FINAL_EVIDENCE_DIR"' in build
+    assert '"$FINAL_EVIDENCE_DIR/final-decision-receipt.json"' in build
+    assert "runner.temp" not in build
+    assert "--dir final-evidence" not in build
+
+
+def test_release_rerun_accepts_only_identical_existing_pypi_artifacts() -> None:
+    workflow = (ROOT / ".github" / "workflows" / "release.yml").read_text(
+        encoding="utf-8"
+    )
+    publish = workflow.split("publish-pypi:", 1)[1].split("github-release:", 1)[0]
+
+    assert "release-proof/verify_pypi_release.py" in workflow
+    assert "gh attestation verify verify_pypi_release.py" in publish
+    assert "id: registry_state" in publish
+    assert "--checksums candidate/SHA256SUMS" in publish
+    assert "if: steps.registry_state.outputs.publish_required == 'true'" in publish
+    assert "--require-existing" in publish
+    assert "--wait-seconds 120" in publish
+
+
+def test_github_release_rerun_repairs_only_missing_verified_assets() -> None:
+    workflow = (ROOT / ".github" / "workflows" / "release.yml").read_text(
+        encoding="utf-8"
+    )
+    release = workflow.split("github-release:", 1)[1]
+
+    assert "release-proof/verify_github_release.py" in workflow
+    assert "verify_github_release.py --repo" in release
+    assert "--allow-absent" in release
+    assert 'if [[ "$RELEASE_STATE" == "absent" ]]' in release
+    assert "gh release upload" in release
+    assert "--clobber" not in release
+    assert "--require-complete" in release
+    assert "--require-published" in release
+
+
 def test_release_preflight_tag_matches_project_version() -> None:
     from scripts.release_preflight import expected_tag
 
-    assert expected_tag() == "v0.1.0a1"
+    assert expected_tag() == "v0.1.0a2"
 
 
 def test_final_evidence_workflow_is_exact_head_and_attestation_bound() -> None:

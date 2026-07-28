@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - "v0.1.0a1"
+      - "v0.1.0a2"
 
 permissions: {}
 
@@ -58,6 +58,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          FINAL_EVIDENCE_DIR="$RUNNER_TEMP/final-evidence"
           RUN_ID="$(gh run list \
             --workflow final-evidence.yml \
             --branch main \
@@ -70,18 +71,20 @@ jobs:
           test -n "$RUN_ID"
           gh run download "$RUN_ID" \
             --name final-decision-receipt \
-            --dir final-evidence
+            --dir "$FINAL_EVIDENCE_DIR"
           gh attestation verify \
-            final-evidence/final-decision-receipt.json \
+            "$FINAL_EVIDENCE_DIR/final-decision-receipt.json" \
             --repo "${{ github.repository }}"
           python -m scripts.verify_final_receipt \
-            final-evidence/final-decision-receipt.json \
+            "$FINAL_EVIDENCE_DIR/final-decision-receipt.json" \
             "$RUNSIEVE_EVIDENCE_COMMIT"
       - name: Build candidate distributions twice and run package proof
         run: |
           python -m pip install --upgrade pip
           python -m pip install build==1.5.0
           python -m scripts.package_matrix_proof --output release-proof
+          cp scripts/verify_github_release.py release-proof/verify_github_release.py
+          cp scripts/verify_pypi_release.py release-proof/verify_pypi_release.py
       - name: Verify release checksums
         working-directory: release-proof
         run: sha256sum --check SHA256SUMS
@@ -93,6 +96,8 @@ jobs:
             release-proof/reprosieve-*.tar.gz
             release-proof/SHA256SUMS
             release-proof/reprosieve.spdx.json
+            release-proof/verify_github_release.py
+            release-proof/verify_pypi_release.py
       - name: Upload immutable candidate bundle
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -125,40 +130,120 @@ jobs:
           gh attestation verify reprosieve-*.tar.gz --repo "${{ github.repository }}"
           gh attestation verify SHA256SUMS --repo "${{ github.repository }}"
           gh attestation verify reprosieve.spdx.json --repo "${{ github.repository }}"
+          gh attestation verify verify_github_release.py --repo "${{ github.repository }}"
+          gh attestation verify verify_pypi_release.py --repo "${{ github.repository }}"
       - name: Select only primary distributions
         run: |
           mkdir dist
           cp candidate/reprosieve-*.whl dist/
           cp candidate/reprosieve-*.tar.gz dist/
           test "$(find dist -maxdepth 1 -type f | wc -l)" -eq 2
+      - name: Determine whether the exact release already exists on PyPI
+        id: registry_state
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          python candidate/verify_pypi_release.py \
+            --project reprosieve \
+            --version "${RELEASE_TAG#v}" \
+            --checksums candidate/SHA256SUMS \
+            --output "$GITHUB_OUTPUT"
       - name: Publish artifact-bound distributions to PyPI
+        if: steps.registry_state.outputs.publish_required == 'true'
         uses: pypa/gh-action-pypi-publish@ba38be9e461d3875417946c167d0b5f3d385a247 # release/v1
         with:
           packages-dir: dist
           print-hash: true
+      - name: Verify the published or recovered PyPI release
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          python candidate/verify_pypi_release.py \
+            --project reprosieve \
+            --version "${RELEASE_TAG#v}" \
+            --checksums candidate/SHA256SUMS \
+            --require-existing \
+            --wait-seconds 120
 
   github-release:
     needs: publish-pypi
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
+      attestations: read
       contents: write
     steps:
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: reprosieve-${{ github.ref_name }}
           path: candidate
-      - name: Create immutable GitHub prerelease
+      - name: Verify the release candidate bundle
         env:
           GH_TOKEN: ${{ github.token }}
-        run: >-
-          gh release create "${{ github.ref_name }}"
-          candidate/reprosieve-*.whl
-          candidate/reprosieve-*.tar.gz
-          candidate/SHA256SUMS
-          candidate/reprosieve.spdx.json
-          --repo "${{ github.repository }}"
-          --verify-tag
-          --prerelease
-          --generate-notes
-          --title "ReproSieve 0.1.0a1"
+        run: |
+          cd candidate
+          sha256sum --check SHA256SUMS
+          gh attestation verify reprosieve-*.whl --repo "${{ github.repository }}"
+          gh attestation verify reprosieve-*.tar.gz --repo "${{ github.repository }}"
+          gh attestation verify SHA256SUMS --repo "${{ github.repository }}"
+          gh attestation verify reprosieve.spdx.json --repo "${{ github.repository }}"
+          gh attestation verify verify_github_release.py --repo "${{ github.repository }}"
+      - name: Create or recover the exact GitHub prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_TITLE: ReproSieve 0.1.0a2
+        run: |
+          RELEASES_JSON="$RUNNER_TEMP/releases.json"
+          RELEASE_STATE_FILE="$RUNNER_TEMP/release-state.txt"
+          MISSING_ASSETS_FILE="$RUNNER_TEMP/missing-assets.txt"
+          gh api \
+            "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+            > "$RELEASES_JSON"
+          python candidate/verify_github_release.py --repo "$GITHUB_REPOSITORY" \
+            --tag "$RELEASE_TAG" \
+            --title "$RELEASE_TITLE" \
+            --releases-json "$RELEASES_JSON" \
+            --candidate-dir candidate \
+            --state-output "$RELEASE_STATE_FILE" \
+            --missing-output "$MISSING_ASSETS_FILE" \
+            --allow-absent
+          RELEASE_STATE="$(tr -d '\r\n' < "$RELEASE_STATE_FILE")"
+          if [[ "$RELEASE_STATE" == "absent" ]]; then
+            gh release create "$RELEASE_TAG" \
+              candidate/reprosieve-*.whl \
+              candidate/reprosieve-*.tar.gz \
+              candidate/SHA256SUMS \
+              candidate/reprosieve.spdx.json \
+              --repo "$GITHUB_REPOSITORY" \
+              --verify-tag \
+              --prerelease \
+              --generate-notes \
+              --title "$RELEASE_TITLE"
+          else
+            while IFS= read -r asset; do
+              if [[ -n "$asset" ]]; then
+                gh release upload "$RELEASE_TAG" "$asset" \
+                  --repo "$GITHUB_REPOSITORY"
+              fi
+            done < "$MISSING_ASSETS_FILE"
+            if [[ "$RELEASE_STATE" == "draft" ]]; then
+              gh release edit "$RELEASE_TAG" \
+                --repo "$GITHUB_REPOSITORY" \
+                --draft=false \
+                --prerelease \
+                --title "$RELEASE_TITLE"
+            fi
+          fi
+          gh api \
+            "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+            > "$RELEASES_JSON"
+          python candidate/verify_github_release.py --repo "$GITHUB_REPOSITORY" \
+            --tag "$RELEASE_TAG" \
+            --title "$RELEASE_TITLE" \
+            --releases-json "$RELEASES_JSON" \
+            --candidate-dir candidate \
+            --state-output "$RELEASE_STATE_FILE" \
+            --missing-output "$MISSING_ASSETS_FILE" \
+            --require-complete \
+            --require-published

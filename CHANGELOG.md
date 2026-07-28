@@ -2,7 +2,14 @@
 
 All notable changes will be recorded here.
 
-## 0.1.0a1 - release candidate
+## 0.1.0a2 - release candidate
+
+- Kept release evidence downloads outside the source checkout so the
+  reproducible package proof runs from a clean tree.
+- Supersedes the unpublished `v0.1.0a1` candidate, whose release workflow
+  stopped before any registry upload.
+
+## 0.1.0a1 - unpublished candidate
 
 - Renamed the unpublished public product, distribution, module, executable,
   capsule suffix, and repository target to ReproSieve / `reprosieve` after the

@@ -143,7 +143,7 @@ def validate_package_proof(
                 "reduction-report-v1.schema.json",
             ],
             "sdist_schema_parity": True,
-            "version": "0.1.0a1",
+            "version": "0.1.0a2",
             "wheel_schema_parity": True,
         }
         or not isinstance(flows, dict)

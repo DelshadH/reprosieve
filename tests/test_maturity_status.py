@@ -17,12 +17,12 @@ def test_maturity_status_records_alpha_candidate_and_external_blockers() -> None
     assert status["schema_version"] == 1
     assert (
         status["recommendation"]
-        == "ready-for-0.1.0a1-publication-decision"
+        == "authorized-0.1.0a2-pending-exact-head-gates"
     )
     assert set(status["levels"]) == {"0.1", "0.5", "1.0"}
     assert (
         status["levels"]["0.1"]["status"]
-        == "release-candidate-awaiting-owner-decision"
+        == "release-authorized-pending-exact-head-gates"
     )
     assert status["levels"]["0.5"]["status"] == "not-ready"
     assert status["levels"]["1.0"]["status"] == "not-ready"
@@ -31,8 +31,8 @@ def test_maturity_status_records_alpha_candidate_and_external_blockers() -> None
         item["id"] for item in status["levels"]["0.1"]["remaining"]
     }
     assert alpha_remaining == {
-        "publication-authorization",
-        "registry-authentication",
+        "exact-head-independent-review",
+        "post-merge-final-evidence",
     }
 
     half_blockers = {

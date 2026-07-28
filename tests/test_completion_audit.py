@@ -12,7 +12,7 @@ _EXPECTED = {
     "canonical-migration-preparation": "verified-technical",
     "canonical-migration-execution": "verified-technical",
     "reproducible-release-engineering": "verified-technical",
-    "0.1-publication": "blocked-owner-decision-and-registry",
+    "0.1-publication": "blocked-exact-head-release-gates",
     "framework-application-replay": "verified-technical",
     "0.5-readiness": "blocked-external",
     "permissioned-case-infrastructure": "verified-technical",
@@ -59,7 +59,7 @@ def test_completion_audit_is_canonical_and_preserves_full_scope() -> None:
     assert audit["schema_version"] == 1
     assert (
         audit["recommendation"]
-        == "ready-for-0.1.0a1-publication-decision"
+        == "authorized-0.1.0a2-pending-exact-head-gates"
     )
     requirements = {item["id"]: item for item in audit["requirements"]}
     assert {

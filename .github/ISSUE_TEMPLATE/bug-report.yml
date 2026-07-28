@@ -11,7 +11,7 @@ body:
     id: version
     attributes:
       label: ReproSieve version or commit
-      placeholder: 0.1.0a1 or full commit SHA
+      placeholder: 0.1.0a2 or full commit SHA
     validations:
       required: true
   - type: input
