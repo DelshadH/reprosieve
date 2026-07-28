@@ -96,10 +96,26 @@ def test_release_receipt_does_not_dirty_the_package_proof_checkout() -> None:
     )
     build = workflow.split("build-and-attest:", 1)[1].split("publish-pypi:", 1)[0]
 
-    assert 'FINAL_EVIDENCE_DIR: ${{ runner.temp }}/final-evidence' in build
+    assert 'FINAL_EVIDENCE_DIR="$RUNNER_TEMP/final-evidence"' in build
     assert '--dir "$FINAL_EVIDENCE_DIR"' in build
     assert '"$FINAL_EVIDENCE_DIR/final-decision-receipt.json"' in build
+    assert "runner.temp" not in build
     assert "--dir final-evidence" not in build
+
+
+def test_release_rerun_accepts_only_identical_existing_pypi_artifacts() -> None:
+    workflow = (ROOT / ".github" / "workflows" / "release.yml").read_text(
+        encoding="utf-8"
+    )
+    publish = workflow.split("publish-pypi:", 1)[1].split("github-release:", 1)[0]
+
+    assert "release-proof/verify_pypi_release.py" in workflow
+    assert "gh attestation verify verify_pypi_release.py" in publish
+    assert "id: registry_state" in publish
+    assert "--checksums candidate/SHA256SUMS" in publish
+    assert "if: steps.registry_state.outputs.publish_required == 'true'" in publish
+    assert "--require-existing" in publish
+    assert "--wait-seconds 120" in publish
 
 
 def test_release_preflight_tag_matches_project_version() -> None:
