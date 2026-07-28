@@ -17,7 +17,7 @@ def test_maturity_status_records_alpha_candidate_and_external_blockers() -> None
     assert status["schema_version"] == 1
     assert (
         status["recommendation"]
-        == "authorized-0.1.0a2-pending-exact-head-gates"
+        == "authorized-0.1.0a3-pending-exact-head-gates"
     )
     assert set(status["levels"]) == {"0.1", "0.5", "1.0"}
     assert (

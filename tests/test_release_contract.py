@@ -46,14 +46,14 @@ def test_package_identifies_as_the_replacement_0_1_alpha_without_broad_replay_cl
 
     assert metadata["project"]["name"] == "reprosieve"
     assert metadata["project"]["scripts"] == {"reprosieve": "reprosieve.cli:main"}
-    assert metadata["project"]["version"] == "0.1.0a2"
+    assert metadata["project"]["version"] == "0.1.0a3"
     assert metadata["tool"]["hatch"]["build"]["targets"]["wheel"]["packages"] == [
         "src/reprosieve"
     ]
     assert metadata["tool"]["hatch"]["build"]["targets"]["sdist"]["include"][0] == (
         "/src/reprosieve"
     )
-    assert reprosieve.__version__ == "0.1.0a2"
+    assert reprosieve.__version__ == "0.1.0a3"
     assert "hermetic" not in changelog
     assert "recorded-output replay" not in changelog
 
@@ -65,7 +65,7 @@ def test_release_workflow_attests_the_reproducibility_checked_artifacts() -> Non
 
     assert "RUNSIEVE_EVIDENCE_COMMIT: ${{ github.sha }}" in workflow
     assert "ref: ${{ env.RUNSIEVE_EVIDENCE_COMMIT }}" in workflow
-    assert 'tags:\n      - "v0.1.0a2"' in workflow
+    assert 'tags:\n      - "v0.1.0a3"' in workflow
     assert "scripts.release_preflight" in workflow
     assert "python -m scripts.package_matrix_proof" in workflow
     assert "release-proof/reprosieve-*.whl" in workflow
@@ -103,6 +103,16 @@ def test_release_receipt_does_not_dirty_the_package_proof_checkout() -> None:
     assert "--dir final-evidence" not in build
 
 
+def test_release_package_proof_uses_an_absolute_output_path() -> None:
+    workflow = (ROOT / ".github" / "workflows" / "release.yml").read_text(
+        encoding="utf-8"
+    )
+    build = workflow.split("build-and-attest:", 1)[1].split("publish-pypi:", 1)[0]
+
+    assert 'scripts.package_matrix_proof --output "$PWD/release-proof"' in build
+    assert "scripts.package_matrix_proof --output release-proof" not in build
+
+
 def test_release_rerun_accepts_only_identical_existing_pypi_artifacts() -> None:
     workflow = (ROOT / ".github" / "workflows" / "release.yml").read_text(
         encoding="utf-8"
@@ -137,7 +147,7 @@ def test_github_release_rerun_repairs_only_missing_verified_assets() -> None:
 def test_release_preflight_tag_matches_project_version() -> None:
     from scripts.release_preflight import expected_tag
 
-    assert expected_tag() == "v0.1.0a2"
+    assert expected_tag() == "v0.1.0a3"
 
 
 def test_final_evidence_workflow_is_exact_head_and_attestation_bound() -> None:

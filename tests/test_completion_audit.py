@@ -59,7 +59,7 @@ def test_completion_audit_is_canonical_and_preserves_full_scope() -> None:
     assert audit["schema_version"] == 1
     assert (
         audit["recommendation"]
-        == "authorized-0.1.0a2-pending-exact-head-gates"
+        == "authorized-0.1.0a3-pending-exact-head-gates"
     )
     requirements = {item["id"]: item for item in audit["requirements"]}
     assert {
