@@ -118,6 +118,22 @@ def test_release_rerun_accepts_only_identical_existing_pypi_artifacts() -> None:
     assert "--wait-seconds 120" in publish
 
 
+def test_github_release_rerun_repairs_only_missing_verified_assets() -> None:
+    workflow = (ROOT / ".github" / "workflows" / "release.yml").read_text(
+        encoding="utf-8"
+    )
+    release = workflow.split("github-release:", 1)[1]
+
+    assert "release-proof/verify_github_release.py" in workflow
+    assert "verify_github_release.py --repo" in release
+    assert "--allow-absent" in release
+    assert 'if [[ "$RELEASE_STATE" == "absent" ]]' in release
+    assert "gh release upload" in release
+    assert "--clobber" not in release
+    assert "--require-complete" in release
+    assert "--require-published" in release
+
+
 def test_release_preflight_tag_matches_project_version() -> None:
     from scripts.release_preflight import expected_tag
 
