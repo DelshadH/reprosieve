@@ -2,7 +2,14 @@
 
 All notable changes will be recorded here.
 
-## 0.1.0a2 - release candidate
+## 0.1.0a3 - release candidate
+
+- Made the tag-bound package proof pass an absolute output path so its
+  clean-checkout install smoke tests can resolve the candidate artifacts.
+- Supersedes the unpublished `v0.1.0a2` candidate, whose release workflow
+  stopped before any registry upload.
+
+## 0.1.0a2 - unpublished candidate
 
 - Kept release evidence downloads outside the source checkout so the
   reproducible package proof runs from a clean tree.

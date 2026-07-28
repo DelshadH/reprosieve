@@ -13,10 +13,11 @@ or failing release gate.
    the attestation-bound exact-head final-evidence workflow to pass. The
    immutable contract-v2 `scripts.release_gate` remains historical evidence;
    it is not rewritten to bless descendant implementation changes.
-5. After the owner answers `PUBLISH? YES`, create the one annotated tag
-   `v0.1.0a2` on the exact canonical `main` head. Never move an existing tag.
-   The unpublished `v0.1.0a1` tag is retained as the immutable record of a
-   release-workflow failure that occurred before any registry upload.
+5. After the owner answers `PUBLISH? YES`, create the annotated tag
+   `v0.1.0a3` on the exact canonical `main` head. Never move an existing tag.
+   The unpublished `v0.1.0a1` and `v0.1.0a2` tags are retained as immutable
+   records of release-workflow failures that occurred before any registry
+   upload.
 6. Let the release workflow export the tagged commit twice, set
    `SOURCE_DATE_EPOCH` to that commit's timestamp, require byte-identical wheel
    and sdist pairs, generate `SHA256SUMS` and an SPDX SBOM, attest the primary

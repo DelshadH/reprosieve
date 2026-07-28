@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - "v0.1.0a2"
+      - "v0.1.0a3"
 
 permissions: {}
 
@@ -82,7 +82,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install build==1.5.0
-          python -m scripts.package_matrix_proof --output release-proof
+          python -m scripts.package_matrix_proof --output "$PWD/release-proof"
           cp scripts/verify_github_release.py release-proof/verify_github_release.py
           cp scripts/verify_pypi_release.py release-proof/verify_pypi_release.py
       - name: Verify release checksums
@@ -192,7 +192,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.ref_name }}
-          RELEASE_TITLE: ReproSieve 0.1.0a2
+          RELEASE_TITLE: ReproSieve 0.1.0a3
         run: |
           RELEASES_JSON="$RUNNER_TEMP/releases.json"
           RELEASE_STATE_FILE="$RUNNER_TEMP/release-state.txt"
