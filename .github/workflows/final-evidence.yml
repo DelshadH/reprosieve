@@ -35,7 +35,7 @@ jobs:
           python-version: ${{ matrix.python }}
       - run: python -m pip install build==1.5.0
       - run: python -m scripts.package_matrix_proof --output "${{ runner.temp }}/proof"
-      - uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v3.2.0
+      - uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v3.2.0
         with:
           subject-path: "${{ runner.temp }}/proof/*"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -69,7 +69,7 @@ jobs:
           python-version: "3.13"
       - run: python -m pip install -e ".[dev]"
       - run: python -m scripts.portable_reproduction_proof --output "${{ runner.temp }}/proof"
-      - uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v3.2.0
+      - uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v3.2.0
         with:
           subject-path: "${{ runner.temp }}/proof/*"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -104,7 +104,7 @@ jobs:
           "$RUNSIEVE_EVIDENCE_COMMIT"
           --output "${{ runner.temp }}/app/verification.json"
       - run: tar -C "${{ runner.temp }}" -czf "${{ runner.temp }}/application-replay.tgz" app
-      - uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v3.2.0
+      - uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v3.2.0
         with:
           subject-path: |
             ${{ runner.temp }}/exact-head.json
@@ -151,7 +151,7 @@ jobs:
           python -m scripts.gates.RS_G10
           ".evidence/RS-G10/final-${{ github.run_id }}-${{ github.run_attempt }}/manifest.json"
       - run: tar -czf "${{ runner.temp }}/rs-g10.tgz" ".evidence/RS-G10/final-${{ github.run_id }}-${{ github.run_attempt }}"
-      - uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v3.2.0
+      - uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v3.2.0
         with:
           subject-path: "${{ runner.temp }}/rs-g10.tgz"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -194,7 +194,7 @@ jobs:
           python -m scripts.gates.RS_G13
           ".evidence/RS-G13/final-${{ github.run_id }}-${{ github.run_attempt }}/manifest.json"
       - run: tar -czf "${{ runner.temp }}/rs-g13.tgz" ".evidence/RS-G13/final-${{ github.run_id }}-${{ github.run_attempt }}"
-      - uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v3.2.0
+      - uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v3.2.0
         with:
           subject-path: "${{ runner.temp }}/rs-g13.tgz"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -227,7 +227,7 @@ jobs:
           'gate':'final-release-evidence','passed':True,
           'workflow_run':'${{ github.run_id }}-${{ github.run_attempt }}'},
           sort_keys=True,separators=(',',':'))+'\\n')"
-      - uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v3.2.0
+      - uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v3.2.0
         with:
           subject-path: final-decision-receipt.json
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
