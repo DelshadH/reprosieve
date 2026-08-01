@@ -89,7 +89,7 @@ jobs:
         working-directory: release-proof
         run: sha256sum --check SHA256SUMS
       - name: Attest primary wheel, sdist, checksums, and SBOM
-        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v3.2.0
+        uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v3.2.0
         with:
           subject-path: |
             release-proof/reprosieve-*.whl
